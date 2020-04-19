@@ -3,6 +3,10 @@ package main
 import (
 	"github.com/spf13/pflag"
 	"go.coder.com/cli"
+	"log"
+	"os"
+	"net/http"
+	_ "net/http/pprof"
 )
 
 type rootCmd struct {
@@ -24,10 +28,15 @@ func (r *rootCmd) Subcommands() []cli.Command {
 	return []cli.Command{
 		loginCmd{},
 		logoutCmd{},
-		syncCmd{},
+		&syncCmd{},
 	}
 }
 
 func main() {
+	if os.Getenv("PPROF") != "" {
+		go func() {
+			log.Println(http.ListenAndServe("localhost:6060", nil))
+		}()
+	}
 	cli.RunRoot(&rootCmd{})
 }

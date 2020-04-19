@@ -20,3 +20,4 @@ $ coder sync ~/Projects/cdr/enterprise my-env:~/enterprise
 
 - The `coder login` flow will not work when the CLI is ran from a different network
 than the browser. #1
+- Windows doesn't work out of the box. The `scp` utility is required in PATH.

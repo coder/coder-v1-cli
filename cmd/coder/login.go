@@ -11,9 +11,9 @@ import (
 	"go.coder.com/cli"
 	"go.coder.com/flog"
 
-	"cdr.dev/coder/internal/client"
-	"cdr.dev/coder/internal/config"
-	"cdr.dev/coder/internal/loginsrv"
+	"cdr.dev/coder-cli/internal/client"
+	"cdr.dev/coder-cli/internal/config"
+	"cdr.dev/coder-cli/internal/loginsrv"
 )
 
 type loginCmd struct {

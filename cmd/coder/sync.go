@@ -1,26 +1,39 @@
 package main
 
 import (
+	"context"
+	"crypto/rand"
+	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 
+	"github.com/cheggaaa/pb/v3"
 	"github.com/spf13/pflag"
 	"go.coder.com/cli"
 	"go.coder.com/flog"
 
-	"cdr.dev/coder/internal/client"
-	"cdr.dev/coder/internal/sync"
+	"cdr.dev/coder-cli/internal/client"
+	"cdr.dev/coder-cli/internal/sync"
+	"cdr.dev/coder-cli/wush"
 )
 
 type syncCmd struct {
+	init      bool
+	benchSize int64
 }
 
-func (cmd syncCmd) Spec() cli.CommandSpec {
+func (cmd *syncCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
 		Name:  "sync",
 		Usage: "[local directory] [<env name>:<remote directory>]",
 		Desc:  "establish a one way directory sync to a remote environment",
 	}
+}
+
+func (cmd *syncCmd) RegisterFlags(fl *pflag.FlagSet) {
+	fl.BoolVarP(&cmd.init, "init", "i", false, "do inititial transfer and exit")
+	fl.Int64Var(&cmd.benchSize, "bench", 0, "bench test the wush endpoint")
 }
 
 // userOrgs gets a list of orgs the user is apart of.
@@ -39,7 +52,7 @@ outer:
 	return uo
 }
 
-func (cmd syncCmd) findEnv(client *client.Client, name string) client.Environment {
+func (cmd *syncCmd) findEnv(client *client.Client, name string) client.Environment {
 	me, err := client.Me()
 	if err != nil {
 		flog.Fatal("get self: %+v", err)
@@ -72,8 +85,27 @@ func (cmd syncCmd) findEnv(client *client.Client, name string) client.Environmen
 	panic("unreachable")
 }
 
-//noinspection GoImportUsedAsName
-func (cmd syncCmd) Run(fl *pflag.FlagSet) {
+func (cmd *syncCmd) bench(client *client.Client, env client.Environment) {
+	conn, err := client.Wush(env, "cat")
+	if err != nil {
+		flog.Fatal("wush failed: %v", err)
+	}
+	wc := wush.Dial(context.Background(), conn)
+	bar := pb.New64(cmd.benchSize)
+	bar.Start()
+	go io.Copy(ioutil.Discard, wc.Stdout)
+	io.Copy(
+		bar.NewProxyWriter(wc.Stdin),
+		io.LimitReader(rand.Reader, cmd.benchSize),
+	)
+	wc.Stdin.Close()
+	code, err := wc.Wait()
+	if err != nil || code != 0 {
+		flog.Error("bench: (code %v) %v", code, err)
+	}
+}
+
+func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 	var (
 		local  = fl.Arg(0)
 		remote = fl.Arg(1)
@@ -97,14 +129,21 @@ func (cmd syncCmd) Run(fl *pflag.FlagSet) {
 		flog.Fatal("remote misformmated")
 	}
 	var (
-		envName    = remoteTokens[0]
-		remotePAth = remoteTokens[1]
+		envName   = remoteTokens[0]
+		remoteDir = remoteTokens[1]
 	)
 
 	env := cmd.findEnv(client, envName)
-	_ = remotePAth
+
+	if cmd.benchSize > 0 {
+		cmd.bench(client, env)
+		return
+	}
 
 	s := sync.Sync{
+		Init:        cmd.init,
+		RemoteDir:   remoteDir,
+		LocalDir:    local,
 		Client:      client,
 		Environment: env,
 	}

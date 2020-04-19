@@ -37,11 +37,10 @@ func (c Client) Wush(env Environment, cmd string, args ...string) (*websocket.Co
 	query.Set("tty", "false")
 	query.Set("stdin", "true")
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
 
 	fullURL := u.String() + "?" + query.Encode()
-	println(fullURL)
 
 	conn, resp, err := websocket.Dial(ctx, fullURL,
 		&websocket.DialOptions{
@@ -51,7 +50,10 @@ func (c Client) Wush(env Environment, cmd string, args ...string) (*websocket.Co
 		},
 	)
 	if err != nil {
-		return nil, bodyError(resp)
+		if resp != nil {
+			return nil, bodyError(resp)
+		}
+		return nil, err
 	}
 	return conn, nil
 }

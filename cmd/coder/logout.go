@@ -7,7 +7,7 @@ import (
 	"go.coder.com/cli"
 	"go.coder.com/flog"
 
-	"cdr.dev/coder/internal/config"
+	"cdr.dev/coder-cli/internal/config"
 )
 
 type logoutCmd struct {
