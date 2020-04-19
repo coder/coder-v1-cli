@@ -13,7 +13,7 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
-// Client converts a Wush connection into streams.
+// Client converts a Wush connection into OS streams.
 type Client struct {
 	done     <-chan struct{}
 	statusMu sync.Mutex

@@ -1,4 +1,4 @@
-package client
+package entclient
 
 type User struct {
 	ID    string `json:"id"`

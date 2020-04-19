@@ -11,7 +11,6 @@ import (
 	"go.coder.com/cli"
 	"go.coder.com/flog"
 
-	"cdr.dev/coder-cli/internal/client"
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/loginsrv"
 )
@@ -26,29 +25,6 @@ func (cmd loginCmd) Spec() cli.CommandSpec {
 		Desc:  "authenticate this client for future operations",
 	}
 }
-
-func requireAuth() *client.Client {
-	sessionToken, err := config.Session.Read()
-	if err != nil {
-		flog.Fatal("read session: %v (did you run coder login?)", err)
-	}
-
-	rawURL, err := config.URL.Read()
-	if err != nil {
-		flog.Fatal("read url: %v (did you run coder login?)", err)
-	}
-
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		flog.Fatal("url misformatted: %v (try runing coder login)", err)
-	}
-
-	return &client.Client{
-		BaseURL: u,
-		Token:   sessionToken,
-	}
-}
-
 func (cmd loginCmd) Run(fl *pflag.FlagSet) {
 	rawURL := fl.Arg(0)
 	if rawURL == "" {

@@ -1,4 +1,4 @@
-package client
+package entclient
 
 type Org struct {
 	ID      string `json:"id"`

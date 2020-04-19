@@ -1,4 +1,4 @@
-package client
+package entclient
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ func (c Client) request(
 	method string, path string,
 	request interface{},
 ) (*http.Response, error) {
-	client, err := c.httpClient()
+	client, err := c.http()
 	if err != nil {
 		return nil, err
 	}

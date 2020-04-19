@@ -9,7 +9,7 @@ import (
 	"go.coder.com/cli"
 	"go.coder.com/flog"
 
-	client "cdr.dev/coder-cli/internal/client"
+	client "cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/wush"
 )
 
@@ -19,25 +19,26 @@ type shellCmd struct {
 func (cmd *shellCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
 		Name:    "sh",
-		Usage:   "<env name> -- <command [command args...]>",
+		Usage:   "<env name> <command [command args...]>",
 		Desc:    "executes a remote command on the environment",
 		RawArgs: true,
 	}
 }
 
 func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
-	if len(fl.Args()) < 3 {
+	if len(fl.Args()) < 2 {
 		exitUsage(fl)
 	}
 	var (
 		envName = fl.Arg(0)
-		_       = fl.Arg(1)
-		command = fl.Arg(2)
-		args    = fl.Args()[3:]
+		command = fl.Arg(1)
+		args    = fl.Args()[2:]
 	)
 
-	entClient := requireAuth()
-	env := findEnv(entClient, envName)
+	var (
+		entClient = requireAuth()
+		env       = findEnv(entClient, envName)
+	)
 
 	conn, err := entClient.DialWush(
 		env,

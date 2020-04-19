@@ -1,4 +1,4 @@
-package client
+package entclient
 
 import (
 	"net/http"
@@ -15,7 +15,7 @@ func (c Client) copyURL() *url.URL {
 	return &(*c.BaseURL)
 }
 
-func (c *Client) httpClient() (*http.Client, error) {
+func (c *Client) http() (*http.Client, error) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, err
