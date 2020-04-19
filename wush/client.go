@@ -69,10 +69,10 @@ func (w *stdinWriter) Close() error {
 	})
 }
 
-// Dial begins multiplexing the Wush connection
+// NewClient begins multiplexing the Wush connection
 // into independent streams.
 // It will cancel all goroutines when the provided context cancels.
-func Dial(ctx context.Context, conn *websocket.Conn) *Client {
+func NewClient(ctx context.Context, conn *websocket.Conn) *Client {
 	var (
 		stdoutReader, stdoutWriter = io.Pipe()
 		stderrReader, stderrWriter = io.Pipe()

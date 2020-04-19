@@ -52,7 +52,7 @@ outer:
 	return uo
 }
 
-func (cmd *syncCmd) findEnv(client *client.Client, name string) client.Environment {
+func findEnv(client *client.Client, name string) client.Environment {
 	me, err := client.Me()
 	if err != nil {
 		flog.Fatal("get self: %+v", err)
@@ -86,11 +86,11 @@ func (cmd *syncCmd) findEnv(client *client.Client, name string) client.Environme
 }
 
 func (cmd *syncCmd) bench(client *client.Client, env client.Environment) {
-	conn, err := client.Wush(env, "cat")
+	conn, err := client.DialWush(env, nil, "cat")
 	if err != nil {
 		flog.Fatal("wush failed: %v", err)
 	}
-	wc := wush.Dial(context.Background(), conn)
+	wc := wush.NewClient(context.Background(), conn)
 	bar := pb.New64(cmd.benchSize)
 	bar.Start()
 	go io.Copy(ioutil.Discard, wc.Stdout)
@@ -133,7 +133,7 @@ func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 		remoteDir = remoteTokens[1]
 	)
 
-	env := cmd.findEnv(client, envName)
+	env := findEnv(client, envName)
 
 	if cmd.benchSize > 0 {
 		cmd.bench(client, env)

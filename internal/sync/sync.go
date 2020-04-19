@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"time"
 
 	"github.com/cheggaaa/pb/v3"
@@ -33,39 +32,26 @@ type Sync struct {
 	barWriter io.Writer
 }
 
-func (s Sync) pushFile(ctx context.Context, path string) error {
-	conn, err := s.Wush(s.Environment, "scp", "-qprt", s.RemoteDir)
+func (s Sync) pushDirectory(ctx context.Context, path string) error {
+	conn, err := s.DialWush(s.Environment, nil, "sh", "-c", "cd "+s.RemoteDir+"; tar xvzf -")
 	if err != nil {
 		return err
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
 
-	wc := wush.Dial(ctx, conn)
+	wc := wush.NewClient(ctx, conn)
 
 	// This starts scp in local mode
-	cmd := exec.Command("scp", "-qprf", path)
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return err
-	}
+	cmd := exec.Command("tar", "-czf", "-", ".")
+	cmd.Dir = path
 
-	go func() {
-		defer stdin.Close()
-
-		_, err = io.Copy(io.MultiWriter(stdin, &debugWriter{
-			Prefix: "s->c",
-			W:      os.Stderr,
-		}), wc.Stdout)
-		if err != nil {
-			flog.Error("s->c copy fail: %v", err)
-		}
-	}()
+	go io.Copy(os.Stderr, wc.Stdout)
+	go io.Copy(os.Stderr, wc.Stderr)
 
 	cmd.Stdout = io.MultiWriter(s.barWriter, wc.Stdin, &debugWriter{
 		Prefix: "c->s",
 		W:      os.Stderr,
 	})
-	go io.Copy(os.Stderr, wc.Stderr)
 	err = cmd.Run()
 	if err != nil {
 		return xerrors.Errorf("scp: %w", err)
@@ -81,7 +67,7 @@ func (s Sync) pushFileLog(ctx context.Context, path string) error {
 
 	start := time.Now()
 	fmt.Printf("transferring %v...\t", info.Name())
-	err = s.pushFile(ctx, path)
+	err = s.pushDirectory(ctx, path)
 	if err != nil {
 		fmt.Printf("failed\n")
 		return err
@@ -104,13 +90,7 @@ func (s Sync) initSync(ctx context.Context) error {
 	s.barWriter = bar.NewProxyWriter(ioutil.Discard)
 
 	start := time.Now()
-	err := filepath.Walk(s.LocalDir, func(path string, info os.FileInfo, err error) error {
-		if path == s.LocalDir {
-			// scp can't resolve the self directory
-			return nil
-		}
-		return s.pushFile(ctx, path)
-	})
+	err := s.pushDirectory(ctx, s.LocalDir)
 	if err == nil {
 		bar.Finish()
 		flog.Info("finished initial sync (%v)", time.Since(start).Truncate(time.Millisecond))

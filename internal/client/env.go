@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"net/url"
+	"strconv"
 	"time"
 
 	"nhooyr.io/websocket"
@@ -23,7 +24,17 @@ func (c Client) Envs(user *User, org Org) ([]Environment, error) {
 	return envs, err
 }
 
-func (c Client) Wush(env Environment, cmd string, args ...string) (*websocket.Conn, error) {
+type WushOptions struct {
+	TTY   bool
+	Stdin bool
+}
+
+var defaultWushOptions = WushOptions{
+	TTY:   false,
+	Stdin: true,
+}
+
+func (c Client) DialWush(env Environment, opts *WushOptions, cmd string, args ...string) (*websocket.Conn, error) {
 	u := c.copyURL()
 	if c.BaseURL.Scheme == "https" {
 		u.Scheme = "wss"
@@ -34,8 +45,11 @@ func (c Client) Wush(env Environment, cmd string, args ...string) (*websocket.Co
 	query := make(url.Values)
 	query.Set("command", cmd)
 	query["args[]"] = args
-	query.Set("tty", "false")
-	query.Set("stdin", "true")
+	if opts == nil {
+		opts = &defaultWushOptions
+	}
+	query.Set("tty", strconv.FormatBool(opts.TTY))
+	query.Set("stdin", strconv.FormatBool(opts.Stdin))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()

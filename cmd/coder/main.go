@@ -28,6 +28,7 @@ func (r *rootCmd) Subcommands() []cli.Command {
 	return []cli.Command{
 		loginCmd{},
 		logoutCmd{},
+		&shellCmd{},
 		&syncCmd{},
 	}
 }
