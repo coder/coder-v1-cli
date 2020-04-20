@@ -1,4 +1,4 @@
-# coder
+# coder-cli
 
 `coder` provides a one-way, live file sync to your Coder Enterprise environment.
 
