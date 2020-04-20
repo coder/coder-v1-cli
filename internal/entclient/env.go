@@ -17,7 +17,7 @@ type Environment struct {
 func (c Client) Envs(user *User, org Org) ([]Environment, error) {
 	var envs []Environment
 	err := c.requestBody(
-		"GET", "/api/environments/?user_id="+user.ID+"&organization_id="+org.ID,
+		"GET", "/api/orgs/"+org.ID+"/members/"+user.ID+"/environments",
 		nil,
 		&envs,
 	)
