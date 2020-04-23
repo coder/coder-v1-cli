@@ -111,7 +111,10 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 		go cmd.sendResizeEvents(termfd, wc)
 	}
 
-	go io.Copy(wc.Stdin, os.Stdin)
+	go func(){
+		defer wc.Stdin.Close()
+		io.Copy(wc.Stdin, os.Stdin)
+	}()
 	go io.Copy(os.Stdout, wc.Stdout)
 	go io.Copy(os.Stderr, wc.Stderr)
 
