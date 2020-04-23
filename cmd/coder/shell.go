@@ -88,7 +88,7 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 		env       = findEnv(entClient, envName)
 	)
 
-	termfd := int(os.Stdout.Fd())
+	termfd := int(os.Stdin.Fd())
 
 	tty := terminal.IsTerminal(termfd)
 	if tty {
