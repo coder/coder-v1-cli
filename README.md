@@ -5,6 +5,12 @@
 It is useful in cases where you want to use an unsupported IDE with your Coder
 Environment.
 
+## Install
+
+```go
+go get cdr.dev/coder-cli/cmd/coder
+```
+
 ## Login
 ```shell script
 $ coder login https://my-coder-enterprise.com
