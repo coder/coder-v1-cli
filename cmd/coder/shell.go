@@ -4,7 +4,9 @@ import (
 	"context"
 	"io"
 	"os"
+	"os/exec"
 
+	"github.com/mattn/go-isatty"
 	"github.com/spf13/pflag"
 	"go.coder.com/cli"
 	"go.coder.com/flog"
@@ -25,6 +27,18 @@ func (cmd *shellCmd) Spec() cli.CommandSpec {
 	}
 }
 
+func enableTerminal() {
+	out, err := exec.Command("stty", "-f", "/dev/tty",
+		// Send
+		"cbreak",
+		"-echo",
+		"intr", "undef",
+	).CombinedOutput()
+	if err != nil {
+		flog.Fatal("configure tty: %v %q", err, out)
+	}
+}
+
 func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 	if len(fl.Args()) < 2 {
 		exitUsage(fl)
@@ -40,10 +54,15 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 		env       = findEnv(entClient, envName)
 	)
 
+	tty := isatty.IsTerminal(os.Stdout.Fd())
+	if tty {
+		enableTerminal()
+	}
+
 	conn, err := entClient.DialWush(
 		env,
 		&client.WushOptions{
-			TTY:   false,
+			TTY:   tty,
 			Stdin: true,
 		}, command, args...)
 	if err != nil {
