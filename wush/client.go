@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"sync"
 
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
@@ -15,10 +14,12 @@ import (
 
 // Client converts a Wush connection into OS streams.
 type Client struct {
-	done     <-chan struct{}
-	statusMu sync.Mutex
+	statusPromise promise
 	exitCode uint8
 	err      error
+
+	conn *websocket.Conn
+	ctx context.Context
 
 	Stdin  io.WriteCloser
 	Stdout io.Reader
@@ -26,9 +27,7 @@ type Client struct {
 }
 
 type stdinWriter struct {
-	conn *websocket.Conn
 	*Client
-	ctx context.Context
 }
 
 func (w *stdinWriter) writeChunk(p []byte) (int, error) {
@@ -69,6 +68,15 @@ func (w *stdinWriter) Close() error {
 	})
 }
 
+func (c *Client) Resize(width, height int) error {
+	err := wsjson.Write(c.ctx, c.conn, &ClientMessage{
+		Type:   Stdin,
+		Height: height,
+		Width:  width,
+	})
+	return err
+}
+
 // NewClient begins multiplexing the Wush connection
 // into independent streams.
 // It will cancel all goroutines when the provided context cancels.
@@ -77,18 +85,20 @@ func NewClient(ctx context.Context, conn *websocket.Conn) *Client {
 		stdoutReader, stdoutWriter = io.Pipe()
 		stderrReader, stderrWriter = io.Pipe()
 	)
-	done := make(chan struct{})
+
+	eg, ctx := errgroup.WithContext(ctx)
+
 	c := &Client{
 		Stdout: stdoutReader,
 		Stderr: stderrReader,
-		done:   done,
+		conn: conn,
+		ctx: ctx,
+		statusPromise: newPromise(),
 	}
-	eg, ctx := errgroup.WithContext(ctx)
 	c.Stdin = &stdinWriter{
 		Client: c,
-		conn:   conn,
-		ctx:    ctx,
 	}
+
 
 	// We expect massive reads from some commands. Because we're streaming it's no big deal.
 	conn.SetReadLimit(1 << 40)
@@ -137,16 +147,15 @@ func NewClient(ctx context.Context, conn *websocket.Conn) *Client {
 	})
 	// Cleanup routine
 	go func() {
+		defer c.statusPromise.Release()
+
 		err := eg.Wait()
-		c.statusMu.Lock()
-		defer c.statusMu.Unlock()
 		// If the command failed before exit code, don't block.
 		select {
 		case c.exitCode = <-exitCode:
 		default:
 		}
 		c.err = err
-		close(done)
 	}()
 
 	return c
@@ -155,7 +164,7 @@ func NewClient(ctx context.Context, conn *websocket.Conn) *Client {
 // Wait returns the status code of the command, along
 // with any error.
 func (c *Client) Wait() (uint8, error) {
-	<-c.done
+	c.statusPromise.Wait()
 	// There is guaranteed to be no writers after the channel is closed.
 	return c.exitCode, c.err
 }

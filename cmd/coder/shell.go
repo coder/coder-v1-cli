@@ -4,12 +4,13 @@ import (
 	"context"
 	"io"
 	"os"
-	"os/exec"
+	"os/signal"
 
-	"github.com/mattn/go-isatty"
 	"github.com/spf13/pflag"
 	"go.coder.com/cli"
 	"go.coder.com/flog"
+	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/sys/unix"
 
 	client "cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/wush"
@@ -27,13 +28,32 @@ func (cmd *shellCmd) Spec() cli.CommandSpec {
 	}
 }
 
-func enableTerminal() {
-	out, err := exec.Command("stty", "-f", "/dev/tty",
-		"raw",
-	).CombinedOutput()
+func enableTerminal(fd int) {
+	_, err := terminal.MakeRaw(fd)
 	if err != nil {
-		flog.Fatal("configure tty: %v %q", err, out)
+		flog.Fatal("make raw term: %v", err)
 	}
+}
+
+func (cmd *shellCmd) sendResizeEvents(termfd int, client *wush.Client) {
+		sigs := make(chan os.Signal, 16)
+		signal.Notify(sigs, unix.SIGWINCH)
+
+		for {
+			width, height, err := terminal.GetSize(termfd)
+			if err != nil {
+				flog.Error("get term size: %v", err)
+				return
+			}
+
+			err = client.Resize(width, height)
+			if err != nil {
+				flog.Error("get term size: %v", err)
+				return
+			}
+			// Do this last so the first resize is sent.
+			<-sigs
+		}
 }
 
 func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
@@ -51,9 +71,11 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 		env       = findEnv(entClient, envName)
 	)
 
-	tty := isatty.IsTerminal(os.Stdout.Fd())
+	termfd := int(os.Stdout.Fd())
+
+	tty := terminal.IsTerminal(termfd)
 	if tty {
-		enableTerminal()
+		enableTerminal(termfd)
 	}
 
 	conn, err := entClient.DialWush(
@@ -68,6 +90,10 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 	ctx := context.Background()
 
 	wc := wush.NewClient(ctx, conn)
+	if tty {
+		go cmd.sendResizeEvents(termfd, wc)
+	}
+
 	go io.Copy(wc.Stdin, os.Stdin)
 	go io.Copy(os.Stdout, wc.Stdout)
 	go io.Copy(os.Stderr, wc.Stderr)
