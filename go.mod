@@ -16,6 +16,7 @@ require (
 	golang.org/x/crypto v0.0.0-20200422194213-44a606286825
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 	golang.org/x/sys v0.0.0-20200413165638-669c56c373c4
+	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 	nhooyr.io/websocket v1.8.5
 )

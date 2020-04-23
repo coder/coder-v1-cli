@@ -5,12 +5,14 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/spf13/pflag"
 	"go.coder.com/cli"
 	"go.coder.com/flog"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/sys/unix"
+	"golang.org/x/time/rate"
 
 	client "cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/wush"
@@ -39,6 +41,9 @@ func (cmd *shellCmd) sendResizeEvents(termfd int, client *wush.Client) {
 	sigs := make(chan os.Signal, 16)
 	signal.Notify(sigs, unix.SIGWINCH)
 
+	// Limit the frequency of resizes to prevent a stuttering effect.
+	resizeLimiter := rate.NewLimiter(rate.Every(time.Millisecond*100), 1)
+
 	for {
 		width, height, err := terminal.GetSize(termfd)
 		if err != nil {
@@ -51,8 +56,10 @@ func (cmd *shellCmd) sendResizeEvents(termfd int, client *wush.Client) {
 			flog.Error("get term size: %v", err)
 			return
 		}
+
 		// Do this last so the first resize is sent.
 		<-sigs
+		resizeLimiter.Wait(context.Background())
 	}
 }
 
