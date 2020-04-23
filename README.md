@@ -1,9 +1,6 @@
 # coder-cli
 
-`coder` provides a one-way, live file sync to your Coder Enterprise environment.
-
-It is useful in cases where you want to use an unsupported IDE with your Coder
-Environment.
+`coder` is a command line utility for Coder Enterprise.
 
 ## Install
 
@@ -18,11 +15,20 @@ $ coder login https://my-coder-enterprise.com
 
 ## Setting up a Live Sync
 
+`coder sync` is useful in cases where you want to use an unsupported IDE with your Coder
+Environment.
+
+
 Ensure that `rsync` is installed locally and in your environment.
 
 ``
 $ coder sync ~/Projects/cdr/enterprise/. my-env:~/enterprise
 ``
+
+## Remote Terminal
+
+You can access your environment's terminal with `coder sh <env>`. You can also
+execute a command in your environment with `coder sh <env> [command] [args]`.
 
 ## Caveats
 
