@@ -22,8 +22,8 @@ type shellCmd struct {
 func (cmd *shellCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
 		Name:    "sh",
-		Usage:   "<env name> <command [command args...]>",
-		Desc:    "executes a remote command on the environment",
+		Usage:   "<env name> [<command [args...]>]",
+		Desc:    "executes a remote command on the environment\nIf no command is specified, the default shell is opened.",
 		RawArgs: true,
 	}
 }
@@ -36,35 +36,45 @@ func enableTerminal(fd int) {
 }
 
 func (cmd *shellCmd) sendResizeEvents(termfd int, client *wush.Client) {
-		sigs := make(chan os.Signal, 16)
-		signal.Notify(sigs, unix.SIGWINCH)
+	sigs := make(chan os.Signal, 16)
+	signal.Notify(sigs, unix.SIGWINCH)
 
-		for {
-			width, height, err := terminal.GetSize(termfd)
-			if err != nil {
-				flog.Error("get term size: %v", err)
-				return
-			}
-
-			err = client.Resize(width, height)
-			if err != nil {
-				flog.Error("get term size: %v", err)
-				return
-			}
-			// Do this last so the first resize is sent.
-			<-sigs
+	for {
+		width, height, err := terminal.GetSize(termfd)
+		if err != nil {
+			flog.Error("get term size: %v", err)
+			return
 		}
+
+		err = client.Resize(width, height)
+		if err != nil {
+			flog.Error("get term size: %v", err)
+			return
+		}
+		// Do this last so the first resize is sent.
+		<-sigs
+	}
 }
 
 func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
-	if len(fl.Args()) < 2 {
+	if len(fl.Args()) < 1 {
 		exitUsage(fl)
 	}
 	var (
 		envName = fl.Arg(0)
 		command = fl.Arg(1)
-		args    = fl.Args()[2:]
 	)
+
+	var args []string
+	if command != "" {
+		args = fl.Args()[2:]
+	}
+
+	// Bring user into shell if no command is specified.
+	if command == "" {
+		command = "sh"
+		args = []string{"-c", "exec $(getent passwd $(whoami) | awk -F: '{ print $7 }')"}
+	}
 
 	var (
 		entClient = requireAuth()
