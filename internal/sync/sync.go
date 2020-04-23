@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rjeczalik/notify"
 	"go.coder.com/flog"
+	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/internal/entclient"
@@ -156,6 +157,13 @@ func (s Sync) work(ev notify.EventInfo) {
 	}
 }
 
+func setConsoleTitle(title string) {
+	if !terminal.IsTerminal(int(os.Stdout.Fd())) {
+	return
+	}
+	fmt.Printf("\033]0;%s\007", title)
+}
+
 // maxinflightInotify sets the maximum number of inotifies before the sync just restarts.
 // Syncing a large amount of small files (e.g .git or node_modules) is impossible to do performantly
 // with individual rsyncs.
@@ -164,6 +172,7 @@ const maxInflightInotify = 16
 var ErrRestartSync = errors.New("the sync exited because it was overloaded, restart it")
 
 func (s Sync) Run() error {
+	setConsoleTitle("⏳ syncing project")
 	err := s.initSync()
 	if err != nil {
 		return err
@@ -182,12 +191,19 @@ func (s Sync) Run() error {
 	}
 	defer notify.Stop(events)
 
+
+	const watchingFilesystemTitle = "🛰 watching filesystem"
+	setConsoleTitle(watchingFilesystemTitle)
+
 	flog.Info("watching %s for changes", s.LocalDir)
 	for ev := range events {
 		if len(events) > maxInflightInotify {
 			return ErrRestartSync
 		}
+
+		setConsoleTitle("🚀 updating " + filepath.Base(ev.Path()))
 		s.work(ev)
+		setConsoleTitle(watchingFilesystemTitle)
 	}
 
 	return nil
