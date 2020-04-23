@@ -70,7 +70,7 @@ func (w *stdinWriter) Close() error {
 
 func (c *Client) Resize(width, height int) error {
 	err := wsjson.Write(c.ctx, c.conn, &ClientMessage{
-		Type:   Stdin,
+		Type:   Resize,
 		Height: height,
 		Width:  width,
 	})
