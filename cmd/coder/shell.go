@@ -29,10 +29,7 @@ func (cmd *shellCmd) Spec() cli.CommandSpec {
 
 func enableTerminal() {
 	out, err := exec.Command("stty", "-f", "/dev/tty",
-		// Send
-		"cbreak",
-		"-echo",
-		"intr", "undef",
+		"raw",
 	).CombinedOutput()
 	if err != nil {
 		flog.Fatal("configure tty: %v %q", err, out)
