@@ -214,6 +214,9 @@ const (
 	maxAcceptableDispatch = time.Millisecond * 50
 )
 
+// Run starts the sync synchronously.
+// Use this command to debug what wasn't sync'd correctly:
+// rsync -e "coder sh" -nicr ~/Projects/cdr/coder-cli/. ammar:/home/coder/coder-cli/
 func (s Sync) Run() error {
 	setConsoleTitle("⏳ syncing project")
 	err := s.initSync()
