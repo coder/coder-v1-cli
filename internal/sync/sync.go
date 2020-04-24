@@ -24,8 +24,10 @@ import (
 // Sync runs a live sync daemon.
 type Sync struct {
 	// Init sets whether the sync will do the initial init and then return fast.
-	Init      bool
-	LocalDir  string
+	Init bool
+	// LocalDir is an absolute path.
+	LocalDir string
+	// RemoteDir is an absolute path.
 	RemoteDir string
 	entclient.Environment
 	*entclient.Client
@@ -104,6 +106,12 @@ func (s Sync) handleCreate(localPath string) error {
 	target := s.convertPath(localPath)
 	err := s.syncPaths(false, localPath, target)
 	if err != nil {
+		_, statErr := os.Stat(localPath)
+		// File was quickly deleted.
+		if os.IsNotExist(statErr) {
+			return nil
+		}
+
 		return err
 	}
 	return nil
@@ -133,11 +141,10 @@ func (s Sync) handleRename(localPath string) error {
 	return s.handleCreate(localPath)
 }
 
-func (s Sync) work(ev notify.EventInfo) {
+func (s Sync) work(ev timedEvent) {
 	var (
-		localPath  = ev.Path()
-		remotePath = s.convertPath(localPath)
-		err        error
+		localPath = ev.Path()
+		err       error
 	)
 	switch ev.Event() {
 	case notify.Write, notify.Create:
@@ -150,26 +157,62 @@ func (s Sync) work(ev notify.EventInfo) {
 		flog.Info("unhandled event %v %+v", ev.Event(), ev.Path())
 	}
 
+	log := fmt.Sprintf("%v %v (%v)",
+		ev.Event(), filepath.Base(localPath), time.Since(ev.CreatedAt).Truncate(time.Millisecond*10),
+	)
 	if err != nil {
-		flog.Error("%v: %v -> %v: %v", ev.Event(), localPath, remotePath, err)
+		flog.Error(log+": %v", err)
 	} else {
-		flog.Success("%v: %v -> %v", ev.Event(), localPath, remotePath)
+		flog.Success(log)
 	}
 }
 
 func setConsoleTitle(title string) {
 	if !terminal.IsTerminal(int(os.Stdout.Fd())) {
-	return
+		return
 	}
 	fmt.Printf("\033]0;%s\007", title)
 }
 
-// maxinflightInotify sets the maximum number of inotifies before the sync just restarts.
-// Syncing a large amount of small files (e.g .git or node_modules) is impossible to do performantly
-// with individual rsyncs.
-const maxInflightInotify = 16
 
 var ErrRestartSync = errors.New("the sync exited because it was overloaded, restart it")
+
+// workEventGroup converges a group of events to prevent duplicate work.
+func (s Sync) workEventGroup(evs []timedEvent) {
+	cache := map[string]timedEvent{}
+	for _, ev := range evs {
+		log := flog.New()
+		log.Prefix = ev.Path() + ": "
+		lastEvent, ok := cache[ev.Path()]
+		if ok {
+			switch {
+			// If the file was quickly created and then destroyed, pretend nothing ever happened.
+			case lastEvent.Event() == notify.Create && ev.Event() == notify.Remove:
+				delete(cache, ev.Path())
+				log.Info("ignored Create then Remove")
+				continue
+			}
+		}
+		if ok {
+			log.Info("ignored duplicate event (%s replaced by %s)", lastEvent.Event(), ev.Event())
+		}
+		// Only let the latest event for a path have action.
+		cache[ev.Path()] = ev
+	}
+	for _, ev := range cache {
+		setConsoleTitle("🚀 updating " + filepath.Base(ev.Path()))
+		s.work(ev)
+	}
+}
+
+
+const (
+	// maxinflightInotify sets the maximum number of inotifies before the sync just restarts.
+	// Syncing a large amount of small files (e.g .git or node_modules) is impossible to do performantly
+	// with individual rsyncs.
+	maxInflightInotify = 8
+	maxEventDelay = time.Second * 7
+)
 
 func (s Sync) Run() error {
 	setConsoleTitle("⏳ syncing project")
@@ -191,20 +234,47 @@ func (s Sync) Run() error {
 	}
 	defer notify.Stop(events)
 
-
-	const watchingFilesystemTitle = "🛰 watching filesystem"
-	setConsoleTitle(watchingFilesystemTitle)
-
 	flog.Info("watching %s for changes", s.LocalDir)
-	for ev := range events {
-		if len(events) > maxInflightInotify {
-			return ErrRestartSync
+
+	// Timed events lets us track how long each individual file takes to update.
+	timedEvents := make(chan timedEvent, cap(events))
+	go func() {
+		defer close(timedEvents)
+		for event := range events {
+			timedEvents <- timedEvent{
+				CreatedAt: time.Now(),
+				EventInfo: event,
+			}
 		}
+	}()
 
-		setConsoleTitle("🚀 updating " + filepath.Base(ev.Path()))
-		s.work(ev)
+	var (
+		eventGroup         []timedEvent
+		dispatchEventGroup = time.NewTicker(time.Millisecond * 10)
+	)
+	defer dispatchEventGroup.Stop()
+	for {
+		const watchingFilesystemTitle = "🛰 watching filesystem"
 		setConsoleTitle(watchingFilesystemTitle)
-	}
 
-	return nil
+		select {
+		case ev := <-timedEvents:
+			if len(events) > maxInflightInotify {
+				return ErrRestartSync
+			}
+
+			eventGroup = append(eventGroup, ev)
+		case <-dispatchEventGroup.C:
+			if len(eventGroup) == 0 {
+				continue
+			}
+			// We're too backlogged and should restart the sync.
+			if time.Since(eventGroup[0].CreatedAt) > maxEventDelay {
+				return ErrRestartSync
+			}
+
+			s.workEventGroup(eventGroup)
+			eventGroup = eventGroup[:0]
+		}
+	}
 }
