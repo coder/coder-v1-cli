@@ -222,8 +222,17 @@ const (
 // Use this command to debug what wasn't sync'd correctly:
 // rsync -e "coder sh" -nicr ~/Projects/cdr/coder-cli/. ammar:/home/coder/coder-cli/
 func (s Sync) Run() error {
+	events := make(chan notify.EventInfo, maxInflightInotify)
+	// Set up a recursive watch.
+	// We do this before the initial sync so we can capture any changes that may have happened during sync.
+	err := notify.Watch(path.Join(s.LocalDir, "..."), events, notify.All)
+	if err != nil {
+		return xerrors.Errorf("create watch: %w", err)
+	}
+	defer notify.Stop(events)
+
 	setConsoleTitle("⏳ syncing project")
-	err := s.initSync()
+	err = s.initSync()
 	if err != nil {
 		return err
 	}
@@ -232,13 +241,6 @@ func (s Sync) Run() error {
 		return nil
 	}
 
-	events := make(chan notify.EventInfo, maxInflightInotify)
-	// Set up a recursive watch.
-	err = notify.Watch(path.Join(s.LocalDir, "..."), events, notify.All)
-	if err != nil {
-		return xerrors.Errorf("create watch: %w", err)
-	}
-	defer notify.Stop(events)
 
 	flog.Info("watching %s for changes", s.LocalDir)
 
