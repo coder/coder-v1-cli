@@ -38,13 +38,17 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 	self := os.Args[0]
 
 	args := []string{"-zz",
-		"-a", "--progress",
+		"-a",
 		"--delete",
 		"-e", self + " sh", local, s.Environment.Name + ":" + remote,
 	}
 	if delete {
 		args = append([]string{"--delete"}, args...)
 	}
+	if os.Getenv("DEBUG_RSYNC") != "" {
+		args = append([]string{"--progress"}, args...)
+	}
+
 	// See https://unix.stackexchange.com/questions/188737/does-compression-option-z-with-rsync-speed-up-backup
 	// on compression level.
 	// (AB): compression sped up the initial sync of the enterprise repo by 30%, leading me to believe it's
@@ -228,8 +232,7 @@ func (s Sync) Run() error {
 		return nil
 	}
 
-	// This queue is twice as large as the max in flight so we can check when it's full reliably.
-	events := make(chan notify.EventInfo, maxInflightInotify*2)
+	events := make(chan notify.EventInfo, maxInflightInotify)
 	// Set up a recursive watch.
 	err = notify.Watch(path.Join(s.LocalDir, "..."), events, notify.All)
 	if err != nil {
