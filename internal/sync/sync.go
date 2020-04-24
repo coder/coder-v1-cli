@@ -16,6 +16,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rjeczalik/notify"
 	"go.coder.com/flog"
+	"golang.org/x/sync/semaphore"
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/internal/entclient"
@@ -192,13 +193,17 @@ func (s Sync) workEventGroup(evs []timedEvent) {
 		s.work(ev)
 	}
 
+	sem := semaphore.NewWeighted(8)
+
 	var wg sync.WaitGroup
 	for _, ev := range cache.ConcurrentEvents() {
 		setConsoleTitle(fmtUpdateTitle(ev.Path()))
 
 		wg.Add(1)
+		sem.Acquire(context.Background(), 1)
 		ev := ev
 		go func() {
+			defer sem.Release(1)
 			defer wg.Done()
 			s.work(ev)
 		}()
