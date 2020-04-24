@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/pflag"
@@ -57,11 +58,16 @@ func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 
 	env := findEnv(entClient, envName)
 
+	absLocal, err := filepath.Abs(local)
+	if err != nil {
+		flog.Fatal("make abs path out of %v: %v", local, absLocal)
+	}
+
 	s := sync.Sync{
 		Init:        cmd.init,
 		Environment: env,
 		RemoteDir:   remoteDir,
-		LocalDir:    local,
+		LocalDir:    absLocal,
 		Client:      entClient,
 	}
 	for err == nil || err == sync.ErrRestartSync {
