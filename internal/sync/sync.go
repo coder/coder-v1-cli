@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -84,7 +85,7 @@ func (s Sync) initSync() error {
 
 	start := time.Now()
 	// Delete old files on initial sync (e.g git checkout).
-	err := s.syncPaths(true, s.LocalDir + "/.", s.RemoteDir)
+	err := s.syncPaths(true, s.LocalDir+"/.", s.RemoteDir)
 	if err == nil {
 		flog.Info("finished initial sync (%v)", time.Since(start).Truncate(time.Millisecond))
 	}
@@ -167,7 +168,6 @@ func (s Sync) work(ev timedEvent) {
 	}
 }
 
-
 var ErrRestartSync = errors.New("the sync exited because it was overloaded, restart it")
 
 // workEventGroup converges a group of events to prevent duplicate work.
@@ -239,14 +239,21 @@ func (s Sync) Run() error {
 
 	flog.Info("watching %s for changes", s.LocalDir)
 
+	var droppedEvents uint64
 	// Timed events lets us track how long each individual file takes to update.
 	timedEvents := make(chan timedEvent, cap(events))
 	go func() {
 		defer close(timedEvents)
 		for event := range events {
-			timedEvents <- timedEvent{
+			select {
+			case timedEvents <- timedEvent{
 				CreatedAt: time.Now(),
 				EventInfo: event,
+			}:
+			default:
+				if atomic.AddUint64(&droppedEvents, 1) == 1 {
+					flog.Info("dropped event, sync should restart soon")
+				}
 			}
 		}
 	}()
@@ -262,7 +269,7 @@ func (s Sync) Run() error {
 
 		select {
 		case ev := <-timedEvents:
-			if len(events) > maxInflightInotify {
+			if atomic.LoadUint64(&droppedEvents) > 0 {
 				return ErrRestartSync
 			}
 
