@@ -9,12 +9,12 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/rjeczalik/notify"
 	"go.coder.com/flog"
-	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/internal/entclient"
@@ -167,51 +167,51 @@ func (s Sync) work(ev timedEvent) {
 	}
 }
 
-func setConsoleTitle(title string) {
-	if !terminal.IsTerminal(int(os.Stdout.Fd())) {
-		return
-	}
-	fmt.Printf("\033]0;%s\007", title)
-}
-
 
 var ErrRestartSync = errors.New("the sync exited because it was overloaded, restart it")
 
 // workEventGroup converges a group of events to prevent duplicate work.
 func (s Sync) workEventGroup(evs []timedEvent) {
-	cache := map[string]timedEvent{}
+	cache := make(eventCache)
 	for _, ev := range evs {
-		log := flog.New()
-		log.Prefix = ev.Path() + ": "
-		lastEvent, ok := cache[ev.Path()]
-		if ok {
-			switch {
-			// If the file was quickly created and then destroyed, pretend nothing ever happened.
-			case lastEvent.Event() == notify.Create && ev.Event() == notify.Remove:
-				delete(cache, ev.Path())
-				log.Info("ignored Create then Remove")
-				continue
-			}
-		}
-		if ok {
-			log.Info("ignored duplicate event (%s replaced by %s)", lastEvent.Event(), ev.Event())
-		}
-		// Only let the latest event for a path have action.
-		cache[ev.Path()] = ev
+		cache.Add(ev)
 	}
-	for _, ev := range cache {
-		setConsoleTitle("🚀 updating " + filepath.Base(ev.Path()))
+
+	// We want to process events concurrently but safely for speed.
+	// Because the event cache prevents duplicate events for the same file, race conditions of that type
+	// are impossible.
+	// What is possible is a dependency on a previous Rename or Create. For example, if a directory is renamed
+	// and then a file is moved to it. AFAIK this dependecy only exists with Directories.
+	// So, we sequentially process the list of directory Renames and Creates, and then concurrently
+	// perform all Writes.
+	for _, ev := range cache.DirectoryEvents() {
 		s.work(ev)
 	}
-}
 
+	var wg sync.WaitGroup
+	for _, ev := range cache.FileEvents() {
+		setConsoleTitle(fmtUpdateTitle(ev.Path()))
+
+		wg.Add(1)
+		ev := ev
+		go func() {
+			defer wg.Done()
+			s.work(ev)
+		}()
+	}
+
+	wg.Wait()
+}
 
 const (
 	// maxinflightInotify sets the maximum number of inotifies before the sync just restarts.
 	// Syncing a large amount of small files (e.g .git or node_modules) is impossible to do performantly
 	// with individual rsyncs.
 	maxInflightInotify = 8
-	maxEventDelay = time.Second * 7
+	maxEventDelay      = time.Second * 7
+	// maxAcceptableDispatch is the maximum amount of time before an event should begin its journey to the server.
+	// This sets a lower bound for perceivable latency, but the higher it is, the better the optimization.
+	maxAcceptableDispatch = time.Millisecond * 50
 )
 
 func (s Sync) Run() error {
@@ -250,7 +250,7 @@ func (s Sync) Run() error {
 
 	var (
 		eventGroup         []timedEvent
-		dispatchEventGroup = time.NewTicker(time.Millisecond * 10)
+		dispatchEventGroup = time.NewTicker(maxAcceptableDispatch)
 	)
 	defer dispatchEventGroup.Stop()
 	for {
