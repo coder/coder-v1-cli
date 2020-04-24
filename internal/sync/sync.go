@@ -92,7 +92,7 @@ func (s Sync) initSync() error {
 	// Delete old files on initial sync (e.g git checkout).
 	err := s.syncPaths(true, s.LocalDir+"/.", s.RemoteDir)
 	if err == nil {
-		flog.Info("finished initial sync (%v)", time.Since(start).Truncate(time.Millisecond))
+		flog.Success("finished initial sync (%v)", time.Since(start).Truncate(time.Millisecond))
 	}
 	return err
 }
