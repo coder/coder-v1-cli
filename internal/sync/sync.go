@@ -272,7 +272,6 @@ func (s Sync) Run() error {
 			if time.Since(eventGroup[0].CreatedAt) > maxEventDelay {
 				return ErrRestartSync
 			}
-
 			s.workEventGroup(eventGroup)
 			eventGroup = eventGroup[:0]
 		}

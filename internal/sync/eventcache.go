@@ -29,7 +29,7 @@ func (cache eventCache) Add(ev timedEvent) {
 		}
 	}
 	if ok {
-		log.Info("ignored duplicate event (%s replaced by %s)", lastEvent.Event(), ev.Event())
+		log.Info("replaced %s with %s", lastEvent.Event(), ev.Event())
 	}
 	// Only let the latest event for a path have action.
 	cache[ev.Path()] = ev
