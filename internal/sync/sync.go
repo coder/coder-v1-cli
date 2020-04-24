@@ -90,6 +90,8 @@ func (s Sync) initSync() error {
 
 	start := time.Now()
 	// Delete old files on initial sync (e.g git checkout).
+	// Add the "/." to the local directory so rsync doesn't try to place the directory
+	// into the remote dir.
 	err := s.syncPaths(true, s.LocalDir+"/.", s.RemoteDir)
 	if err == nil {
 		flog.Success("finished initial sync (%v)", time.Since(start).Truncate(time.Millisecond))

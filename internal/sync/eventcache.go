@@ -27,8 +27,6 @@ func (cache eventCache) Add(ev timedEvent) {
 			log.Info("ignored Create then Remove")
 			return
 		}
-	}
-	if ok {
 		log.Info("replaced %s with %s", lastEvent.Event(), ev.Event())
 	}
 	// Only let the latest event for a path have action.
