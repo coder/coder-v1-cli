@@ -35,34 +35,33 @@ func (cache eventCache) Add(ev timedEvent) {
 	cache[ev.Path()] = ev
 }
 
-// DirectoryEvents returns the list of events that pertain to directories.
-// The set of returns events is disjoint with FileEvents.
-func (cache eventCache) DirectoryEvents() []timedEvent {
+// SequentialEvents returns the list of events that pertain to directories.
+// The set of returned events is disjoint with ConcurrentEvents.
+func (cache eventCache) SequentialEvents() []timedEvent {
 	var r []timedEvent
 	for _, ev := range cache {
 		info, err := os.Stat(ev.Path())
-		if err != nil {
+		if err == nil && !info.IsDir() {
 			continue
 		}
-		if !info.IsDir() {
-			continue
-		}
+		// Include files that have deleted here.
+		// It's unclear whether they're files or folders.
 		r = append(r, ev)
 
 	}
 	return r
 }
 
-// FileEvents returns the list of events that pertain to files.
-// The set of returns events is disjoint with DirectoryEvents.
-func (cache eventCache) FileEvents() []timedEvent {
+// ConcurrentEvents returns the list of events that are safe to process after SequentialEvents.
+// The set of returns events is disjoint with SequentialEvents.
+func (cache eventCache) ConcurrentEvents() []timedEvent {
 	var r []timedEvent
 	for _, ev := range cache {
 		info, err := os.Stat(ev.Path())
 		if err != nil {
 			continue
 		}
-		if info.IsDir() {
+		if  info.IsDir() {
 			continue
 		}
 		r = append(r, ev)

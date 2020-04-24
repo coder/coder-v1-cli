@@ -188,12 +188,12 @@ func (s Sync) workEventGroup(evs []timedEvent) {
 	// and then a file is moved to it. AFAIK this dependecy only exists with Directories.
 	// So, we sequentially process the list of directory Renames and Creates, and then concurrently
 	// perform all Writes.
-	for _, ev := range cache.DirectoryEvents() {
+	for _, ev := range cache.SequentialEvents() {
 		s.work(ev)
 	}
 
 	var wg sync.WaitGroup
-	for _, ev := range cache.FileEvents() {
+	for _, ev := range cache.ConcurrentEvents() {
 		setConsoleTitle(fmtUpdateTitle(ev.Path()))
 
 		wg.Add(1)
