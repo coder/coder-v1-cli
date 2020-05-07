@@ -18,7 +18,6 @@ $ coder login https://my-coder-enterprise.com
 `coder sync` is useful in cases where you want to use an unsupported IDE with your Coder
 Environment.
 
-
 Ensure that `rsync` is installed locally and in your environment.
 
 ``
@@ -29,6 +28,14 @@ $ coder sync ~/Projects/cdr/enterprise/. my-env:~/enterprise
 
 You can access your environment's terminal with `coder sh <env>`. You can also
 execute a command in your environment with `coder sh <env> [command] [args]`.
+
+## Development URLs
+
+You can retrieve the devurl of an environment.
+
+``
+$ coder url my-env 8080
+``
 
 ## Caveats
 

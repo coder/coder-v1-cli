@@ -30,6 +30,7 @@ func (r *rootCmd) Subcommands() []cli.Command {
 		&logoutCmd{},
 		&shellCmd{},
 		&syncCmd{},
+		&urlCmd{},
 	}
 }
 
