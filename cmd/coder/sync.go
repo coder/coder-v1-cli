@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,6 +29,8 @@ func (cmd *syncCmd) RegisterFlags(fl *pflag.FlagSet) {
 	fl.BoolVarP(&cmd.init, "init", "i", false, "do inititial transfer and exit")
 }
 
+var NoRsync = errors.New("rsync: exit status 2")
+
 func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 	var (
 		local  = fl.Arg(0)
@@ -49,7 +52,7 @@ func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 
 	remoteTokens := strings.SplitN(remote, ":", 2)
 	if len(remoteTokens) != 2 {
-		flog.Fatal("remote misformmated")
+		flog.Fatal("remote misformatted")
 	}
 	var (
 		envName   = remoteTokens[0]
@@ -73,5 +76,10 @@ func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 	for err == nil || err == sync.ErrRestartSync {
 		err = s.Run()
 	}
-	flog.Fatal("sync: %v", err)
+
+	if err == NoRsync {
+		flog.Fatal("no compatible rsync present on remote machine")
+	} else {
+		flog.Fatal("sync: %v", err)
+	}
 }
