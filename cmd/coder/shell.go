@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
-	"go.coder.com/cli"
-	"go.coder.com/flog"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/sys/unix"
 	"golang.org/x/time/rate"
+
+	"go.coder.com/cli"
+	"go.coder.com/flog"
 
 	client "cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/wush"
@@ -30,14 +31,20 @@ func (cmd *shellCmd) Spec() cli.CommandSpec {
 	}
 }
 
-func enableTerminal(fd int) {
-	_, err := terminal.MakeRaw(fd)
+func enableTerminal(fd int) (restore func()) {
+	state, err := terminal.MakeRaw(fd)
 	if err != nil {
 		flog.Fatal("make raw term: %v", err)
 	}
+	return func() {
+		err := terminal.Restore(fd, state)
+		if err != nil {
+			flog.Fatal("restore term state: %v", err)
+		}
+	}
 }
 
-func (cmd *shellCmd) sendResizeEvents(termfd int, client *wush.Client) {
+func sendResizeEvents(termfd int, client *wush.Client) {
 	sigs := make(chan os.Signal, 16)
 	signal.Notify(sigs, unix.SIGWINCH)
 
@@ -83,6 +90,11 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 		args = []string{"-c", "exec $(getent passwd $(whoami) | awk -F: '{ print $7 }')"}
 	}
 
+	exitCode := runCommand(envName, command, args)
+	os.Exit(exitCode)
+}
+
+func runCommand(envName string, command string, args []string) int {
 	var (
 		entClient = requireAuth()
 		env       = findEnv(entClient, envName)
@@ -92,7 +104,8 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 
 	tty := terminal.IsTerminal(termfd)
 	if tty {
-		enableTerminal(termfd)
+		restore := enableTerminal(termfd)
+		defer restore()
 	}
 
 	conn, err := entClient.DialWush(
@@ -108,10 +121,10 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 
 	wc := wush.NewClient(ctx, conn)
 	if tty {
-		go cmd.sendResizeEvents(termfd, wc)
+		go sendResizeEvents(termfd, wc)
 	}
 
-	go func(){
+	go func() {
 		defer wc.Stdin.Close()
 		io.Copy(wc.Stdin, os.Stdin)
 	}()
@@ -122,5 +135,6 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 	if err != nil {
 		flog.Fatal("wush error: %v", err)
 	}
-	os.Exit(int(exitCode))
+
+	return int(exitCode)
 }
