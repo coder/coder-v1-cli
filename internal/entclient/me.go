@@ -1,8 +1,9 @@
 package entclient
 
 type User struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
+	ID       string `json:"id"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
 }
 
 func (c Client) Me() (*User, error) {
