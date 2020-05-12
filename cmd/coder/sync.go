@@ -29,6 +29,7 @@ func (cmd *syncCmd) RegisterFlags(fl *pflag.FlagSet) {
 	fl.BoolVarP(&cmd.init, "init", "i", false, "do inititial transfer and exit")
 }
 
+// See https://lxadm.com/Rsync_exit_codes#List_of_standard_rsync_exit_codes.
 var NoRsync = errors.New("rsync: exit status 2")
 
 func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
