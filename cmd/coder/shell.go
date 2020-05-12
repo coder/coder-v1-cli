@@ -11,6 +11,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/sys/unix"
 	"golang.org/x/time/rate"
+	"golang.org/x/xerrors"
 
 	"go.coder.com/cli"
 	"go.coder.com/flog"
@@ -31,17 +32,17 @@ func (cmd *shellCmd) Spec() cli.CommandSpec {
 	}
 }
 
-func enableTerminal(fd int) (restore func()) {
+func enableTerminal(fd int) (restore func(), err error) {
 	state, err := terminal.MakeRaw(fd)
 	if err != nil {
-		flog.Fatal("make raw term: %v", err)
+		return restore, xerrors.Errorf("make raw term: %w", err)
 	}
 	return func() {
 		err := terminal.Restore(fd, state)
 		if err != nil {
-			flog.Fatal("restore term state: %v", err)
+			flog.Error("restore term state: %v", err)
 		}
-	}
+	}, nil
 }
 
 func sendResizeEvents(termfd int, client *wush.Client) {
@@ -90,11 +91,14 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 		args = []string{"-c", "exec $(getent passwd $(whoami) | awk -F: '{ print $7 }')"}
 	}
 
-	exitCode := runCommand(envName, command, args)
+	exitCode, err := runCommand(envName, command, args)
+	if err != nil {
+		flog.Fatal("run command: %v", err)
+	}
 	os.Exit(exitCode)
 }
 
-func runCommand(envName string, command string, args []string) int {
+func runCommand(envName string, command string, args []string) (int, error) {
 	var (
 		entClient = requireAuth()
 		env       = findEnv(entClient, envName)
@@ -104,7 +108,10 @@ func runCommand(envName string, command string, args []string) int {
 
 	tty := terminal.IsTerminal(termfd)
 	if tty {
-		restore := enableTerminal(termfd)
+		restore, err := enableTerminal(termfd)
+		if err != nil {
+			return -1, err
+		}
 		defer restore()
 	}
 
@@ -115,7 +122,7 @@ func runCommand(envName string, command string, args []string) int {
 			Stdin: true,
 		}, command, args...)
 	if err != nil {
-		flog.Fatal("dial wush: %v", err)
+		return -1, err
 	}
 	ctx := context.Background()
 
@@ -133,8 +140,8 @@ func runCommand(envName string, command string, args []string) int {
 
 	exitCode, err := wc.Wait()
 	if err != nil {
-		flog.Fatal("wush error: %v", err)
+		return -1, err
 	}
 
-	return int(exitCode)
+	return int(exitCode), nil
 }
