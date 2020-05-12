@@ -24,7 +24,8 @@ outer:
 	return uo
 }
 
-func findEnv(client *entclient.Client, name string) entclient.Environment {
+// getEnvs returns all environments for the user.
+func getEnvs(client *entclient.Client) []entclient.Environment {
 	me, err := client.Me()
 	if err != nil {
 		flog.Fatal("get self: %+v", err)
@@ -37,7 +38,7 @@ func findEnv(client *entclient.Client, name string) entclient.Environment {
 
 	orgs = userOrgs(me, orgs)
 
-	var found []string
+	var allEnvs []entclient.Environment
 
 	for _, org := range orgs {
 		envs, err := client.Envs(me, org)
@@ -45,13 +46,26 @@ func findEnv(client *entclient.Client, name string) entclient.Environment {
 			flog.Fatal("get envs for %v: %+v", org.Name, err)
 		}
 		for _, env := range envs {
-			found = append(found, env.Name)
-			if env.Name != name {
-				continue
-			}
+			allEnvs = append(allEnvs, env)
+		}
+	}
+
+	return allEnvs
+}
+
+// findEnv returns a single environment by name (if it exists.)
+func findEnv(client *entclient.Client, name string) entclient.Environment {
+	envs := getEnvs(client)
+
+	var found []string
+
+	for _, env := range envs {
+		found = append(found, env.Name)
+		if env.Name == name {
 			return env
 		}
 	}
+
 	flog.Info("found %q", found)
 	flog.Fatal("environment %q not found", name)
 	panic("unreachable")

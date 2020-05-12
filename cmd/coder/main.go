@@ -26,6 +26,7 @@ func (r *rootCmd) Spec() cli.CommandSpec {
 
 func (r *rootCmd) Subcommands() []cli.Command {
 	return []cli.Command{
+		&envsCmd{},
 		&loginCmd{},
 		&logoutCmd{},
 		&shellCmd{},
