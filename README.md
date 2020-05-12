@@ -29,6 +29,14 @@ $ coder sync ~/Projects/cdr/enterprise/. my-env:~/enterprise
 You can access your environment's terminal with `coder sh <env>`. You can also
 execute a command in your environment with `coder sh <env> [command] [args]`.
 
+## Environments
+
+List all active environments for the user.
+
+``
+$ coder envs
+``
+
 ## Development URLs
 
 You can retrieve the devurl of an environment.
