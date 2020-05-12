@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -56,7 +57,7 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 	// good in general for codebases.
 	cmd := exec.Command("rsync", args...)
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stderr = ioutil.Discard
 	cmd.Stdin = os.Stdin
 	err := cmd.Run()
 	if err != nil {
@@ -247,7 +248,6 @@ func (s Sync) Run() error {
 	if s.Init {
 		return nil
 	}
-
 
 	flog.Info("watching %s for changes", s.LocalDir)
 
