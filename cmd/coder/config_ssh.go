@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -19,6 +20,7 @@ type configSSHCmd struct {
 	remove   bool
 
 	startToken, startMessage, endToken string
+	privateKeyFilepath                 string
 }
 
 func (cmd *configSSHCmd) Spec() cli.CommandSpec {
@@ -31,7 +33,8 @@ func (cmd *configSSHCmd) Spec() cli.CommandSpec {
 
 func (cmd *configSSHCmd) RegisterFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.remove, "remove", false, "remove the auto-generated Coder Enterprise ssh config")
-	defaultPath := filepath.Join(os.Getenv("HOME"), ".ssh", "config")
+	home := os.Getenv("HOME")
+	defaultPath := filepath.Join(home, ".ssh", "config")
 	fl.StringVar(&cmd.filepath, "config-path", defaultPath, "overide the default path of your ssh config file")
 
 	cmd.startToken = "# ------------START-CODER-ENTERPRISE-----------"
@@ -44,9 +47,13 @@ func (cmd *configSSHCmd) RegisterFlags(fl *pflag.FlagSet) {
 #
 # You should not hand-edit this section, unless you are deleting it.`
 	cmd.endToken = "# ------------END-CODER-ENTERPRISE------------"
+	cmd.privateKeyFilepath = filepath.Join(home, ".ssh", "coder_enterprise")
 }
 
 func (cmd *configSSHCmd) Run(fl *pflag.FlagSet) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	currentConfig, err := readStr(cmd.filepath)
 	if err != nil {
 		flog.Fatal("failed to read ssh config file %q: %v", cmd.filepath, err)
@@ -91,30 +98,48 @@ func (cmd *configSSHCmd) Run(fl *pflag.FlagSet) {
 	if err != nil {
 		flog.Fatal("failed to write new configurations to ssh config file %q: %v", cmd.filepath, err)
 	}
+	err = cmd.writeSSHKey(ctx, entClient)
+	if err != nil {
+		flog.Fatal("failed to fetch and write ssh key: %v", err)
+	}
+
 	fmt.Printf("An auto-generated ssh config was written to %q\n", cmd.filepath)
+	fmt.Printf("Your private ssh key was written to %q\n", cmd.privateKeyFilepath)
 	fmt.Println("You should now be able to ssh into your environment")
 	fmt.Printf("For example, try running\n\n\t$ ssh coder:%s\n\n", envs[0].Name)
+}
+
+func (cmd *configSSHCmd) writeSSHKey(ctx context.Context, client *entclient.Client) error {
+	key, err := client.SSHKey()
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(cmd.privateKeyFilepath, []byte(key.PrivateKey), 400)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (cmd *configSSHCmd) makeNewConfigs(userName string, envs []entclient.Environment) string {
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", cmd.startToken, cmd.startMessage)
 	for _, env := range envs {
-		newConfig += makeConfig(userName, env.Name)
+		newConfig += cmd.makeConfig(userName, env.Name)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", cmd.endToken)
 
 	return newConfig
 }
 
-func makeConfig(userName, envName string) string {
+func (cmd *configSSHCmd) makeConfig(userName, envName string) string {
 	return fmt.Sprintf(
 		`Host coder:%s
     HostName %s
     User %s-%s
-    Port 2222
-    KeepAlive=yes
+    StrictHostKeyChecking no
     ConnectTimeout=0
-`, envName, "MOCK-SSHPROXY-IP", userName, envName) // TODO: get real ssh proxy ip address
+    IdentityFile=%s
+`, envName, "MOCK-SSHPROXY-IP", userName, envName, cmd.privateKeyFilepath) // TODO: get real ssh proxy ip address
 }
 
 func writeStr(filename, data string) error {
