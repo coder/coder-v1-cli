@@ -106,7 +106,7 @@ func (cmd *configSSHCmd) Run(fl *pflag.FlagSet) {
 	fmt.Printf("An auto-generated ssh config was written to %q\n", cmd.filepath)
 	fmt.Printf("Your private ssh key was written to %q\n", cmd.privateKeyFilepath)
 	fmt.Println("You should now be able to ssh into your environment")
-	fmt.Printf("For example, try running\n\n\t$ ssh coder:%s\n\n", envs[0].Name)
+	fmt.Printf("For example, try running\n\n\t$ ssh coder.%s\n\n", envs[0].Name)
 }
 
 func (cmd *configSSHCmd) writeSSHKey(ctx context.Context, client *entclient.Client) error {
@@ -133,7 +133,7 @@ func (cmd *configSSHCmd) makeNewConfigs(userName string, envs []entclient.Enviro
 
 func (cmd *configSSHCmd) makeConfig(userName, envName string) string {
 	return fmt.Sprintf(
-		`Host coder:%s
+		`Host coder.%s
     HostName %s
     User %s-%s
     StrictHostKeyChecking no
