@@ -1,2 +1,3 @@
 .idea
 ci/bin
+cmd/coder/coder
