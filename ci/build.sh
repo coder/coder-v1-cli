@@ -14,11 +14,11 @@ mkdir -p bin
 
 build(){
 	tmpdir=$(mktemp -d)
-	go build -ldflags "-X main.version=${tag}" -o "$tmpdir/coder-cli" ../cmd/coder
+	go build -ldflags "-X main.version=${tag}" -o "$tmpdir/coder" ../cmd/coder
 
 	pushd "$tmpdir"
 		tarname="coder-cli-$GOOS-$GOARCH.tar.gz"
-		tar -czf "$tarname" coder-cli
+		tar -czf "$tarname" coder
 	popd
 
 	cp "$tmpdir/$tarname" bin
