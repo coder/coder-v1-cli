@@ -14,7 +14,7 @@ mkdir -p bin
 
 build(){
 	tmpdir=$(mktemp -d)
-	go build -ldflags "-X main.version=${tag}" -o "$tmpdir/coder" ../cmd/coder
+	go build -ldflags "-s -w -X main.version=${tag}" -o "$tmpdir/coder" ../cmd/coder
 
 	pushd "$tmpdir"
 		tarname="coder-cli-$GOOS-$GOARCH.tar.gz"
@@ -25,5 +25,14 @@ build(){
 	rm -rf "$tmpdir"
 }
 
+# Darwin builds do not work from Linux, so only try to build them from Darwin.
+# See: https://github.com/cdr/coder-cli/issues/20
+if [[ "$(uname)" -eq "Darwin" ]]; then
+	GOOS=linux build
+	CGO_ENABLED=1 GOOS=darwin build
+	exit 0
+fi
+
+echo "Warning: Darwin builds don't work on Linux."
+echo "Please use an OSX machine to build Darwin tars."
 GOOS=linux build
-# GOOS=darwin build
