@@ -4,13 +4,16 @@ import (
 	"github.com/spf13/pflag"
 	"go.coder.com/cli"
 	"log"
-	"os"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 )
 
-type rootCmd struct {
-}
+var (
+	version string
+)
+
+type rootCmd struct{}
 
 func (r *rootCmd) Run(fl *pflag.FlagSet) {
 	fl.Usage()
@@ -32,6 +35,7 @@ func (r *rootCmd) Subcommands() []cli.Command {
 		&shellCmd{},
 		&syncCmd{},
 		&urlCmd{},
+		&versionCmd{},
 	}
 }
 
