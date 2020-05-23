@@ -68,7 +68,7 @@ func (cmd loginCmd) Run(fl *pflag.FlagSet) {
 	err = browser.OpenURL(authURL.String())
 	if err != nil {
 		// Tell the user to visit the URL instead.
-		flog.Info("visit %s to login", authURL)
+		flog.Info("visit %s to login", authURL.String())
 	}
 	srv.TokenCond.L.Lock()
 	srv.TokenCond.Wait()
