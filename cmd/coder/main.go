@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/spf13/pflag"
-	"go.coder.com/cli"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+
+	"github.com/spf13/pflag"
+	"go.coder.com/cli"
 )
 
 var (
@@ -36,6 +37,7 @@ func (r *rootCmd) Subcommands() []cli.Command {
 		&syncCmd{},
 		&urlCmd{},
 		&versionCmd{},
+		&configSSHCmd{},
 	}
 }
 
