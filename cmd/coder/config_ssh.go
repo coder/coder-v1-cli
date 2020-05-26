@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/entclient"
@@ -32,7 +34,7 @@ func (cmd *configSSHCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
 		Name:  "config-ssh",
 		Usage: "",
-		Desc:  "adds your Coder Enterprise environments to ~/.ssh/config",
+		Desc:  "add your Coder Enterprise environments to ~/.ssh/config",
 	}
 }
 
@@ -82,6 +84,11 @@ func (cmd *configSSHCmd) Run(fl *pflag.FlagSet) {
 
 	entClient := requireAuth()
 
+	sshAvailable := cmd.ensureSSHAvailable(ctx)
+	if !sshAvailable {
+		flog.Fatal("SSH is disabled or not available for your Coder Enterprise deployment.")
+	}
+
 	me, err := entClient.Me()
 	if err != nil {
 		flog.Fatal("failed to fetch username: %v", err)
@@ -129,18 +136,14 @@ func writeSSHKey(ctx context.Context, client *entclient.Client) error {
 }
 
 func (cmd *configSSHCmd) makeNewConfigs(userName string, envs []entclient.Environment) (string, error) {
-	u, err := config.URL.Read()
+	hostname, err := configuredHostname()
 	if err != nil {
-		return "", err
-	}
-	url, err := url.Parse(u)
-	if err != nil {
-		return "", err
+		return "", nil
 	}
 
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", cmd.startToken, cmd.startMessage)
 	for _, env := range envs {
-		newConfig += cmd.makeConfig(url.Hostname(), userName, env.Name)
+		newConfig += cmd.makeConfig(hostname, userName, env.Name)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", cmd.endToken)
 
@@ -156,6 +159,32 @@ func (cmd *configSSHCmd) makeConfig(host, userName, envName string) string {
     ConnectTimeout=0
     IdentityFile=%s
 `, envName, host, userName, envName, privateKeyFilepath)
+}
+
+func (cmd *configSSHCmd) ensureSSHAvailable(ctx context.Context) bool {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	host, err := configuredHostname()
+	if err != nil {
+		return false
+	}
+
+	var dialer net.Dialer
+	_, err = dialer.DialContext(ctx, "tcp", net.JoinHostPort(host, "22"))
+	return err == nil
+}
+
+func configuredHostname() (string, error) {
+	u, err := config.URL.Read()
+	if err != nil {
+		return "", err
+	}
+	url, err := url.Parse(u)
+	if err != nil {
+		return "", err
+	}
+	return url.Hostname(), nil
 }
 
 func writeStr(filename, data string) error {
