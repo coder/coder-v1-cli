@@ -158,6 +158,8 @@ func (cmd *configSSHCmd) makeConfig(host, userName, envName string) string {
     StrictHostKeyChecking no
     ConnectTimeout=0
     IdentityFile=%s
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
 `, envName, host, userName, envName, privateKeyFilepath)
 }
 
