@@ -3,8 +3,9 @@ package wush
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
+	"encoding/json"
 	"io"
+	"io/ioutil"
 
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
@@ -15,11 +16,11 @@ import (
 // Client converts a Wush connection into OS streams.
 type Client struct {
 	statusPromise promise
-	exitCode uint8
-	err      error
+	exitCode      uint8
+	err           error
 
 	conn *websocket.Conn
-	ctx context.Context
+	ctx  context.Context
 
 	Stdin  io.WriteCloser
 	Stdout io.Reader
@@ -89,16 +90,15 @@ func NewClient(ctx context.Context, conn *websocket.Conn) *Client {
 	eg, ctx := errgroup.WithContext(ctx)
 
 	c := &Client{
-		Stdout: stdoutReader,
-		Stderr: stderrReader,
-		conn: conn,
-		ctx: ctx,
+		Stdout:        stdoutReader,
+		Stderr:        stderrReader,
+		conn:          conn,
+		ctx:           ctx,
 		statusPromise: newPromise(),
 	}
 	c.Stdin = &stdinWriter{
 		Client: c,
 	}
-
 
 	// We expect massive reads from some commands. Because we're streaming it's no big deal.
 	conn.SetReadLimit(1 << 40)
@@ -141,7 +141,17 @@ func NewClient(ctx context.Context, conn *websocket.Conn) *Client {
 				exitCode <- uint8(exitCodeBuf[0])
 				return nil
 			default:
-				return fmt.Errorf("unexpected id %x", streamID[0])
+				// This probably means an error was returned.
+				errResp, err := ioutil.ReadAll(rdr)
+				if err != nil {
+					return xerrors.Errorf("read error msg: %w", err)
+				}
+
+				// Since we read the first byte to check the
+				// stream id, prepend it to the rest of the
+				// data.
+				errResp = append([]byte{streamID[0]}, errResp...)
+				return handleStreamError(errResp)
 			}
 		}
 	})
@@ -159,6 +169,23 @@ func NewClient(ctx context.Context, conn *websocket.Conn) *Client {
 	}()
 
 	return c
+}
+
+func handleStreamError(body []byte) error {
+	res := struct {
+		Error struct {
+			Msg     string `json:"msg"`
+			Verbose string `json:"verbose"`
+		} `json:"error"`
+	}{}
+
+	err := json.Unmarshal(body, &res)
+	if err != nil {
+		// If it's not a JSON error just print response verbatim.
+		return xerrors.Errorf("unknown stream error: %s", string(body))
+	}
+
+	return xerrors.Errorf(res.Error.Msg)
 }
 
 // Wait returns the status code of the command, along
