@@ -93,7 +93,7 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 
 	exitCode, err := runCommand(envName, command, args)
 	if err != nil {
-		flog.Fatal("run command: %v", err)
+		flog.Fatal("run command: %v Is it online?", err)
 	}
 	os.Exit(exitCode)
 }
