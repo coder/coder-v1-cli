@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/spf13/pflag"
+
 	"go.coder.com/cli"
 	"go.coder.com/flog"
 )

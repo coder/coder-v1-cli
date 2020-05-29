@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/spf13/pflag"
+
 	"go.coder.com/cli"
 )
 

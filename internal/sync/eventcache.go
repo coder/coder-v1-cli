@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/rjeczalik/notify"
+
 	"go.coder.com/flog"
 )
 
@@ -59,7 +60,7 @@ func (cache eventCache) ConcurrentEvents() []timedEvent {
 		if err != nil {
 			continue
 		}
-		if  info.IsDir() {
+		if info.IsDir() {
 			continue
 		}
 		r = append(r, ev)

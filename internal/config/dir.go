@@ -25,7 +25,7 @@ func open(path string, flag int, mode os.FileMode) (*os.File, error) {
 	return os.OpenFile(path, flag, mode)
 }
 
-func write(path string,  mode os.FileMode, dat []byte) error {
+func write(path string, mode os.FileMode, dat []byte) error {
 	fi, err := open(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, mode)
 	if err != nil {
 		return err

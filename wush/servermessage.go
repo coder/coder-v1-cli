@@ -18,5 +18,5 @@ const (
 // ServerMessage is sent over websocket type binary.
 type ServerMessage struct {
 	StreamID byte
-	Body io.Reader
+	Body     io.Reader
 }

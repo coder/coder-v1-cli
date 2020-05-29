@@ -5,8 +5,8 @@ import (
 
 	"go.coder.com/flog"
 
-	"cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/internal/config"
+	"cdr.dev/coder-cli/internal/entclient"
 )
 
 func requireAuth() *entclient.Client {

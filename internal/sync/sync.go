@@ -16,9 +16,10 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rjeczalik/notify"
-	"go.coder.com/flog"
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/xerrors"
+
+	"go.coder.com/flog"
 
 	"cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/wush"

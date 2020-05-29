@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/spf13/pflag"
+
 	"go.coder.com/cli"
 	"go.coder.com/flog"
 
@@ -11,13 +12,12 @@ import (
 )
 
 type logoutCmd struct {
-
 }
 
 func (cmd logoutCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
-		Name:    "logout",
-		Desc:    "remote local authentication credentials (if any)",
+		Name: "logout",
+		Desc: "remote local authentication credentials (if any)",
 	}
 }
 
@@ -32,4 +32,3 @@ func (cmd logoutCmd) Run(_ *pflag.FlagSet) {
 	}
 	flog.Success("logged out")
 }
-

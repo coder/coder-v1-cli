@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/browser"
 	"github.com/spf13/pflag"
+
 	"go.coder.com/cli"
 	"go.coder.com/flog"
 

@@ -8,7 +8,7 @@ import (
 
 type Server struct {
 	TokenCond *sync.Cond
-	Token string
+	Token     string
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -27,5 +27,3 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "You may close this window now")
 }
-
-

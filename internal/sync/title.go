@@ -15,7 +15,6 @@ func setConsoleTitle(title string) {
 	fmt.Printf("\033]0;%s\007", title)
 }
 
-
 func fmtUpdateTitle(path string) string {
 	return "🚀 updating " + filepath.Base(path)
 }
