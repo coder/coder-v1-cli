@@ -34,6 +34,34 @@ var defaultWushOptions = WushOptions{
 	Stdin: true,
 }
 
+func (c Client) DialWsep(ctx context.Context, env Environment) (*websocket.Conn, error) {
+	u := c.copyURL()
+	if c.BaseURL.Scheme == "https" {
+		u.Scheme = "wss"
+	} else {
+		u.Scheme = "ws"
+	}
+	u.Path = "/proxy/environments/" + env.ID + "/wsep"
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*15)
+	defer cancel()
+
+	conn, resp, err := websocket.Dial(ctx, u.String(),
+		&websocket.DialOptions{
+			HTTPHeader: map[string][]string{
+				"Cookie": {"session_token=" + c.Token},
+			},
+		},
+	)
+	if err != nil {
+		if resp != nil {
+			return nil, bodyError(resp)
+		}
+		return nil, err
+	}
+	return conn, nil
+}
+
 func (c Client) DialWush(env Environment, opts *WushOptions, cmd string, args ...string) (*websocket.Conn, error) {
 	u := c.copyURL()
 	if c.BaseURL.Scheme == "https" {
