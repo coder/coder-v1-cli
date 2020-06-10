@@ -51,7 +51,7 @@ func sendResizeEvents(ctx context.Context, termfd int, process wsep.Process) {
 	// Limit the frequency of resizes to prevent a stuttering effect.
 	resizeLimiter := rate.NewLimiter(rate.Every(time.Millisecond*100), 1)
 
-	for {
+	for ctx.Err() == nil {
 		if ctx.Err() != nil {
 			return
 		}
