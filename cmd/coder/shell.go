@@ -16,8 +16,7 @@ import (
 	"go.coder.com/cli"
 	"go.coder.com/flog"
 
-	client "cdr.dev/coder-cli/internal/entclient"
-	"cdr.dev/coder-cli/wush"
+	"cdr.dev/wsep"
 )
 
 type shellCmd struct {
@@ -45,29 +44,32 @@ func enableTerminal(fd int) (restore func(), err error) {
 	}, nil
 }
 
-func sendResizeEvents(termfd int, client *wush.Client) {
+func sendResizeEvents(ctx context.Context, termfd int, process wsep.Process) {
 	sigs := make(chan os.Signal, 16)
 	signal.Notify(sigs, unix.SIGWINCH)
 
 	// Limit the frequency of resizes to prevent a stuttering effect.
 	resizeLimiter := rate.NewLimiter(rate.Every(time.Millisecond*100), 1)
 
-	for {
+	for ctx.Err() == nil {
+		if ctx.Err() != nil {
+			return
+		}
 		width, height, err := terminal.GetSize(termfd)
 		if err != nil {
 			flog.Error("get term size: %v", err)
 			return
 		}
 
-		err = client.Resize(width, height)
+		err = process.Resize(ctx, uint16(height), uint16(width))
 		if err != nil {
-			flog.Error("get term size: %v", err)
+			flog.Error("set term size: %v", err)
 			return
 		}
 
 		// Do this last so the first resize is sent.
 		<-sigs
-		resizeLimiter.Wait(context.Background())
+		resizeLimiter.Wait(ctx)
 	}
 }
 
@@ -78,6 +80,7 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 	var (
 		envName = fl.Arg(0)
 		command = fl.Arg(1)
+		ctx     = context.Background()
 	)
 
 	var args []string
@@ -91,14 +94,16 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 		args = []string{"-c", "exec $(getent passwd $(whoami) | awk -F: '{ print $7 }')"}
 	}
 
-	exitCode, err := runCommand(envName, command, args)
+	err := runCommand(ctx, envName, command, args)
+	if exitErr, ok := err.(wsep.ExitError); ok {
+		os.Exit(exitErr.Code)
+	}
 	if err != nil {
 		flog.Fatal("run command: %v Is it online?", err)
 	}
-	os.Exit(exitCode)
 }
 
-func runCommand(envName string, command string, args []string) (int, error) {
+func runCommand(ctx context.Context, envName string, command string, args []string) error {
 	var (
 		entClient = requireAuth()
 		env       = findEnv(entClient, envName)
@@ -110,38 +115,37 @@ func runCommand(envName string, command string, args []string) (int, error) {
 	if tty {
 		restore, err := enableTerminal(termfd)
 		if err != nil {
-			return -1, err
+			return err
 		}
 		defer restore()
 	}
 
-	conn, err := entClient.DialWush(
-		env,
-		&client.WushOptions{
-			TTY:   tty,
-			Stdin: true,
-		}, command, args...)
+	conn, err := entClient.DialWsep(ctx, env)
 	if err != nil {
-		return -1, err
+		return err
 	}
-	ctx := context.Background()
 
-	wc := wush.NewClient(ctx, conn)
+	execer := wsep.RemoteExecer(conn)
+	process, err := execer.Start(ctx, wsep.Command{
+		Command: command,
+		Args:    args,
+		TTY:     tty,
+	})
+	if err != nil {
+		return err
+	}
+
 	if tty {
-		go sendResizeEvents(termfd, wc)
+		go sendResizeEvents(ctx, termfd, process)
 	}
 
 	go func() {
-		defer wc.Stdin.Close()
-		io.Copy(wc.Stdin, os.Stdin)
+		stdin := process.Stdin()
+		defer stdin.Close()
+		io.Copy(stdin, os.Stdin)
 	}()
-	go io.Copy(os.Stdout, wc.Stdout)
-	go io.Copy(os.Stderr, wc.Stderr)
+	go io.Copy(os.Stdout, process.Stdout())
+	go io.Copy(os.Stderr, process.Stderr())
 
-	exitCode, err := wc.Wait()
-	if err != nil {
-		return -1, err
-	}
-
-	return int(exitCode), nil
+	return process.Wait()
 }

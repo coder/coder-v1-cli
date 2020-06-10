@@ -2,8 +2,6 @@ package entclient
 
 import (
 	"context"
-	"net/url"
-	"strconv"
 	"time"
 
 	"nhooyr.io/websocket"
@@ -24,39 +22,19 @@ func (c Client) Envs(user *User, org Org) ([]Environment, error) {
 	return envs, err
 }
 
-type WushOptions struct {
-	TTY   bool
-	Stdin bool
-}
-
-var defaultWushOptions = WushOptions{
-	TTY:   false,
-	Stdin: true,
-}
-
-func (c Client) DialWush(env Environment, opts *WushOptions, cmd string, args ...string) (*websocket.Conn, error) {
+func (c Client) DialWsep(ctx context.Context, env Environment) (*websocket.Conn, error) {
 	u := c.copyURL()
 	if c.BaseURL.Scheme == "https" {
 		u.Scheme = "wss"
 	} else {
 		u.Scheme = "ws"
 	}
-	u.Path = "/proxy/environments/" + env.ID + "/wush-lite"
-	query := make(url.Values)
-	query.Set("command", cmd)
-	query["args[]"] = args
-	if opts == nil {
-		opts = &defaultWushOptions
-	}
-	query.Set("tty", strconv.FormatBool(opts.TTY))
-	query.Set("stdin", strconv.FormatBool(opts.Stdin))
+	u.Path = "/proxy/environments/" + env.ID + "/wsep"
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*15)
 	defer cancel()
 
-	fullURL := u.String() + "?" + query.Encode()
-
-	conn, resp, err := websocket.Dial(ctx, fullURL,
+	conn, resp, err := websocket.Dial(ctx, u.String(),
 		&websocket.DialOptions{
 			HTTPHeader: map[string][]string{
 				"Cookie": {"session_token=" + c.Token},

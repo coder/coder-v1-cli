@@ -22,7 +22,7 @@ import (
 	"go.coder.com/flog"
 
 	"cdr.dev/coder-cli/internal/entclient"
-	"cdr.dev/coder-cli/wush"
+	"cdr.dev/wsep"
 )
 
 // Sync runs a live sync daemon.
@@ -67,21 +67,30 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 	return nil
 }
 
-func (s Sync) remoteRm(remote string) error {
-	conn, err := s.Client.DialWush(s.Environment, nil, "rm", "-rf", remote)
+func (s Sync) remoteRm(ctx context.Context, remote string) error {
+	conn, err := s.Client.DialWsep(ctx, s.Environment)
 	if err != nil {
 		return err
 	}
 	defer conn.Close(websocket.CloseNormalClosure, "")
-	wc := wush.NewClient(context.Background(), conn)
-	go io.Copy(os.Stdout, wc.Stderr)
-	go io.Copy(os.Stderr, wc.Stdout)
-	code, err := wc.Wait()
+
+	execer := wsep.RemoteExecer(conn)
+	process, err := execer.Start(ctx, wsep.Command{
+		Command: "rm",
+		Args:    []string{"-rf", remote},
+	})
 	if err != nil {
-		return xerrors.Errorf("wush failure: %w", err)
+		return err
 	}
-	if code != 0 {
+	go io.Copy(os.Stdout, process.Stderr())
+	go io.Copy(os.Stderr, process.Stdout())
+
+	err = process.Wait()
+	if code, ok := err.(wsep.ExitError); ok {
 		return fmt.Errorf("rm exit status: %v", code)
+	}
+	if err != nil {
+		return xerrors.Errorf("execution failure: %w", err)
 	}
 	return nil
 }
@@ -128,7 +137,10 @@ func (s Sync) handleCreate(localPath string) error {
 }
 
 func (s Sync) handleDelete(localPath string) error {
-	return s.remoteRm(s.convertPath(localPath))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	return s.remoteRm(ctx, s.convertPath(localPath))
 }
 
 func (s Sync) handleRename(localPath string) error {
