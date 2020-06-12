@@ -99,7 +99,7 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 		os.Exit(exitErr.Code)
 	}
 	if err != nil {
-		flog.Fatal("run command: %v Is it online?", err)
+		flog.Fatal("run command: %v. Is %q online?", err, envName)
 	}
 }
 
@@ -119,6 +119,9 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 		}
 		defer restore()
 	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	conn, err := entClient.DialWsep(ctx, env)
 	if err != nil {
@@ -142,10 +145,26 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	go func() {
 		stdin := process.Stdin()
 		defer stdin.Close()
-		io.Copy(stdin, os.Stdin)
+		_, err := io.Copy(stdin, os.Stdin)
+		if err != nil {
+			cancel()
+		}
 	}()
-	go io.Copy(os.Stdout, process.Stdout())
-	go io.Copy(os.Stderr, process.Stderr())
-
-	return process.Wait()
+	go func() {
+		_, err := io.Copy(os.Stdout, process.Stdout())
+		if err != nil {
+			cancel()
+		}
+	}()
+	go func() {
+		_, err := io.Copy(os.Stderr, process.Stderr())
+		if err != nil {
+			cancel()
+		}
+	}()
+	err = process.Wait()
+	if xerrors.Is(err, ctx.Err()) {
+		return xerrors.Errorf("network error")
+	}
+	return err
 }
