@@ -11,8 +11,7 @@ import (
 	"go.coder.com/flog"
 )
 
-type urlCmd struct {
-}
+type urlCmd struct{}
 
 type DevURL struct {
 	Url string `json:"url"`

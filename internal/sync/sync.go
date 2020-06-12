@@ -21,6 +21,7 @@ import (
 
 	"go.coder.com/flog"
 
+	"cdr.dev/coder-cli/internal/activity"
 	"cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/wsep"
 )
@@ -33,8 +34,11 @@ type Sync struct {
 	LocalDir string
 	// RemoteDir is an absolute path.
 	RemoteDir string
-	entclient.Environment
-	*entclient.Client
+	// DisableMetrics disables activity metric pushing.
+	DisableMetrics bool
+
+	Env    entclient.Environment
+	Client *entclient.Client
 }
 
 func (s Sync) syncPaths(delete bool, local, remote string) error {
@@ -43,7 +47,7 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 	args := []string{"-zz",
 		"-a",
 		"--delete",
-		"-e", self + " sh", local, s.Environment.Name + ":" + remote,
+		"-e", self + " sh", local, s.Env.Name + ":" + remote,
 	}
 	if delete {
 		args = append([]string{"--delete"}, args...)
@@ -68,7 +72,7 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 }
 
 func (s Sync) remoteRm(ctx context.Context, remote string) error {
-	conn, err := s.Client.DialWsep(ctx, s.Environment)
+	conn, err := s.Client.DialWsep(ctx, s.Env)
 	if err != nil {
 		return err
 	}
@@ -229,13 +233,16 @@ func (s Sync) workEventGroup(evs []timedEvent) {
 }
 
 const (
-	// maxinflightInotify sets the maximum number of inotifies before the sync just restarts.
-	// Syncing a large amount of small files (e.g .git or node_modules) is impossible to do performantly
-	// with individual rsyncs.
+	// maxinflightInotify sets the maximum number of inotifies before the
+	// sync just restarts. Syncing a large amount of small files (e.g .git
+	// or node_modules) is impossible to do performantly with individual
+	// rsyncs.
 	maxInflightInotify = 8
 	maxEventDelay      = time.Second * 7
-	// maxAcceptableDispatch is the maximum amount of time before an event should begin its journey to the server.
-	// This sets a lower bound for perceivable latency, but the higher it is, the better the optimization.
+	// maxAcceptableDispatch is the maximum amount of time before an event
+	// should begin its journey to the server. This sets a lower bound for
+	// perceivable latency, but the higher it is, the better the
+	// optimization.
 	maxAcceptableDispatch = time.Millisecond * 50
 )
 
@@ -245,12 +252,16 @@ const (
 func (s Sync) Run() error {
 	events := make(chan notify.EventInfo, maxInflightInotify)
 	// Set up a recursive watch.
-	// We do this before the initial sync so we can capture any changes that may have happened during sync.
+	// We do this before the initial sync so we can capture any changes
+	// that may have happened during sync.
 	err := notify.Watch(path.Join(s.LocalDir, "..."), events, notify.All)
 	if err != nil {
 		return xerrors.Errorf("create watch: %w", err)
 	}
 	defer notify.Stop(events)
+
+	ap := activity.NewPusher(s.Client, s.Env.ID, activityName)
+	ap.Push()
 
 	setConsoleTitle("⏳ syncing project")
 	err = s.initSync()
@@ -265,7 +276,8 @@ func (s Sync) Run() error {
 	flog.Info("watching %s for changes", s.LocalDir)
 
 	var droppedEvents uint64
-	// Timed events lets us track how long each individual file takes to update.
+	// Timed events lets us track how long each individual file takes to
+	// update.
 	timedEvents := make(chan timedEvent, cap(events))
 	go func() {
 		defer close(timedEvents)
@@ -309,6 +321,9 @@ func (s Sync) Run() error {
 			}
 			s.workEventGroup(eventGroup)
 			eventGroup = eventGroup[:0]
+			ap.Push()
 		}
 	}
 }
+
+const activityName = "sync"

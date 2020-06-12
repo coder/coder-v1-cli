@@ -69,11 +69,11 @@ func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 	}
 
 	s := sync.Sync{
-		Init:        cmd.init,
-		Environment: env,
-		RemoteDir:   remoteDir,
-		LocalDir:    absLocal,
-		Client:      entClient,
+		Init:      cmd.init,
+		Env:       env,
+		RemoteDir: remoteDir,
+		LocalDir:  absLocal,
+		Client:    entClient,
 	}
 	for err == nil || err == sync.ErrRestartSync {
 		err = s.Run()
