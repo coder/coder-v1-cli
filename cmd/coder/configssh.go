@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"cdr.dev/coder-cli/internal/config"
-	"cdr.dev/coder-cli/internal/entclient"
 	"github.com/spf13/pflag"
-
 	"go.coder.com/cli"
 	"go.coder.com/flog"
+
+	"cdr.dev/coder-cli/internal/config"
+	"cdr.dev/coder-cli/internal/entclient"
 )
 
 var (
@@ -61,7 +61,10 @@ func (cmd *configSSHCmd) Run(fl *pflag.FlagSet) {
 	defer cancel()
 
 	currentConfig, err := readStr(cmd.filepath)
-	if err != nil {
+	if os.IsNotExist(err) {
+		// SSH configs are not always already there.
+		currentConfig = ""
+	} else if err != nil {
 		flog.Fatal("failed to read ssh config file %q: %v", cmd.filepath, err)
 	}
 
