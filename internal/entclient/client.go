@@ -15,6 +15,13 @@ func (c Client) copyURL() *url.URL {
 	return &(*c.BaseURL)
 }
 
+func (c *Client) wsScheme() string {
+	if c.BaseURL.Scheme == "https" {
+		return "wss"
+	}
+	return "ws"
+}
+
 func (c *Client) http() (*http.Client, error) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
