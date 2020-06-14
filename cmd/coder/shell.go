@@ -20,15 +20,19 @@ import (
 )
 
 type shellCmd struct {
+	container string
 }
 
 func (cmd *shellCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
-		Name:    "sh",
-		Usage:   "<env name> [<command [args...]>]",
-		Desc:    "executes a remote command on the environment\nIf no command is specified, the default shell is opened.",
-		RawArgs: true,
+		Name:  "sh",
+		Usage: "<env name> [flags] -- [<command [args...]>]",
+		Desc:  "executes a remote command on the environment\nIf no command is specified, the default shell is opened.",
 	}
+}
+
+func (cmd *shellCmd) RegisterFlags(fl *pflag.FlagSet) {
+	fl.StringVar(&cmd.container, "container", "", "The container to execute against. Defaults to main container. Useful for execing into services.")
 }
 
 func enableTerminal(fd int) (restore func(), err error) {
@@ -94,7 +98,7 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 		args = []string{"-c", "exec $(getent passwd $(whoami) | awk -F: '{ print $7 }')"}
 	}
 
-	err := runCommand(ctx, envName, command, args)
+	err := runCommand(ctx, envName, cmd.container, command, args)
 	if exitErr, ok := err.(wsep.ExitError); ok {
 		os.Exit(exitErr.Code)
 	}
@@ -103,7 +107,7 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 	}
 }
 
-func runCommand(ctx context.Context, envName string, command string, args []string) error {
+func runCommand(ctx context.Context, envName, container, command string, args []string) error {
 	var (
 		entClient = requireAuth()
 		env       = findEnv(entClient, envName)
@@ -123,7 +127,7 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	conn, err := entClient.DialWsep(ctx, env)
+	conn, err := entClient.DialWsep(ctx, env, container)
 	if err != nil {
 		return err
 	}
