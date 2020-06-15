@@ -63,7 +63,6 @@ func sendResizeEvents(ctx context.Context, termfd int, process wsep.Process) {
 
 		err = process.Resize(ctx, uint16(height), uint16(width))
 		if err != nil {
-			flog.Error("set term size: %v", err)
 			return
 		}
 
@@ -99,7 +98,7 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 		os.Exit(exitErr.Code)
 	}
 	if err != nil {
-		flog.Fatal("run command: %v. Is %q online?", err, envName)
+		flog.Fatal("run command: %v", err)
 	}
 }
 
@@ -133,6 +132,7 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 		Command: command,
 		Args:    args,
 		TTY:     tty,
+		Stdin:   true,
 	})
 	if err != nil {
 		return err
@@ -163,8 +163,8 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 		}
 	}()
 	err = process.Wait()
-	if xerrors.Is(err, ctx.Err()) {
-		return xerrors.Errorf("network error")
+	if err != nil && xerrors.Is(err, ctx.Err()) {
+		return xerrors.Errorf("network error, is %q online?", envName)
 	}
 	return err
 }

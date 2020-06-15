@@ -4,6 +4,14 @@ cdr.dev/wsep v0.0.0-20200602025116-5cbe721683df h1:9KgAywWKNQMYi3gvu4HyExiuXJhoN
 cdr.dev/wsep v0.0.0-20200602025116-5cbe721683df/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
 cdr.dev/wsep v0.0.0-20200612224539-e66f8bb64883 h1:nr/trZU6911y9PohrsVaujzJPrtN7bUSX7yfvenYbc0=
 cdr.dev/wsep v0.0.0-20200612224539-e66f8bb64883/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
+cdr.dev/wsep v0.0.0-20200613153816-ed81c4ad638b h1:cd2Fx+EBMWxWFMdODG/OWRhF9X8OWQ5DnsCEeCfd0Y4=
+cdr.dev/wsep v0.0.0-20200613153816-ed81c4ad638b/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
+cdr.dev/wsep v0.0.0-20200613225213-3384735ae5e5 h1:x6UJpHOO7mz//OrAdysmQIW+jdXAQ+n35eol5s+O6WU=
+cdr.dev/wsep v0.0.0-20200613225213-3384735ae5e5/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
+cdr.dev/wsep v0.0.0-20200613231142-71da214c188e h1:ZOQoyb0N07vc9MMet/IQFCpKSObcZZt9o+nPFz7/zNM=
+cdr.dev/wsep v0.0.0-20200613231142-71da214c188e/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
+cdr.dev/wsep v0.0.0-20200615020153-e2b1c576fc40 h1:f369880iSAZ3cXwvbdc9WIyy3FZ4yanusYZjaVHeis4=
+cdr.dev/wsep v0.0.0-20200615020153-e2b1c576fc40/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.38.0/go.mod h1:990N+gfupTy94rShfmMCWGDn0LpTmnzTp2qbd1dvSRU=
