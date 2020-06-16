@@ -1,15 +1,5 @@
 cdr.dev/slog v1.3.0 h1:MYN1BChIaVEGxdS7I5cpdyMC0+WfJfK8BETAfzfLUGQ=
 cdr.dev/slog v1.3.0/go.mod h1:C5OL99WyuOK8YHZdYY57dAPN1jK2WJlCdq2VP6xeQns=
-cdr.dev/wsep v0.0.0-20200602025116-5cbe721683df h1:9KgAywWKNQMYi3gvu4HyExiuXJhoNbnrPcb5RIzYSdQ=
-cdr.dev/wsep v0.0.0-20200602025116-5cbe721683df/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
-cdr.dev/wsep v0.0.0-20200612224539-e66f8bb64883 h1:nr/trZU6911y9PohrsVaujzJPrtN7bUSX7yfvenYbc0=
-cdr.dev/wsep v0.0.0-20200612224539-e66f8bb64883/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
-cdr.dev/wsep v0.0.0-20200613153816-ed81c4ad638b h1:cd2Fx+EBMWxWFMdODG/OWRhF9X8OWQ5DnsCEeCfd0Y4=
-cdr.dev/wsep v0.0.0-20200613153816-ed81c4ad638b/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
-cdr.dev/wsep v0.0.0-20200613225213-3384735ae5e5 h1:x6UJpHOO7mz//OrAdysmQIW+jdXAQ+n35eol5s+O6WU=
-cdr.dev/wsep v0.0.0-20200613225213-3384735ae5e5/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
-cdr.dev/wsep v0.0.0-20200613231142-71da214c188e h1:ZOQoyb0N07vc9MMet/IQFCpKSObcZZt9o+nPFz7/zNM=
-cdr.dev/wsep v0.0.0-20200613231142-71da214c188e/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
 cdr.dev/wsep v0.0.0-20200615020153-e2b1c576fc40 h1:f369880iSAZ3cXwvbdc9WIyy3FZ4yanusYZjaVHeis4=
 cdr.dev/wsep v0.0.0-20200615020153-e2b1c576fc40/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
@@ -126,8 +116,6 @@ github.com/kirsle/configdir v0.0.0-20170128060238-e45d2f54772f/go.mod h1:4rEELDS
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.10.3 h1:OP96hzwJVBIHYU52pVTI6CczrxPvrGfgqF9N5eTO0Q8=
 github.com/klauspost/compress v1.10.3/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
-github.com/klauspost/compress v1.10.7 h1:7rix8v8GpI3ZBb0nSozFRgbtXKv+hOe+qfEpZqybrAg=
-github.com/klauspost/compress v1.10.7/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
 github.com/klauspost/compress v1.10.8 h1:eLeJ3dr/Y9+XRfJT4l+8ZjmtB5RPJhucH2HeCV5+IZY=
 github.com/klauspost/compress v1.10.8/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
@@ -250,8 +238,6 @@ golang.org/x/sys v0.0.0-20191026070338-33540a1f6037/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20191210023423-ac6580df4449/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200116001909-b77594299b42/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-golang.org/x/sys v0.0.0-20200523222454-059865788121 h1:rITEj+UZHYC927n8GT97eC3zrpzXdb/voyeOuVKS46o=
-golang.org/x/sys v0.0.0-20200523222454-059865788121/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200610111108-226ff32320da h1:bGb80FudwxpeucJUjPYJXuJ8Hk91vNtfvrymzwiei38=
 golang.org/x/sys v0.0.0-20200610111108-226ff32320da/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
