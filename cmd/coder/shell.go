@@ -16,6 +16,7 @@ import (
 	"go.coder.com/cli"
 	"go.coder.com/flog"
 
+	"cdr.dev/coder-cli/internal/activity"
 	"cdr.dev/wsep"
 )
 
@@ -145,7 +146,10 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	go func() {
 		stdin := process.Stdin()
 		defer stdin.Close()
-		_, err := io.Copy(stdin, os.Stdin)
+
+		ap := activity.NewPusher(entClient, env.ID, sshActivityName)
+		wr := ap.Writer(stdin)
+		_, err := io.Copy(wr, os.Stdin)
 		if err != nil {
 			cancel()
 		}
@@ -168,3 +172,5 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	}
 	return err
 }
+
+const sshActivityName = "ssh"
