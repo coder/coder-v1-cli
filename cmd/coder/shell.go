@@ -20,8 +20,7 @@ import (
 	"cdr.dev/wsep"
 )
 
-type shellCmd struct {
-}
+type shellCmd struct{}
 
 func (cmd *shellCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{

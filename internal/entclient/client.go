@@ -12,7 +12,8 @@ type Client struct {
 }
 
 func (c Client) copyURL() *url.URL {
-	return &(*c.BaseURL)
+	swp := *c.BaseURL
+	return &swp
 }
 
 func (c *Client) http() (*http.Client, error) {
