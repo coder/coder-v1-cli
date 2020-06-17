@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sys/unix"
 	"golang.org/x/time/rate"
 	"golang.org/x/xerrors"
+	"nhooyr.io/websocket"
 
 	"go.coder.com/cli"
 	"go.coder.com/flog"
@@ -126,6 +127,7 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	if err != nil {
 		return err
 	}
+	go heatbeat(ctx, conn, 15*time.Second)
 
 	execer := wsep.RemoteExecer(conn)
 	process, err := execer.Start(ctx, wsep.Command{
@@ -170,6 +172,23 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 		return xerrors.Errorf("network error, is %q online?", envName)
 	}
 	return err
+}
+
+func heatbeat(ctx context.Context, c *websocket.Conn, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			err := c.Ping(ctx)
+			if err != nil {
+				flog.Error("failed to ping websocket: %v", err)
+			}
+		}
+	}
 }
 
 const sshActivityName = "ssh"
