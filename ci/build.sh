@@ -27,7 +27,7 @@ build(){
 
 # Darwin builds do not work from Linux, so only try to build them from Darwin.
 # See: https://github.com/cdr/coder-cli/issues/20
-if [[ "$(uname)" -eq "Darwin" ]]; then
+if [[ "$(uname)" == "Darwin" ]]; then
 	GOOS=linux build
 	CGO_ENABLED=1 GOOS=darwin build
 	exit 0
