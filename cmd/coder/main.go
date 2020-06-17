@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	version string
+	version string = "No version built"
 )
 
 type rootCmd struct{}
