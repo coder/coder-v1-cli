@@ -71,7 +71,7 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 	return nil
 }
 
-func (s Sync) remoteRm(ctx context.Context, remote string) error {
+func (s Sync) remoteCmd(ctx context.Context, prog string, args ...string) error {
 	conn, err := s.Client.DialWsep(ctx, s.Env)
 	if err != nil {
 		return err
@@ -80,8 +80,8 @@ func (s Sync) remoteRm(ctx context.Context, remote string) error {
 
 	execer := wsep.RemoteExecer(conn)
 	process, err := execer.Start(ctx, wsep.Command{
-		Command: "rm",
-		Args:    []string{"-rf", remote},
+		Command: prog,
+		Args:    args,
 	})
 	if err != nil {
 		return err
@@ -91,7 +91,7 @@ func (s Sync) remoteRm(ctx context.Context, remote string) error {
 
 	err = process.Wait()
 	if code, ok := err.(wsep.ExitError); ok {
-		return fmt.Errorf("rm exit status: %v", code)
+		return fmt.Errorf("%s exit status: %v", prog, code)
 	}
 	if err != nil {
 		return xerrors.Errorf("execution failure: %w", err)
@@ -144,7 +144,7 @@ func (s Sync) handleDelete(localPath string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	return s.remoteRm(ctx, s.convertPath(localPath))
+	return s.remoteCmd(ctx, "rm", "-rf", s.convertPath(localPath))
 }
 
 func (s Sync) handleRename(localPath string) error {
@@ -259,6 +259,11 @@ func (s Sync) Run() error {
 		return xerrors.Errorf("create watch: %w", err)
 	}
 	defer notify.Stop(events)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	s.remoteCmd(ctx, "mkdir", "-p", s.RemoteDir)
 
 	ap := activity.NewPusher(s.Client, s.Env.ID, activityName)
 	ap.Push()
