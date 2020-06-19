@@ -4,6 +4,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/pkg/browser"
@@ -22,13 +23,13 @@ type loginCmd struct {
 func (cmd loginCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
 		Name:  "login",
-		Usage: "[Coder Enterprise URL]",
+		Usage: "[Coder Enterprise URL eg. http://my.coder.domain/ ]",
 		Desc:  "authenticate this client for future operations",
 	}
 }
 func (cmd loginCmd) Run(fl *pflag.FlagSet) {
 	rawURL := fl.Arg(0)
-	if rawURL == "" {
+	if rawURL == "" || !strings.HasPrefix(rawURL, "http") {
 		exitUsage(fl)
 	}
 
