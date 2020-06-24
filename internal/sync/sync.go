@@ -41,6 +41,12 @@ type Sync struct {
 	Client *entclient.Client
 }
 
+// See https://lxadm.com/Rsync_exit_codes#List_of_standard_rsync_exit_codes.
+const (
+	rsyncExitCodeIncompat   = 2
+	rsyncExitCodeDataStream = 12
+)
+
 func (s Sync) syncPaths(delete bool, local, remote string) error {
 	self := os.Args[0]
 
@@ -66,6 +72,15 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 	cmd.Stdin = os.Stdin
 	err := cmd.Run()
 	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if exitError.ExitCode() == rsyncExitCodeIncompat {
+				return xerrors.Errorf("no compatible rsync on remote machine: rsync: %w", err)
+			} else if exitError.ExitCode() == rsyncExitCodeDataStream {
+				return xerrors.Errorf("protocol datastream error or no remote rsync found: %w", err)
+			} else {
+				return xerrors.Errorf("rsync: %w", err)
+			}
+		}
 		return xerrors.Errorf("rsync: %w", err)
 	}
 	return nil
