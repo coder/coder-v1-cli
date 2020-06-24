@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"text/tabwriter"
 
 	"github.com/spf13/pflag"
 
@@ -14,7 +16,9 @@ import (
 type urlCmd struct{}
 
 type DevURL struct {
-	Url string `json:"url"`
+	URL    string `json:"url"`
+	Port   string `json:"port"`
+	Access string `json:"access"`
 }
 
 func (cmd urlCmd) Spec() cli.CommandSpec {
@@ -26,11 +30,9 @@ func (cmd urlCmd) Spec() cli.CommandSpec {
 }
 
 func (cmd urlCmd) Run(fl *pflag.FlagSet) {
-	var (
-		envName = fl.Arg(0)
-		port    = fl.Arg(1)
-	)
-	if envName == "" || port == "" {
+	var envName = fl.Arg(0)
+
+	if envName == "" {
 		exitUsage(fl)
 	}
 
@@ -38,8 +40,8 @@ func (cmd urlCmd) Run(fl *pflag.FlagSet) {
 
 	env := findEnv(entClient, envName)
 
-	reqString := "%s/api/environments/%s/devurl?port=%s&session_token=%s"
-	reqUrl := fmt.Sprintf(reqString, entClient.BaseURL, env.ID, port, entClient.Token)
+	reqString := "%s/api/environments/%s/devurls?session_token=%s"
+	reqUrl := fmt.Sprintf(reqString, entClient.BaseURL, env.ID, entClient.Token)
 
 	resp, err := http.Get(reqUrl)
 	if err != nil {
@@ -47,13 +49,25 @@ func (cmd urlCmd) Run(fl *pflag.FlagSet) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 200 {
+		flog.Fatal("non-success status code: %d", resp.StatusCode)
+	}
+
 	dec := json.NewDecoder(resp.Body)
 
-	var devUrl DevURL
-	err = dec.Decode(&devUrl)
+	var devURLs = make([]DevURL, 0)
+	err = dec.Decode(&devURLs)
 	if err != nil {
 		flog.Fatal("%v", err)
 	}
 
-	fmt.Println(devUrl.Url)
+	if len(devURLs) == 0 {
+		fmt.Printf("no dev urls were found for environment: %s\n", envName)
+	}
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.TabIndent)
+	for _, devURL := range devURLs {
+		fmt.Fprintf(w, "%s\t%s\t%s\n", devURL.URL, devURL.Port, devURL.Access)
+	}
+	w.Flush()
 }
