@@ -13,7 +13,7 @@ import (
 	"go.coder.com/flog"
 )
 
-type urlCmd struct{}
+type urlsCmd struct{}
 
 type DevURL struct {
 	URL    string `json:"url"`
@@ -21,15 +21,15 @@ type DevURL struct {
 	Access string `json:"access"`
 }
 
-func (cmd urlCmd) Spec() cli.CommandSpec {
+func (cmd urlsCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
-		Name:  "url",
-		Usage: "<env name> <port>",
-		Desc:  "get a development url for external access",
+		Name:  "urls",
+		Usage: "<env name>",
+		Desc:  "get all development urls for external access",
 	}
 }
 
-func (cmd urlCmd) Run(fl *pflag.FlagSet) {
+func (cmd urlsCmd) Run(fl *pflag.FlagSet) {
 	var envName = fl.Arg(0)
 
 	if envName == "" {
