@@ -6,9 +6,15 @@ To view usage documentation, head over to [https://enterprise.coder.com](https:/
 
 To report bugs and request features, please [open an issue](https://github.com/cdr/coder-cli/issues/new).
 
-## Install Release
+## Installation
 
-Download the latest [release](https://github.com/cdr/coder-cli/releases):
+To install the latest version with `go` you can use:
+
+```bash
+GO111MODULE=on go get cdr.dev/coder-cli/cmd/coder@latest
+```
+
+Or from [GitHub Releases](https://github.com/cdr/coder-cli/releases):
 
 1. Click a release and download the tar file for your operating system (ex: coder-cli-linux-amd64.tar.gz)
 2. Extract the `coder` binary from the tar file, ex:
