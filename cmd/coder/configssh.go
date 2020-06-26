@@ -131,7 +131,7 @@ func writeSSHKey(ctx context.Context, client *entclient.Client) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(privateKeyFilepath, []byte(key.PrivateKey), 400)
+	err = ioutil.WriteFile(privateKeyFilepath, []byte(key.PrivateKey), 0400)
 	if err != nil {
 		return err
 	}
