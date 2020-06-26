@@ -135,6 +135,7 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 		Args:    args,
 		TTY:     tty,
 		Stdin:   true,
+		Env:     []string{"TERM=" + os.Getenv("TERM")},
 	})
 	if err != nil {
 		return err
