@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,9 +28,6 @@ func (cmd *syncCmd) Spec() cli.CommandSpec {
 func (cmd *syncCmd) RegisterFlags(fl *pflag.FlagSet) {
 	fl.BoolVarP(&cmd.init, "init", "i", false, "do initial transfer and exit")
 }
-
-// See https://lxadm.com/Rsync_exit_codes#List_of_standard_rsync_exit_codes.
-var NoRsync = errors.New("rsync: exit status 2")
 
 func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 	var (
@@ -79,9 +75,7 @@ func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 		err = s.Run()
 	}
 
-	if err == NoRsync {
-		flog.Fatal("no compatible rsync present on remote machine")
-	} else {
-		flog.Fatal("sync: %v", err)
+	if err != nil {
+		flog.Fatal("%v", err)
 	}
 }
