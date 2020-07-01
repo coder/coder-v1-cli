@@ -1,7 +1,12 @@
 package main
 
 import (
+	"bufio"
+	"errors"
+	"fmt"
+	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -27,6 +32,32 @@ func (cmd *syncCmd) Spec() cli.CommandSpec {
 
 func (cmd *syncCmd) RegisterFlags(fl *pflag.FlagSet) {
 	fl.BoolVarP(&cmd.init, "init", "i", false, "do initial transfer and exit")
+}
+
+// See https://lxadm.com/Rsync_exit_codes#List_of_standard_rsync_exit_codes.
+var IncompatRsync = errors.New("rsync: exit status 2")
+var StreamErrRsync = errors.New("rsync: exit status 12")
+
+// Returns local rsync protocol version as a string.
+func (s *syncCmd) version() string {
+	cmd := exec.Command("rsync", "--version")
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		log.Fatal(err)
+	}
+
+	r := bufio.NewReader(stdout)
+	if err := cmd.Wait(); err != nil {
+		log.Fatal(err)
+	}
+
+	versionString := strings.Split(r.ReadLine(), "protocol version ")
+
+	return versionString[1]
 }
 
 func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
@@ -71,6 +102,16 @@ func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 		LocalDir:  absLocal,
 		Client:    entClient,
 	}
+
+	localVersion := s.version()
+	remoteVersion, rsyncErr := sync.Version()
+
+	if rsyncErr != nil {
+		flog.Info("Unable to determine remote rsync version.  Proceeding cautiously.")
+	} else if localVersion != remoteVersion {
+		flog.Fatal(fmt.Sprintf("rsync protocol mismatch. local is %s; remote is %s.", localVersion, remoteVersion))
+	}
+
 	for err == nil || err == sync.ErrRestartSync {
 		err = s.Run()
 	}
