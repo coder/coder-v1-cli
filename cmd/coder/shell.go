@@ -127,7 +127,7 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	if err != nil {
 		return err
 	}
-	go heatbeat(ctx, conn, 15*time.Second)
+	go heartbeat(ctx, conn, 15*time.Second)
 
 	execer := wsep.RemoteExecer(conn)
 	process, err := execer.Start(ctx, wsep.Command{
@@ -175,7 +175,7 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	return err
 }
 
-func heatbeat(ctx context.Context, c *websocket.Conn, interval time.Duration) {
+func heartbeat(ctx context.Context, c *websocket.Conn, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
