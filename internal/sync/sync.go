@@ -266,14 +266,14 @@ const (
 // Returns remote protocol version as a string.
 // Or, an error if one exists.
 func (s Sync) Version() (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
 	conn, err := s.Client.DialWsep(ctx, s.Env)
 	if err != nil {
 		return "", err
 	}
 	defer conn.Close(websocket.CloseNormalClosure, "")
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
 
 	execer := wsep.RemoteExecer(conn)
 	process, err := execer.Start(ctx, wsep.Command{
