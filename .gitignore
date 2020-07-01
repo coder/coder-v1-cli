@@ -1,3 +1,4 @@
-.idea
+/.idea/
+/.repo/
 ci/bin
 cmd/coder/coder
