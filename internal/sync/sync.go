@@ -1,7 +1,7 @@
 package sync
 
 import (
-	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -283,7 +283,8 @@ func (s Sync) Version() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	r := bufio.NewReader(process.Stdout())
+	buf := &bytes.Buffer{}
+	go io.Copy(buf, process.Stdout())
 
 	err = process.Wait()
 	if code, ok := err.(wsep.ExitError); ok {
@@ -293,7 +294,7 @@ func (s Sync) Version() (string, error) {
 		return "", fmt.Errorf("Server version mismatch")
 	}
 
-	firstLine, err := r.ReadString('\n')
+	firstLine, err := buf.ReadString('\n')
 	if err != nil {
 		return "", err
 	}

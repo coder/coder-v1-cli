@@ -1,8 +1,7 @@
 package main
 
 import (
-	"bufio"
-	"errors"
+	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -34,32 +33,18 @@ func (cmd *syncCmd) RegisterFlags(fl *pflag.FlagSet) {
 	fl.BoolVarP(&cmd.init, "init", "i", false, "do initial transfer and exit")
 }
 
-// See https://lxadm.com/Rsync_exit_codes#List_of_standard_rsync_exit_codes.
-var IncompatRsync = errors.New("rsync: exit status 2")
-var StreamErrRsync = errors.New("rsync: exit status 12")
-
 // Returns local rsync protocol version as a string.
-func (s *syncCmd) version() string {
+func (_ *syncCmd) version() string {
 	cmd := exec.Command("rsync", "--version")
-	stdout, err := cmd.StdoutPipe()
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := cmd.Start(); err != nil {
-		log.Fatal(err)
-	}
-
-	r := bufio.NewReader(stdout)
-	if err := cmd.Wait(); err != nil {
-		log.Fatal(err)
-	}
-
-	firstLine, err := r.ReadString('\n')
+	firstLine, err := bytes.NewBuffer(out).ReadString('\n')
 	if err != nil {
-		return ""
+		log.Fatal(err)
 	}
-
 	versionString := strings.Split(firstLine, "protocol version ")
 
 	return versionString[1]
