@@ -287,11 +287,11 @@ func (s Sync) Version() (string, error) {
 	io.Copy(buf, process.Stdout())
 
 	err = process.Wait()
-	if code, ok := err.(wsep.ExitError); ok {
-		return "", fmt.Errorf("Version check exit status: %v", code)
+	if _, ok := err.(wsep.ExitError); ok {
+		return "", err
 	}
 	if err != nil {
-		return "", fmt.Errorf("Server version mismatch")
+		return "", err
 	}
 
 	firstLine, err := buf.ReadString('\n')

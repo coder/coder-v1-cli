@@ -99,7 +99,7 @@ func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 	if rsyncErr != nil {
 		flog.Info("Unable to determine remote rsync version.  Proceeding cautiously.")
 	} else if localVersion != remoteVersion {
-		flog.Fatal(fmt.Sprintf("rsync protocol mismatch. local is %s; remote is %s.", localVersion, remoteVersion))
+		flog.Fatal(fmt.Sprintf("rsync protocol mismatch. %s.", localVersion, rsyncErr))
 	}
 
 	for err == nil || err == sync.ErrRestartSync {
