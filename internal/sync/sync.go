@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -260,6 +262,44 @@ const (
 	// optimization.
 	maxAcceptableDispatch = time.Millisecond * 50
 )
+
+// Version returns remote protocol version as a string.
+// Or, an error if one exists.
+func (s Sync) Version() (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	conn, err := s.Client.DialWsep(ctx, s.Env)
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close(websocket.CloseNormalClosure, "")
+
+	execer := wsep.RemoteExecer(conn)
+	process, err := execer.Start(ctx, wsep.Command{
+		Command: "rsync",
+		Args:    []string{"--version"},
+	})
+	if err != nil {
+		return "", err
+	}
+	buf := &bytes.Buffer{}
+	io.Copy(buf, process.Stdout())
+
+	err = process.Wait()
+	if err != nil {
+		return "", err
+	}
+
+	firstLine, err := buf.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+
+	versionString := strings.Split(firstLine, "protocol version ")
+
+	return versionString[1], nil
+}
 
 // Run starts the sync synchronously.
 // Use this command to debug what wasn't sync'd correctly:

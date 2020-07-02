@@ -1,7 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
+	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -27,6 +31,23 @@ func (cmd *syncCmd) Spec() cli.CommandSpec {
 
 func (cmd *syncCmd) RegisterFlags(fl *pflag.FlagSet) {
 	fl.BoolVarP(&cmd.init, "init", "i", false, "do initial transfer and exit")
+}
+
+// version returns local rsync protocol version as a string.
+func (_ *syncCmd) version() string {
+	cmd := exec.Command("rsync", "--version")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	firstLine, err := bytes.NewBuffer(out).ReadString('\n')
+	if err != nil {
+		log.Fatal(err)
+	}
+	versionString := strings.Split(firstLine, "protocol version ")
+
+	return versionString[1]
 }
 
 func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
@@ -71,6 +92,16 @@ func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 		LocalDir:  absLocal,
 		Client:    entClient,
 	}
+
+	localVersion := cmd.version()
+	remoteVersion, rsyncErr := s.Version()
+
+	if rsyncErr != nil {
+		flog.Info("Unable to determine remote rsync version.  Proceeding cautiously.")
+	} else if localVersion != remoteVersion {
+		flog.Fatal(fmt.Sprintf("rsync protocol mismatch. %s.", localVersion, rsyncErr))
+	}
+
 	for err == nil || err == sync.ErrRestartSync {
 		err = s.Run()
 	}
