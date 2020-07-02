@@ -5,9 +5,11 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/pflag"
 
+	"github.com/mutagen-io/mutagen/pkg/command/mutagen"
 	"go.coder.com/cli"
 )
 
@@ -39,6 +41,7 @@ func (r *rootCmd) Subcommands() []cli.Command {
 		&urlsCmd{},
 		&versionCmd{},
 		&configSSHCmd{},
+		&mutagenCmd{},
 	}
 }
 
@@ -47,6 +50,10 @@ func main() {
 		go func() {
 			log.Println(http.ListenAndServe("localhost:6060", nil))
 		}()
+	}
+	if filepath.Base(os.Args[0]) == "mutagen" {
+		mutagen.Main()
+		return
 	}
 	cli.RunRoot(&rootCmd{})
 }

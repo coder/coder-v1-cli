@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -40,14 +39,6 @@ func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 
 	entClient := requireAuth()
 
-	info, err := os.Stat(local)
-	if err != nil {
-		flog.Fatal("%v", err)
-	}
-	if !info.IsDir() {
-		flog.Fatal("%s must be a directory", local)
-	}
-
 	remoteTokens := strings.SplitN(remote, ":", 2)
 	if len(remoteTokens) != 2 {
 		flog.Fatal("remote misformatted")
@@ -64,17 +55,18 @@ func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 		flog.Fatal("make abs path out of %v: %v", local, absLocal)
 	}
 
-	s := sync.Sync{
-		Init:      cmd.init,
-		Env:       env,
-		RemoteDir: remoteDir,
-		LocalDir:  absLocal,
-		Client:    entClient,
-	}
-	for err == nil || err == sync.ErrRestartSync {
-		err = s.Run()
+	s := sync.Syncer{
+		Environment: env,
+		RemoteDir:   remoteDir,
+		LocalDir:    absLocal,
 	}
 
+	err = s.Create()
+	if err != nil {
+		flog.Fatal("%v", err)
+	}
+
+	err = s.Monitor()
 	if err != nil {
 		flog.Fatal("%v", err)
 	}
