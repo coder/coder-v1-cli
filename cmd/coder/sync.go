@@ -55,7 +55,12 @@ func (s *syncCmd) version() string {
 		log.Fatal(err)
 	}
 
-	versionString := strings.Split(r.ReadLine(), "protocol version ")
+	firstLine, err := r.ReadString('\n')
+	if err != nil {
+		return ""
+	}
+
+	versionString := strings.Split(firstLine, "protocol version ")
 
 	return versionString[1]
 }
@@ -103,8 +108,8 @@ func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 		Client:    entClient,
 	}
 
-	localVersion := s.version()
-	remoteVersion, rsyncErr := sync.Version()
+	localVersion := cmd.version()
+	remoteVersion, rsyncErr := s.Version()
 
 	if rsyncErr != nil {
 		flog.Info("Unable to determine remote rsync version.  Proceeding cautiously.")
