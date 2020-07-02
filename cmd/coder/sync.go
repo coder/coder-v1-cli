@@ -33,7 +33,7 @@ func (cmd *syncCmd) RegisterFlags(fl *pflag.FlagSet) {
 	fl.BoolVarP(&cmd.init, "init", "i", false, "do initial transfer and exit")
 }
 
-// Returns local rsync protocol version as a string.
+// version returns local rsync protocol version as a string.
 func (_ *syncCmd) version() string {
 	cmd := exec.Command("rsync", "--version")
 	out, err := cmd.CombinedOutput()

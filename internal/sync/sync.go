@@ -263,7 +263,7 @@ const (
 	maxAcceptableDispatch = time.Millisecond * 50
 )
 
-// Returns remote protocol version as a string.
+// Version returns remote protocol version as a string.
 // Or, an error if one exists.
 func (s Sync) Version() (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
@@ -287,9 +287,6 @@ func (s Sync) Version() (string, error) {
 	io.Copy(buf, process.Stdout())
 
 	err = process.Wait()
-	if _, ok := err.(wsep.ExitError); ok {
-		return "", err
-	}
 	if err != nil {
 		return "", err
 	}
