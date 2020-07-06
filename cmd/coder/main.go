@@ -9,7 +9,6 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/mutagen-io/mutagen/pkg/command/mutagen"
 	"go.coder.com/cli"
 )
 
@@ -52,7 +51,7 @@ func main() {
 		}()
 	}
 	if filepath.Base(os.Args[0]) == "mutagen" {
-		mutagen.Main()
+		mutagenMain()
 		return
 	}
 	cli.RunRoot(&rootCmd{})
