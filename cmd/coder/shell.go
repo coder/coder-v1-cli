@@ -4,13 +4,11 @@ import (
 	"context"
 	"io"
 	"os"
-	"os/signal"
 	"strings"
 	"time"
 
 	"github.com/spf13/pflag"
 	"golang.org/x/crypto/ssh/terminal"
-	"golang.org/x/sys/unix"
 	"golang.org/x/time/rate"
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
@@ -46,31 +44,33 @@ func enableTerminal(fd int) (restore func(), err error) {
 	}, nil
 }
 
+type resizeEvent struct {
+	height, width uint16
+}
+
+func (s resizeEvent) equal(s2 *resizeEvent) bool {
+	if s2 == nil {
+		return false
+	}
+	return s.height == s2.height && s.width == s2.width
+}
+
 func sendResizeEvents(ctx context.Context, termfd int, process wsep.Process) {
-	sigs := make(chan os.Signal, 16)
-	signal.Notify(sigs, unix.SIGWINCH)
+	events := resizeEvents(ctx, termfd)
 
 	// Limit the frequency of resizes to prevent a stuttering effect.
 	resizeLimiter := rate.NewLimiter(rate.Every(time.Millisecond*100), 1)
-
-	for ctx.Err() == nil {
-		if ctx.Err() != nil {
+	for {
+		select {
+		case newsize := <-events:
+			err := process.Resize(ctx, newsize.height, newsize.width)
+			if err != nil {
+				return
+			}
+			_ = resizeLimiter.Wait(ctx)
+		case <-ctx.Done():
 			return
 		}
-		width, height, err := terminal.GetSize(termfd)
-		if err != nil {
-			flog.Error("get term size: %v", err)
-			return
-		}
-
-		err = process.Resize(ctx, uint16(height), uint16(width))
-		if err != nil {
-			return
-		}
-
-		// Do this last so the first resize is sent.
-		<-sigs
-		resizeLimiter.Wait(ctx)
 	}
 }
 
