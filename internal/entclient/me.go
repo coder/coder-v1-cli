@@ -1,10 +1,16 @@
 package entclient
 
+import (
+	"time"
+)
+
 // User describes a Coder user account
 type User struct {
-	ID       string `json:"id"`
-	Email    string `json:"email"`
-	Username string `json:"username"`
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Username  string    `json:"username"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // Me gets the details of the authenticated user

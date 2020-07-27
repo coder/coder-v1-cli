@@ -15,7 +15,7 @@ func (versionCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
 		Name:  "version",
 		Usage: "",
-		Desc:  "Print the currently installed CLI version",
+		Desc:  "print the currently installed CLI version",
 	}
 }
 

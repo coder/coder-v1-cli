@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,6 +12,8 @@ import (
 	"time"
 
 	"cdr.dev/coder-cli/ci/tcli"
+	"cdr.dev/coder-cli/internal/entclient"
+	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/slogtest/assert"
 )
 
@@ -110,6 +113,19 @@ func TestCoderCLI(t *testing.T) {
 		tcli.Error(),
 	)
 
+	var user entclient.User
+	c.Run(ctx, `coder users ls -o json | jq -c '.[] | select( .username == "charlie")'`).Assert(t,
+		tcli.Success(),
+		jsonUnmarshals(&user),
+	)
+	assert.Equal(t, "user email is as expected", "charlie@coder.com", user.Email)
+	assert.Equal(t, "username is as expected", "Charlie", user.Name)
+
+	c.Run(ctx, "coder users ls -o human | grep charlie").Assert(t,
+		tcli.Success(),
+		tcli.StdoutMatches("charlie"),
+	)
+
 	c.Run(ctx, "coder logout").Assert(t,
 		tcli.Success(),
 	)
@@ -117,4 +133,12 @@ func TestCoderCLI(t *testing.T) {
 	c.Run(ctx, "coder envs").Assert(t,
 		tcli.Error(),
 	)
+}
+
+func jsonUnmarshals(target interface{}) tcli.Assertion {
+	return func(t *testing.T, r *tcli.CommandResult) {
+		slog.Helper()
+		err := json.Unmarshal(r.Stdout, target)
+		assert.Success(t, "json unmarshals", err)
+	}
 }
