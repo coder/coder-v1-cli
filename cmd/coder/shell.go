@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -79,19 +80,16 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 	}
 	var (
 		envName = fl.Arg(0)
-		command = fl.Arg(1)
 		ctx     = context.Background()
 	)
 
-	var args []string
-	if command != "" {
-		args = fl.Args()[2:]
-	}
-
-	// Bring user into shell if no command is specified.
-	if command == "" {
-		command = "sh"
-		args = []string{"-c", "exec $(getent passwd $(whoami) | awk -F: '{ print $7 }')"}
+	command := "sh"
+	args := []string{"-c"}
+	if len(fl.Args()) > 1 {
+		args = append(args, strings.Join(fl.Args()[1:], " "))
+	} else {
+		// Bring user into shell if no command is specified.
+		args = append(args, "exec $(getent passwd $(whoami) | awk -F: '{ print $7 }')")
 	}
 
 	err := runCommand(ctx, envName, command, args)
