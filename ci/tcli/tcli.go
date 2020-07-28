@@ -118,41 +118,44 @@ func (r *RunContainer) RunCmd(cmd *exec.Cmd) *Assertable {
 }
 
 func (a Assertable) Assert(t *testing.T, option ...Assertion) {
-	var cmdResult CommandResult
+	t.Run(strings.Join(a.cmd.Args[6:], " "), func(t *testing.T) {
+		var cmdResult CommandResult
 
-	var (
-		stdout bytes.Buffer
-		stderr bytes.Buffer
-	)
+		var (
+			stdout bytes.Buffer
+			stderr bytes.Buffer
+		)
 
-	a.cmd.Stdout = &stdout
-	a.cmd.Stderr = &stderr
+		a.cmd.Stdout = &stdout
+		a.cmd.Stderr = &stderr
 
-	start := time.Now()
-	err := a.cmd.Run()
-	cmdResult.Duration = time.Since(start)
+		start := time.Now()
+		err := a.cmd.Run()
+		cmdResult.Duration = time.Since(start)
 
-	if exitErr, ok := err.(*exec.ExitError); ok {
-		cmdResult.ExitCode = exitErr.ExitCode()
-	} else if err != nil {
-		cmdResult.ExitCode = -1
-	} else {
-		cmdResult.ExitCode = 0
-	}
-
-	cmdResult.Stdout = stdout.Bytes()
-	cmdResult.Stderr = stderr.Bytes()
-
-	for ix, o := range option {
-		name := fmt.Sprintf("assertion_#%v", ix)
-		if named, ok := o.(Named); ok {
-			name = named.Name()
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			cmdResult.ExitCode = exitErr.ExitCode()
+		} else if err != nil {
+			cmdResult.ExitCode = -1
+		} else {
+			cmdResult.ExitCode = 0
 		}
-		t.Run(name, func(t *testing.T) {
-			err := o.Valid(cmdResult)
-			assert.Success(t, name, err)
-		})
-	}
+
+		cmdResult.Stdout = stdout.Bytes()
+		cmdResult.Stderr = stderr.Bytes()
+
+		for ix, o := range option {
+			name := fmt.Sprintf("assertion_#%v", ix)
+			if named, ok := o.(Named); ok {
+				name = named.Name()
+			}
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+				err := o.Valid(cmdResult)
+				assert.Success(t, name, err)
+			})
+		}
+	})
 }
 
 type Assertion interface {
