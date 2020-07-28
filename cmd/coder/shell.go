@@ -4,13 +4,11 @@ import (
 	"context"
 	"io"
 	"os"
-	"os/signal"
 	"strings"
 	"time"
 
 	"github.com/spf13/pflag"
 	"golang.org/x/crypto/ssh/terminal"
-	"golang.org/x/sys/unix"
 	"golang.org/x/time/rate"
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
@@ -19,6 +17,7 @@ import (
 	"go.coder.com/flog"
 
 	"cdr.dev/coder-cli/internal/activity"
+	"cdr.dev/coder-cli/internal/xterminal"
 	"cdr.dev/wsep"
 )
 
@@ -33,45 +32,8 @@ func (cmd *shellCmd) Spec() cli.CommandSpec {
 	}
 }
 
-func enableTerminal(fd int) (restore func(), err error) {
-	state, err := terminal.MakeRaw(fd)
-	if err != nil {
-		return restore, xerrors.Errorf("make raw term: %w", err)
-	}
-	return func() {
-		err := terminal.Restore(fd, state)
-		if err != nil {
-			flog.Error("restore term state: %v", err)
-		}
-	}, nil
-}
-
-func sendResizeEvents(ctx context.Context, termfd int, process wsep.Process) {
-	sigs := make(chan os.Signal, 16)
-	signal.Notify(sigs, unix.SIGWINCH)
-
-	// Limit the frequency of resizes to prevent a stuttering effect.
-	resizeLimiter := rate.NewLimiter(rate.Every(time.Millisecond*100), 1)
-
-	for ctx.Err() == nil {
-		if ctx.Err() != nil {
-			return
-		}
-		width, height, err := terminal.GetSize(termfd)
-		if err != nil {
-			flog.Error("get term size: %v", err)
-			return
-		}
-
-		err = process.Resize(ctx, uint16(height), uint16(width))
-		if err != nil {
-			return
-		}
-
-		// Do this last so the first resize is sent.
-		<-sigs
-		resizeLimiter.Wait(ctx)
-	}
+type resizeEvent struct {
+	height, width uint16
 }
 
 func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
@@ -101,21 +63,40 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 	}
 }
 
+func sendResizeEvents(ctx context.Context, termfd uintptr, process wsep.Process) {
+	events := xterminal.ResizeEvents(ctx, termfd)
+
+	// Limit the frequency of resizes to prevent a stuttering effect.
+	resizeLimiter := rate.NewLimiter(rate.Every(time.Millisecond*100), 1)
+	for {
+		select {
+		case newsize := <-events:
+			err := process.Resize(ctx, newsize.Height, newsize.Width)
+			if err != nil {
+				return
+			}
+			_ = resizeLimiter.Wait(ctx)
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 func runCommand(ctx context.Context, envName string, command string, args []string) error {
 	var (
 		entClient = requireAuth()
 		env       = findEnv(entClient, envName)
 	)
 
-	termfd := int(os.Stdin.Fd())
+	termfd := os.Stdout.Fd()
 
-	tty := terminal.IsTerminal(termfd)
+	tty := terminal.IsTerminal(int(termfd))
 	if tty {
-		restore, err := enableTerminal(termfd)
+		stdinState, err := xterminal.MakeRaw(os.Stdin.Fd())
 		if err != nil {
 			return err
 		}
-		defer restore()
+		defer xterminal.Restore(os.Stdin.Fd(), stdinState)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -127,13 +108,22 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	}
 	go heartbeat(ctx, conn, 15*time.Second)
 
+	var cmdEnv []string
+	if tty {
+		term := os.Getenv("TERM")
+		if term == "" {
+			term = "xterm"
+		}
+		cmdEnv = append(cmdEnv, "TERM="+term)
+	}
+
 	execer := wsep.RemoteExecer(conn)
 	process, err := execer.Start(ctx, wsep.Command{
 		Command: command,
 		Args:    args,
 		TTY:     tty,
 		Stdin:   true,
-		Env:     []string{"TERM=" + os.Getenv("TERM")},
+		Env:     cmdEnv,
 	})
 	if err != nil {
 		return err

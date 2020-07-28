@@ -1,9 +1,7 @@
 cdr.dev/slog v1.3.0 h1:MYN1BChIaVEGxdS7I5cpdyMC0+WfJfK8BETAfzfLUGQ=
 cdr.dev/slog v1.3.0/go.mod h1:C5OL99WyuOK8YHZdYY57dAPN1jK2WJlCdq2VP6xeQns=
-cdr.dev/wsep v0.0.0-20200615020153-e2b1c576fc40 h1:f369880iSAZ3cXwvbdc9WIyy3FZ4yanusYZjaVHeis4=
-cdr.dev/wsep v0.0.0-20200615020153-e2b1c576fc40/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
-cdr.dev/wsep v0.0.0-20200616212001-0613cfe9a4ac h1:rl4O0qfxgNRWBUe5gQu4of2cdsclcpjGYmLQhSCHX7c=
-cdr.dev/wsep v0.0.0-20200616212001-0613cfe9a4ac/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
+cdr.dev/wsep v0.0.0-20200728013649-82316a09813f h1:WnTUINBwXE11xjp5nTVt+H2qB2/KEymos1jKMcppG9U=
+cdr.dev/wsep v0.0.0-20200728013649-82316a09813f/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.38.0/go.mod h1:990N+gfupTy94rShfmMCWGDn0LpTmnzTp2qbd1dvSRU=
@@ -240,8 +238,6 @@ golang.org/x/sys v0.0.0-20191026070338-33540a1f6037/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20191210023423-ac6580df4449/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200116001909-b77594299b42/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-golang.org/x/sys v0.0.0-20200610111108-226ff32320da h1:bGb80FudwxpeucJUjPYJXuJ8Hk91vNtfvrymzwiei38=
-golang.org/x/sys v0.0.0-20200610111108-226ff32320da/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200615200032-f1bc736245b1 h1:ogLJMz+qpzav7lGMh10LMvAkM/fAoGlaiiHYiFYdm80=
 golang.org/x/sys v0.0.0-20200615200032-f1bc736245b1/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=

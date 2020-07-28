@@ -30,6 +30,7 @@ build(){
 if [[ "$(uname)" == "Darwin" ]]; then
 	GOOS=linux build
 	CGO_ENABLED=1 GOOS=darwin build
+	GOOS=windows GOARCH=386 build
 	exit 0
 fi
 
