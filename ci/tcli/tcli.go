@@ -157,7 +157,7 @@ func (a Assertable) Assert(t *testing.T, option ...Assertion) {
 			}
 			t.Run(name, func(t *testing.T) {
 				t.Parallel()
-				err := o.Valid(cmdResult)
+				err := o.Valid(&cmdResult)
 				assert.Success(t, name, err)
 			})
 		}
@@ -167,7 +167,7 @@ func (a Assertable) Assert(t *testing.T, option ...Assertion) {
 // Assertion specifies an assertion on the given CommandResult.
 // Pass custom Assertion types to cover special cases.
 type Assertion interface {
-	Valid(r CommandResult) error
+	Valid(r *CommandResult) error
 }
 
 // Named is an optional extension of Assertion that provides a helpful label
@@ -184,11 +184,11 @@ type CommandResult struct {
 }
 
 type simpleFuncAssert struct {
-	valid func(r CommandResult) error
+	valid func(r *CommandResult) error
 	name  string
 }
 
-func (s simpleFuncAssert) Valid(r CommandResult) error {
+func (s simpleFuncAssert) Valid(r *CommandResult) error {
 	return s.valid(r)
 }
 
@@ -204,7 +204,7 @@ func Success() Assertion {
 // ExitCodeIs asserts that the command exited with the given code
 func ExitCodeIs(code int) Assertion {
 	return simpleFuncAssert{
-		valid: func(r CommandResult) error {
+		valid: func(r *CommandResult) error {
 			if r.ExitCode != code {
 				return xerrors.Errorf("exit code of %v expected, got %v", code, r.ExitCode)
 			}
@@ -217,17 +217,29 @@ func ExitCodeIs(code int) Assertion {
 // StdoutEmpty asserts that the command did not write any data to Stdout
 func StdoutEmpty() Assertion {
 	return simpleFuncAssert{
-		valid: func(r CommandResult) error {
+		valid: func(r *CommandResult) error {
 			return empty("stdout", r.Stdout)
 		},
 		name: fmt.Sprintf("stdout-empty"),
 	}
 }
 
+// GetResult offers an escape hatch from tcli
+// The passed pointer will be assigned to the commands *CommandResult
+func GetResult(result **CommandResult) Assertion {
+	return simpleFuncAssert{
+		valid: func(r *CommandResult) error {
+			*result = r
+			return nil
+		},
+		name: "get-stdout",
+	}
+}
+
 // StderrEmpty asserts that the command did not write any data to Stderr
 func StderrEmpty() Assertion {
 	return simpleFuncAssert{
-		valid: func(r CommandResult) error {
+		valid: func(r *CommandResult) error {
 			return empty("stderr", r.Stderr)
 		},
 		name: fmt.Sprintf("stderr-empty"),
@@ -237,7 +249,7 @@ func StderrEmpty() Assertion {
 // StdoutMatches asserts that Stdout contains a substring which matches the given regexp
 func StdoutMatches(pattern string) Assertion {
 	return simpleFuncAssert{
-		valid: func(r CommandResult) error {
+		valid: func(r *CommandResult) error {
 			return matches("stdout", pattern, r.Stdout)
 		},
 		name: fmt.Sprintf("stdout-matches"),
@@ -247,7 +259,7 @@ func StdoutMatches(pattern string) Assertion {
 // StderrMatches asserts that Stderr contains a substring which matches the given regexp
 func StderrMatches(pattern string) Assertion {
 	return simpleFuncAssert{
-		valid: func(r CommandResult) error {
+		valid: func(r *CommandResult) error {
 			return matches("stderr", pattern, r.Stderr)
 		},
 		name: fmt.Sprintf("stderr-matches"),
@@ -257,7 +269,7 @@ func StderrMatches(pattern string) Assertion {
 // CombinedMatches asserts that either Stdout or Stderr a substring which matches the given regexp
 func CombinedMatches(pattern string) Assertion {
 	return simpleFuncAssert{
-		valid: func(r CommandResult) error {
+		valid: func(r *CommandResult) error {
 			//stdoutValid := StdoutMatches(pattern).Valid(r)
 			//stderrValid := StderrMatches(pattern).Valid(r)
 			// TODO: combine errors
@@ -291,7 +303,7 @@ func empty(name string, a []byte) error {
 // DurationLessThan asserts that the command completed in less than the given duration
 func DurationLessThan(dur time.Duration) Assertion {
 	return simpleFuncAssert{
-		valid: func(r CommandResult) error {
+		valid: func(r *CommandResult) error {
 			if r.Duration > dur {
 				return xerrors.Errorf("expected duration less than %s, took %s", dur.String(), r.Duration.String())
 			}
@@ -304,7 +316,7 @@ func DurationLessThan(dur time.Duration) Assertion {
 // DurationGreaterThan asserts that the command completed in greater than the given duration
 func DurationGreaterThan(dur time.Duration) Assertion {
 	return simpleFuncAssert{
-		valid: func(r CommandResult) error {
+		valid: func(r *CommandResult) error {
 			if r.Duration < dur {
 				return xerrors.Errorf("expected duration greater than %s, took %s", dur.String(), r.Duration.String())
 			}
