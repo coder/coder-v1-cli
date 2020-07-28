@@ -9,7 +9,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
       - name: Build
-        run: ./ci/build.sh
+        run: ./ci/steps/build.sh
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
