@@ -17,6 +17,7 @@ import (
 	"go.coder.com/flog"
 
 	"cdr.dev/coder-cli/internal/activity"
+	"cdr.dev/coder-cli/internal/xterminal"
 	"cdr.dev/wsep"
 )
 
@@ -31,47 +32,8 @@ func (cmd *shellCmd) Spec() cli.CommandSpec {
 	}
 }
 
-func enableTerminal(fd int) (restore func(), err error) {
-	state, err := terminal.MakeRaw(fd)
-	if err != nil {
-		return restore, xerrors.Errorf("make raw term: %w", err)
-	}
-	return func() {
-		err := terminal.Restore(fd, state)
-		if err != nil {
-			flog.Error("restore term state: %v", err)
-		}
-	}, nil
-}
-
 type resizeEvent struct {
 	height, width uint16
-}
-
-func (s resizeEvent) equal(s2 *resizeEvent) bool {
-	if s2 == nil {
-		return false
-	}
-	return s.height == s2.height && s.width == s2.width
-}
-
-func sendResizeEvents(ctx context.Context, termfd int, process wsep.Process) {
-	events := resizeEvents(ctx, termfd)
-
-	// Limit the frequency of resizes to prevent a stuttering effect.
-	resizeLimiter := rate.NewLimiter(rate.Every(time.Millisecond*100), 1)
-	for {
-		select {
-		case newsize := <-events:
-			err := process.Resize(ctx, newsize.height, newsize.width)
-			if err != nil {
-				return
-			}
-			_ = resizeLimiter.Wait(ctx)
-		case <-ctx.Done():
-			return
-		}
-	}
 }
 
 func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
@@ -101,21 +63,46 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 	}
 }
 
+func sendResizeEvents(ctx context.Context, termfd uintptr, process wsep.Process) {
+	events := xterminal.ResizeEvents(ctx, termfd)
+
+	// Limit the frequency of resizes to prevent a stuttering effect.
+	resizeLimiter := rate.NewLimiter(rate.Every(time.Millisecond*100), 1)
+	for {
+		select {
+		case newsize := <-events:
+			err := process.Resize(ctx, newsize.Height, newsize.Width)
+			if err != nil {
+				return
+			}
+			_ = resizeLimiter.Wait(ctx)
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 func runCommand(ctx context.Context, envName string, command string, args []string) error {
 	var (
 		entClient = requireAuth()
 		env       = findEnv(entClient, envName)
 	)
 
-	termfd := int(os.Stdin.Fd())
+	termfd := os.Stdout.Fd()
 
-	tty := terminal.IsTerminal(termfd)
+	tty := terminal.IsTerminal(int(termfd))
 	if tty {
-		restore, err := enableTerminal(termfd)
+		stdinState, err := xterminal.MakeRaw(os.Stdin.Fd())
 		if err != nil {
 			return err
 		}
-		defer restore()
+		defer xterminal.Restore(os.Stdin.Fd(), stdinState)
+
+		stdoutState, err := xterminal.MakeOutputRaw(os.Stdout.Fd())
+		if err != nil {
+			return err
+		}
+		defer xterminal.Restore(os.Stdout.Fd(), stdoutState)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -127,13 +114,22 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	}
 	go heartbeat(ctx, conn, 15*time.Second)
 
+	var cmdEnv []string
+	if tty {
+		term := os.Getenv("TERM")
+		if term == "" {
+			term = "xterm"
+		}
+		cmdEnv = append(cmdEnv, "TERM="+term)
+	}
+
 	execer := wsep.RemoteExecer(conn)
 	process, err := execer.Start(ctx, wsep.Command{
 		Command: command,
 		Args:    args,
 		TTY:     tty,
 		Stdin:   true,
-		Env:     []string{"TERM=" + os.Getenv("TERM")},
+		Env:     cmdEnv,
 	})
 	if err != nil {
 		return err
