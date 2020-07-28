@@ -19,23 +19,51 @@ type RunContainer struct {
 	ctx  context.Context
 }
 
-func NewRunContainer(ctx context.Context, image, name string) (*RunContainer, error) {
-	cmd := exec.CommandContext(ctx,
-		"docker", "run",
-		"--name", name,
+type ContainerConfig struct {
+	Name   string
+	Image  string
+	Mounts map[string]string
+}
+
+func mountArgs(m map[string]string) (args []string) {
+	for src, dest := range m {
+		args = append(args, "--mount", fmt.Sprintf("source=%s,target=%s", src, dest))
+	}
+	return args
+}
+
+func preflightChecks() error {
+	_, err := exec.LookPath("docker")
+	if err != nil {
+		return xerrors.Errorf(`"docker" not found in $PATH`)
+	}
+	return nil
+}
+
+func NewRunContainer(ctx context.Context, config *ContainerConfig) (*RunContainer, error) {
+	if err := preflightChecks(); err != nil {
+		return nil, err
+	}
+
+	args := []string{
+		"run",
+		"--name", config.Name,
 		"-it", "-d",
-		image,
-	)
+	}
+	args = append(args, mountArgs(config.Mounts)...)
+	args = append(args, config.Image)
+
+	cmd := exec.CommandContext(ctx, "docker", args...)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, xerrors.Errorf(
 			"failed to start testing container %q, (%s): %w",
-			name, string(out), err)
+			config.Name, string(out), err)
 	}
 
 	return &RunContainer{
-		name: name,
+		name: config.Name,
 		ctx:  ctx,
 	}, nil
 }
@@ -57,12 +85,18 @@ func (r *RunContainer) Close() error {
 }
 
 type Assertable struct {
-	cmd       string
+	cmd       *exec.Cmd
 	ctx       context.Context
 	container *RunContainer
 }
 
-func (r *RunContainer) Run(ctx context.Context, cmd string) *Assertable {
+// Run executes the given command in the runtime container with reasonable defaults
+func (r *RunContainer) Run(ctx context.Context, command string) *Assertable {
+	cmd := exec.CommandContext(ctx,
+		"docker", "exec", "-i", r.name,
+		"sh", "-c", command,
+	)
+
 	return &Assertable{
 		cmd:       cmd,
 		ctx:       ctx,
@@ -70,23 +104,32 @@ func (r *RunContainer) Run(ctx context.Context, cmd string) *Assertable {
 	}
 }
 
+// RunCmd lifts the given *exec.Cmd into the runtime container
+func (r *RunContainer) RunCmd(cmd *exec.Cmd) *Assertable {
+	path, _ := exec.LookPath("docker")
+	cmd.Path = path
+	command := strings.Join(cmd.Args, " ")
+	cmd.Args = append([]string{"docker", "exec", "-i", r.name, "sh", "-c", command})
+
+	return &Assertable{
+		cmd:       cmd,
+		container: r,
+	}
+}
+
 func (a Assertable) Assert(t *testing.T, option ...Assertion) {
 	var cmdResult CommandResult
 
-	cmd := exec.CommandContext(a.ctx,
-		"docker", "exec", a.container.name,
-		"sh", "-c", a.cmd,
-	)
 	var (
 		stdout bytes.Buffer
 		stderr bytes.Buffer
 	)
 
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	a.cmd.Stdout = &stdout
+	a.cmd.Stderr = &stderr
 
 	start := time.Now()
-	err := cmd.Run()
+	err := a.cmd.Run()
 	cmdResult.Duration = time.Since(start)
 
 	if exitErr, ok := err.(*exec.ExitError); ok {
@@ -147,7 +190,7 @@ func ExitCodeIs(code int) Assertion {
 	return simpleFuncAssert{
 		valid: func(r CommandResult) error {
 			if r.ExitCode != code {
-				return xerrors.Errorf("exit code of %s expected, got %v", code, r.ExitCode)
+				return xerrors.Errorf("exit code of %v expected, got %v", code, r.ExitCode)
 			}
 			return nil
 		},
@@ -209,7 +252,10 @@ func matches(name, pattern string, target []byte) error {
 		return xerrors.Errorf("failed to attempt regexp match: %w", err)
 	}
 	if !ok {
-		return xerrors.Errorf("expected to find pattern (%s) in %s, no match found", pattern, name)
+		return xerrors.Errorf(
+			"expected to find pattern (%s) in %s, no match found in (%v)",
+			pattern, name, string(target),
+		)
 	}
 	return nil
 }

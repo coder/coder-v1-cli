@@ -2,6 +2,8 @@ package integration
 
 import (
 	"context"
+	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,7 +14,11 @@ import (
 func TestTCli(t *testing.T) {
 	ctx := context.Background()
 
-	container, err := tcli.NewRunContainer(ctx, "ubuntu:latest", "test-container")
+	container, err := tcli.NewRunContainer(ctx, &tcli.ContainerConfig{
+		Image: "ubuntu:latest",
+		Name:  "test-container",
+	})
+
 	assert.Success(t, "new run container", err)
 	defer container.Close()
 
@@ -27,5 +33,14 @@ func TestTCli(t *testing.T) {
 		tcli.StdoutEmpty(),
 		tcli.StderrMatches("message"),
 		tcli.DurationGreaterThan(time.Second),
+	)
+
+	cmd := exec.CommandContext(ctx, "cat")
+	cmd.Stdin = strings.NewReader("testing")
+
+	container.RunCmd(cmd).Assert(t,
+		tcli.Success(),
+		tcli.StderrEmpty(),
+		tcli.StdoutMatches("testing"),
 	)
 }
