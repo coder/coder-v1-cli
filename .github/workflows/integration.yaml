@@ -1,5 +1,8 @@
-name: ci
-on: [push, pull_request]
+name: integration
+on:
+  push:
+  schedule:
+    - cron:  '*/180 * * * *'
 
 jobs:
   integration:
