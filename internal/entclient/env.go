@@ -7,11 +7,13 @@ import (
 	"nhooyr.io/websocket"
 )
 
+// Environment describes a Coder environment
 type Environment struct {
 	Name string `json:"name"`
 	ID   string `json:"id"`
 }
 
+// Envs gets the list of environments owned by the authenticated user
 func (c Client) Envs(user *User, org Org) ([]Environment, error) {
 	var envs []Environment
 	err := c.requestBody(
@@ -22,6 +24,8 @@ func (c Client) Envs(user *User, org Org) ([]Environment, error) {
 	return envs, err
 }
 
+// DialWsep dials an environments command execution interface
+// See github.com/cdr/wsep for details
 func (c Client) DialWsep(ctx context.Context, env Environment) (*websocket.Conn, error) {
 	u := c.copyURL()
 	if c.BaseURL.Scheme == "https" {

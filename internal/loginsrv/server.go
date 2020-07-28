@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+// Server waits for the login callback to send session token
 type Server struct {
 	TokenCond *sync.Cond
 	Token     string

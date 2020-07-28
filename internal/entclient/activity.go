@@ -4,6 +4,7 @@ import (
 	"net/http"
 )
 
+// PushActivity pushes CLI activity to Coder
 func (c Client) PushActivity(source string, envID string) error {
 	res, err := c.request("POST", "/api/metrics/usage/push", map[string]string{
 		"source":         source,

@@ -4,8 +4,9 @@ import (
 	"time"
 
 	"cdr.dev/coder-cli/internal/entclient"
-	"go.coder.com/flog"
 	"golang.org/x/time/rate"
+
+	"go.coder.com/flog"
 )
 
 const pushInterval = time.Minute
@@ -20,6 +21,7 @@ type Pusher struct {
 	rate   *rate.Limiter
 }
 
+// NewPusher instantiates a new instance of Pusher
 func NewPusher(c *entclient.Client, envID, source string) *Pusher {
 	return &Pusher{
 		envID:  envID,
@@ -29,6 +31,7 @@ func NewPusher(c *entclient.Client, envID, source string) *Pusher {
 	}
 }
 
+// Push pushes activity, abiding by a rate limit
 func (p *Pusher) Push() {
 	if !p.rate.Allow() {
 		return

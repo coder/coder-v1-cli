@@ -14,11 +14,13 @@ import (
 	"golang.org/x/xerrors"
 )
 
+// RunContainer specifies a runtime container for performing command tests
 type RunContainer struct {
 	name string
 	ctx  context.Context
 }
 
+// ContainerConfig describes the RunContainer configuration schema for initializing a testing environment
 type ContainerConfig struct {
 	Name       string
 	Image      string
@@ -40,6 +42,7 @@ func preflightChecks() error {
 	return nil
 }
 
+// NewRunContainer starts a new docker container for executing command tests
 func NewRunContainer(ctx context.Context, config *ContainerConfig) (*RunContainer, error) {
 	if err := preflightChecks(); err != nil {
 		return nil, err
@@ -68,6 +71,7 @@ func NewRunContainer(ctx context.Context, config *ContainerConfig) (*RunContaine
 	}, nil
 }
 
+// Close kills and removes the command execution testing container
 func (r *RunContainer) Close() error {
 	cmd := exec.CommandContext(r.ctx,
 		"sh", "-c", strings.Join([]string{
@@ -84,6 +88,7 @@ func (r *RunContainer) Close() error {
 	return nil
 }
 
+// Assertable describes an initialized command ready to be run and asserted against
 type Assertable struct {
 	cmd       *exec.Cmd
 	ctx       context.Context
@@ -117,6 +122,7 @@ func (r *RunContainer) RunCmd(cmd *exec.Cmd) *Assertable {
 	}
 }
 
+// Assert runs the Assertable and
 func (a Assertable) Assert(t *testing.T, option ...Assertion) {
 	t.Run(strings.Join(a.cmd.Args[6:], " "), func(t *testing.T) {
 		var cmdResult CommandResult
@@ -158,14 +164,19 @@ func (a Assertable) Assert(t *testing.T, option ...Assertion) {
 	})
 }
 
+// Assertion specifies an assertion on the given CommandResult.
+// Pass custom Assertion types to cover special cases.
 type Assertion interface {
 	Valid(r CommandResult) error
 }
 
+// Named is an optional extension of Assertion that provides a helpful label
+// to *testing.T
 type Named interface {
 	Name() string
 }
 
+// CommandResult contains the aggregated result of a command execution
 type CommandResult struct {
 	Stdout, Stderr []byte
 	ExitCode       int
@@ -185,10 +196,12 @@ func (s simpleFuncAssert) Name() string {
 	return s.name
 }
 
+// Success asserts that the command exited with an exit code of 0
 func Success() Assertion {
 	return ExitCodeIs(0)
 }
 
+// ExitCodeIs asserts that the command exited with the given code
 func ExitCodeIs(code int) Assertion {
 	return simpleFuncAssert{
 		valid: func(r CommandResult) error {
@@ -201,6 +214,7 @@ func ExitCodeIs(code int) Assertion {
 	}
 }
 
+// StdoutEmpty asserts that the command did not write any data to Stdout
 func StdoutEmpty() Assertion {
 	return simpleFuncAssert{
 		valid: func(r CommandResult) error {
@@ -210,6 +224,7 @@ func StdoutEmpty() Assertion {
 	}
 }
 
+// StderrEmpty asserts that the command did not write any data to Stderr
 func StderrEmpty() Assertion {
 	return simpleFuncAssert{
 		valid: func(r CommandResult) error {
@@ -219,6 +234,7 @@ func StderrEmpty() Assertion {
 	}
 }
 
+// StdoutMatches asserts that Stdout contains a substring which matches the given regexp
 func StdoutMatches(pattern string) Assertion {
 	return simpleFuncAssert{
 		valid: func(r CommandResult) error {
@@ -228,6 +244,7 @@ func StdoutMatches(pattern string) Assertion {
 	}
 }
 
+// StderrMatches asserts that Stderr contains a substring which matches the given regexp
 func StderrMatches(pattern string) Assertion {
 	return simpleFuncAssert{
 		valid: func(r CommandResult) error {
@@ -237,6 +254,7 @@ func StderrMatches(pattern string) Assertion {
 	}
 }
 
+// CombinedMatches asserts that either Stdout or Stderr a substring which matches the given regexp
 func CombinedMatches(pattern string) Assertion {
 	return simpleFuncAssert{
 		valid: func(r CommandResult) error {
@@ -270,6 +288,7 @@ func empty(name string, a []byte) error {
 	return nil
 }
 
+// DurationLessThan asserts that the command completed in less than the given duration
 func DurationLessThan(dur time.Duration) Assertion {
 	return simpleFuncAssert{
 		valid: func(r CommandResult) error {
@@ -282,6 +301,7 @@ func DurationLessThan(dur time.Duration) Assertion {
 	}
 }
 
+// DurationGreaterThan asserts that the command completed in greater than the given duration
 func DurationGreaterThan(dur time.Duration) Assertion {
 	return simpleFuncAssert{
 		valid: func(r CommandResult) error {

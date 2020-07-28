@@ -210,6 +210,7 @@ func (s Sync) work(ev timedEvent) {
 	}
 }
 
+// ErrRestartSync describes a known error case that can be solved by re-starting the command
 var ErrRestartSync = errors.New("the sync exited because it was overloaded, restart it")
 
 // workEventGroup converges a group of events to prevent duplicate work.

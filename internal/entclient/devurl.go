@@ -5,11 +5,12 @@ import (
 	"net/http"
 )
 
+// DelDevURL deletes the specified devurl
 func (c Client) DelDevURL(envID, urlID string) error {
 	reqString := "/api/environments/%s/devurls/%s"
-	reqUrl := fmt.Sprintf(reqString, envID, urlID)
+	reqURL := fmt.Sprintf(reqString, envID, urlID)
 
-	res, err := c.request("DELETE", reqUrl, map[string]string{
+	res, err := c.request("DELETE", reqURL, map[string]string{
 		"environment_id": envID,
 		"url_id":         urlID,
 	})
@@ -24,11 +25,12 @@ func (c Client) DelDevURL(envID, urlID string) error {
 	return nil
 }
 
+// UpsertDevURL upserts the specified devurl for the authenticated user
 func (c Client) UpsertDevURL(envID, port, access string) error {
 	reqString := "/api/environments/%s/devurls"
-	reqUrl := fmt.Sprintf(reqString, envID)
+	reqURL := fmt.Sprintf(reqString, envID)
 
-	res, err := c.request("POST", reqUrl, map[string]string{
+	res, err := c.request("POST", reqURL, map[string]string{
 		"environment_id": envID,
 		"port":           port,
 		"access":         access,
