@@ -20,14 +20,14 @@ type RunContainer struct {
 }
 
 type ContainerConfig struct {
-	Name   string
-	Image  string
-	Mounts map[string]string
+	Name       string
+	Image      string
+	BindMounts map[string]string
 }
 
 func mountArgs(m map[string]string) (args []string) {
 	for src, dest := range m {
-		args = append(args, "--mount", fmt.Sprintf("source=%s,target=%s", src, dest))
+		args = append(args, "--mount", fmt.Sprintf("type=bind,source=%s,target=%s", src, dest))
 	}
 	return args
 }
@@ -50,7 +50,7 @@ func NewRunContainer(ctx context.Context, config *ContainerConfig) (*RunContaine
 		"--name", config.Name,
 		"-it", "-d",
 	}
-	args = append(args, mountArgs(config.Mounts)...)
+	args = append(args, mountArgs(config.BindMounts)...)
 	args = append(args, config.Image)
 
 	cmd := exec.CommandContext(ctx, "docker", args...)
