@@ -3,6 +3,7 @@ module cdr.dev/coder-cli
 go 1.14
 
 require (
+	cdr.dev/slog v1.3.0
 	cdr.dev/wsep v0.0.0-20200728013649-82316a09813f
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/gorilla/websocket v1.4.1
