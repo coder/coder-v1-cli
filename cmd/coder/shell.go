@@ -97,12 +97,6 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 			return err
 		}
 		defer xterminal.Restore(os.Stdin.Fd(), stdinState)
-
-		stdoutState, err := xterminal.MakeOutputRaw(os.Stdout.Fd())
-		if err != nil {
-			return err
-		}
-		defer xterminal.Restore(os.Stdout.Fd(), stdoutState)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
