@@ -6,12 +6,15 @@ import (
 	"time"
 
 	"cdr.dev/coder-cli/ci/tcli"
+	"cdr.dev/slog/sloggers/slogtest/assert"
 )
 
 func TestTCli(t *testing.T) {
 	ctx := context.Background()
 
-	container := tcli.NewRunContainer(ctx, "", "test-container")
+	container, err := tcli.NewRunContainer(ctx, "ubuntu:latest", "test-container")
+	assert.Success(t, "new run container", err)
+	defer container.Close()
 
 	container.Run(ctx, "echo testing").Assert(t,
 		tcli.Success(),

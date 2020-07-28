@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,35 +15,68 @@ import (
 )
 
 type RunContainer struct {
+	name string
+	ctx  context.Context
 }
 
-func NewRunContainer(ctx context.Context, image, name string) *RunContainer {
-	//exec.CommandContext(ctx, "docker", "start")
-	// TODO: startup docker container
-	return &RunContainer{}
+func NewRunContainer(ctx context.Context, image, name string) (*RunContainer, error) {
+	cmd := exec.CommandContext(ctx,
+		"docker", "run",
+		"--name", name,
+		"-it", "-d",
+		image,
+	)
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, xerrors.Errorf(
+			"failed to start testing container %q, (%s): %w",
+			name, string(out), err)
+	}
+
+	return &RunContainer{
+		name: name,
+		ctx:  ctx,
+	}, nil
 }
 
-func (r RunContainer) Teardown() error {
-	// TODO: teardown run environment
+func (r *RunContainer) Close() error {
+	cmd := exec.CommandContext(r.ctx,
+		"sh", "-c", strings.Join([]string{
+			"docker", "kill", r.name, "&&",
+			"docker", "rm", r.name,
+		}, " "))
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return xerrors.Errorf(
+			"failed to stop testing container %q, (%s): %w",
+			r.name, string(out), err)
+	}
 	return nil
 }
 
 type Assertable struct {
-	cmd string
-	ctx context.Context
+	cmd       string
+	ctx       context.Context
+	container *RunContainer
 }
 
-func (*RunContainer) Run(ctx context.Context, cmd string) *Assertable {
+func (r *RunContainer) Run(ctx context.Context, cmd string) *Assertable {
 	return &Assertable{
-		cmd: cmd,
-		ctx: ctx,
+		cmd:       cmd,
+		ctx:       ctx,
+		container: r,
 	}
 }
 
 func (a Assertable) Assert(t *testing.T, option ...Assertion) {
 	var cmdResult CommandResult
 
-	cmd := exec.CommandContext(a.ctx, "sh", "-c", a.cmd)
+	cmd := exec.CommandContext(a.ctx,
+		"docker", "exec", a.container.name,
+		"sh", "-c", a.cmd,
+	)
 	var (
 		stdout bytes.Buffer
 		stderr bytes.Buffer
