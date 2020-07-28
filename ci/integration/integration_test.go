@@ -91,6 +91,28 @@ func TestTCli(t *testing.T) {
 	)
 }
 
+func TestHostRunner(t *testing.T) {
+	var (
+		c   tcli.HostRunner
+		ctx = context.Background()
+	)
+
+	c.Run(ctx, "echo testing").Assert(t,
+		tcli.Success(),
+		tcli.StderrEmpty(),
+		tcli.StdoutMatches("testing"),
+	)
+
+	wd, err := os.Getwd()
+	assert.Success(t, "get working dir", err)
+
+	c.Run(ctx, "pwd").Assert(t,
+		tcli.Success(),
+		tcli.StderrEmpty(),
+		tcli.StdoutMatches(wd),
+	)
+}
+
 func TestCoderCLI(t *testing.T) {
 	ctx := context.Background()
 

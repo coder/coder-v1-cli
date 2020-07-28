@@ -100,8 +100,10 @@ func (r *ContainerRunner) Close() error {
 	return nil
 }
 
+// HostRunner executes command tests on the host, outside of a container
 type HostRunner struct{}
 
+// Run executes the given command on the host
 func (r *HostRunner) Run(ctx context.Context, command string) *Assertable {
 	var (
 		args  []string
@@ -114,12 +116,15 @@ func (r *HostRunner) Run(ctx context.Context, command string) *Assertable {
 	if len(parts) > 1 {
 		args = parts[1:]
 	}
+	cmd := exec.CommandContext(ctx, path, args...)
+
 	return &Assertable{
-		cmd:   exec.CommandContext(ctx, path, args...),
+		cmd:   cmd,
 		tname: command,
 	}
 }
 
+// RunCmd executes the given command on the host
 func (r *HostRunner) RunCmd(cmd *exec.Cmd) *Assertable {
 	return &Assertable{
 		cmd:   cmd,
@@ -127,6 +132,7 @@ func (r *HostRunner) RunCmd(cmd *exec.Cmd) *Assertable {
 	}
 }
 
+// Close is a noop for HostRunner
 func (r *HostRunner) Close() error {
 	return nil
 }
