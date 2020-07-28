@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -14,13 +15,18 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// RunContainer specifies a runtime container for performing command tests
-type RunContainer struct {
-	name string
-	ctx  context.Context
+var (
+	_ runnable = &ContainerRunner{}
+	_ runnable = &HostRunner{}
+)
+
+type runnable interface {
+	Run(ctx context.Context, command string) *Assertable
+	RunCmd(cmd *exec.Cmd) *Assertable
+	io.Closer
 }
 
-// ContainerConfig describes the RunContainer configuration schema for initializing a testing environment
+// ContainerConfig describes the ContainerRunner configuration schema for initializing a testing environment
 type ContainerConfig struct {
 	Name       string
 	Image      string
@@ -42,8 +48,14 @@ func preflightChecks() error {
 	return nil
 }
 
-// NewRunContainer starts a new docker container for executing command tests
-func NewRunContainer(ctx context.Context, config *ContainerConfig) (*RunContainer, error) {
+// ContainerRunner specifies a runtime container for performing command tests
+type ContainerRunner struct {
+	name string
+	ctx  context.Context
+}
+
+// NewContainerRunner starts a new docker container for executing command tests
+func NewContainerRunner(ctx context.Context, config *ContainerConfig) (*ContainerRunner, error) {
 	if err := preflightChecks(); err != nil {
 		return nil, err
 	}
@@ -65,14 +77,14 @@ func NewRunContainer(ctx context.Context, config *ContainerConfig) (*RunContaine
 			config.Name, string(out), err)
 	}
 
-	return &RunContainer{
+	return &ContainerRunner{
 		name: config.Name,
 		ctx:  ctx,
 	}, nil
 }
 
 // Close kills and removes the command execution testing container
-func (r *RunContainer) Close() error {
+func (r *ContainerRunner) Close() error {
 	cmd := exec.CommandContext(r.ctx,
 		"sh", "-c", strings.Join([]string{
 			"docker", "kill", r.name, "&&",
@@ -88,43 +100,72 @@ func (r *RunContainer) Close() error {
 	return nil
 }
 
+type HostRunner struct{}
+
+func (r *HostRunner) Run(ctx context.Context, command string) *Assertable {
+	var (
+		args  []string
+		path  string
+		parts = strings.Split(command, " ")
+	)
+	if len(parts) > 0 {
+		path = parts[0]
+	}
+	if len(parts) > 1 {
+		args = parts[1:]
+	}
+	return &Assertable{
+		cmd:   exec.CommandContext(ctx, path, args...),
+		tname: command,
+	}
+}
+
+func (r *HostRunner) RunCmd(cmd *exec.Cmd) *Assertable {
+	return &Assertable{
+		cmd:   cmd,
+		tname: strings.Join(cmd.Args, " "),
+	}
+}
+
+func (r *HostRunner) Close() error {
+	return nil
+}
+
 // Assertable describes an initialized command ready to be run and asserted against
 type Assertable struct {
-	cmd       *exec.Cmd
-	ctx       context.Context
-	container *RunContainer
+	cmd   *exec.Cmd
+	tname string
 }
 
 // Run executes the given command in the runtime container with reasonable defaults
-func (r *RunContainer) Run(ctx context.Context, command string) *Assertable {
+func (r *ContainerRunner) Run(ctx context.Context, command string) *Assertable {
 	cmd := exec.CommandContext(ctx,
 		"docker", "exec", "-i", r.name,
 		"sh", "-c", command,
 	)
 
 	return &Assertable{
-		cmd:       cmd,
-		ctx:       ctx,
-		container: r,
+		cmd:   cmd,
+		tname: command,
 	}
 }
 
 // RunCmd lifts the given *exec.Cmd into the runtime container
-func (r *RunContainer) RunCmd(cmd *exec.Cmd) *Assertable {
+func (r *ContainerRunner) RunCmd(cmd *exec.Cmd) *Assertable {
 	path, _ := exec.LookPath("docker")
 	cmd.Path = path
 	command := strings.Join(cmd.Args, " ")
-	cmd.Args = append([]string{"docker", "exec", "-i", r.name, "sh", "-c", command})
+	cmd.Args = []string{"docker", "exec", "-i", r.name, "sh", "-c", command}
 
 	return &Assertable{
-		cmd:       cmd,
-		container: r,
+		cmd:   cmd,
+		tname: command,
 	}
 }
 
 // Assert runs the Assertable and
 func (a Assertable) Assert(t *testing.T, option ...Assertion) {
-	t.Run(strings.Join(a.cmd.Args[6:], " "), func(t *testing.T) {
+	t.Run(a.tname, func(t *testing.T) {
 		var cmdResult CommandResult
 
 		var (
@@ -225,7 +266,7 @@ func StdoutEmpty() Assertion {
 }
 
 // GetResult offers an escape hatch from tcli
-// The passed pointer will be assigned to the commands *CommandResult
+// The pointer passed as "result" will be assigned to the command's *CommandResult
 func GetResult(result **CommandResult) Assertion {
 	return simpleFuncAssert{
 		valid: func(r *CommandResult) error {

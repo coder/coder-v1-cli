@@ -46,7 +46,7 @@ func init() {
 func TestTCli(t *testing.T) {
 	ctx := context.Background()
 
-	container, err := tcli.NewRunContainer(ctx, &tcli.ContainerConfig{
+	container, err := tcli.NewContainerRunner(ctx, &tcli.ContainerConfig{
 		Image: "ubuntu:latest",
 		Name:  "test-container",
 		BindMounts: map[string]string{
@@ -94,7 +94,7 @@ func TestTCli(t *testing.T) {
 func TestCoderCLI(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := tcli.NewRunContainer(ctx, &tcli.ContainerConfig{
+	c, err := tcli.NewContainerRunner(ctx, &tcli.ContainerConfig{
 		Image: "ubuntu:latest",
 		Name:  "test-container",
 		BindMounts: map[string]string{
