@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"cdr.dev/slog"
+	"cdr.dev/slog/sloggers/slogtest"
 	"cdr.dev/slog/sloggers/slogtest/assert"
 	"golang.org/x/xerrors"
 )
@@ -196,6 +198,14 @@ func (a Assertable) Assert(t *testing.T, option ...Assertion) {
 
 		cmdResult.Stdout = stdout.Bytes()
 		cmdResult.Stderr = stderr.Bytes()
+
+		slogtest.Info(t, "command output",
+			slog.F("command", a.cmd),
+			slog.F("stdout", string(cmdResult.Stdout)),
+			slog.F("stderr", string(cmdResult.Stderr)),
+			slog.F("exit-code", cmdResult.ExitCode),
+			slog.F("duration", cmdResult.Duration),
+		)
 
 		for ix, o := range option {
 			name := fmt.Sprintf("assertion_#%v", ix)

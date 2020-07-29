@@ -44,6 +44,7 @@ func init() {
 }
 
 func TestTCli(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	container, err := tcli.NewContainerRunner(ctx, &tcli.ContainerConfig{
@@ -92,6 +93,7 @@ func TestTCli(t *testing.T) {
 }
 
 func TestHostRunner(t *testing.T) {
+	t.Parallel()
 	var (
 		c   tcli.HostRunner
 		ctx = context.Background()
@@ -114,6 +116,7 @@ func TestHostRunner(t *testing.T) {
 }
 
 func TestCoderCLI(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
 	defer cancel()
 
@@ -141,7 +144,11 @@ func TestCoderCLI(t *testing.T) {
 	)
 
 	creds := login(ctx, t)
-	c.Run(ctx, fmt.Sprintf("mkdir -p ~/.config/coder && echo -ne %s > ~/.config/coder/session", creds.token)).Assert(t,
+	cmd := exec.CommandContext(ctx, "mkdir -p ~/.config/coder && cat > ~/.config/coder/session")
+
+	// !IMPORTANT: be careful that this does not appear in logs
+	cmd.Stdin = strings.NewReader(creds.token)
+	c.RunCmd(cmd).Assert(t,
 		tcli.Success(),
 	)
 	c.Run(ctx, fmt.Sprintf("echo -ne %s > ~/.config/coder/url", creds.url)).Assert(t,
