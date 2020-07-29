@@ -46,7 +46,7 @@ func init() {
 // write session tokens to the given container runner
 func headlessLogin(ctx context.Context, t *testing.T, runner *tcli.ContainerRunner) {
 	creds := login(ctx, t)
-	cmd := exec.CommandContext(ctx, "mkdir -p ~/.config/coder && cat > ~/.config/coder/session")
+	cmd := exec.CommandContext(ctx, "sh", "-c", "mkdir -p ~/.config/coder && cat > ~/.config/coder/session")
 
 	// !IMPORTANT: be careful that this does not appear in logs
 	cmd.Stdin = strings.NewReader(creds.token)

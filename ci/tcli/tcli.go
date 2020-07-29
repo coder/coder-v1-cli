@@ -102,50 +102,8 @@ func (r *ContainerRunner) Close() error {
 	return nil
 }
 
-// HostRunner executes command tests on the host, outside of a container
-type HostRunner struct{}
-
-// Run executes the given command on the host
-func (r *HostRunner) Run(ctx context.Context, command string) *Assertable {
-	var (
-		args  []string
-		path  string
-		parts = strings.Split(command, " ")
-	)
-	if len(parts) > 0 {
-		path = parts[0]
-	}
-	if len(parts) > 1 {
-		args = parts[1:]
-	}
-	cmd := exec.CommandContext(ctx, path, args...)
-
-	return &Assertable{
-		cmd:   cmd,
-		tname: command,
-	}
-}
-
-// RunCmd executes the given command on the host
-func (r *HostRunner) RunCmd(cmd *exec.Cmd) *Assertable {
-	return &Assertable{
-		cmd:   cmd,
-		tname: strings.Join(cmd.Args, " "),
-	}
-}
-
-// Close is a noop for HostRunner
-func (r *HostRunner) Close() error {
-	return nil
-}
-
-// Assertable describes an initialized command ready to be run and asserted against
-type Assertable struct {
-	cmd   *exec.Cmd
-	tname string
-}
-
-// Run executes the given command in the runtime container with reasonable defaults
+// Run executes the given command in the runtime container with reasonable defaults.
+// "command" is executed in a shell as an argument to "sh -c".
 func (r *ContainerRunner) Run(ctx context.Context, command string) *Assertable {
 	cmd := exec.CommandContext(ctx,
 		"docker", "exec", "-i", r.name,
@@ -163,12 +121,45 @@ func (r *ContainerRunner) RunCmd(cmd *exec.Cmd) *Assertable {
 	path, _ := exec.LookPath("docker")
 	cmd.Path = path
 	command := strings.Join(cmd.Args, " ")
-	cmd.Args = []string{"docker", "exec", "-i", r.name, "sh", "-c", command}
+	cmd.Args = append([]string{"docker", "exec", "-i", r.name}, cmd.Args...)
 
 	return &Assertable{
 		cmd:   cmd,
 		tname: command,
 	}
+}
+
+// HostRunner executes command tests on the host, outside of a container
+type HostRunner struct{}
+
+// Run executes the given command on the host.
+// "command" is executed in a shell as an argument to "sh -c".
+func (r *HostRunner) Run(ctx context.Context, command string) *Assertable {
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+
+	return &Assertable{
+		cmd:   cmd,
+		tname: command,
+	}
+}
+
+// RunCmd executes the given *exec.Cmd on the host
+func (r *HostRunner) RunCmd(cmd *exec.Cmd) *Assertable {
+	return &Assertable{
+		cmd:   cmd,
+		tname: strings.Join(cmd.Args, " "),
+	}
+}
+
+// Close is a noop for HostRunner
+func (r *HostRunner) Close() error {
+	return nil
+}
+
+// Assertable describes an initialized command ready to be run and asserted against
+type Assertable struct {
+	cmd   *exec.Cmd
+	tname string
 }
 
 // Assert runs the Assertable and
