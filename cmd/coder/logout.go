@@ -17,7 +17,7 @@ type logoutCmd struct {
 func (cmd logoutCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
 		Name: "logout",
-		Desc: "remote local authentication credentials (if any)",
+		Desc: "remove local authentication credentials (if any)",
 	}
 }
 

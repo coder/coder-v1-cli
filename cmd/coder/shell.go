@@ -27,7 +27,7 @@ func (cmd *shellCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
 		Name:    "sh",
 		Usage:   "<env name> [<command [args...]>]",
-		Desc:    "executes a remote command on the environment\nIf no command is specified, the default shell is opened.",
+		Desc:    "execute a remote command on the environment\nIf no command is specified, the default shell is opened.",
 		RawArgs: true,
 	}
 }
