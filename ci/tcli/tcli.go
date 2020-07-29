@@ -203,7 +203,6 @@ func (a Assertable) Assert(t *testing.T, option ...Assertion) {
 				name = named.Name()
 			}
 			t.Run(name, func(t *testing.T) {
-				t.Parallel()
 				err := o.Valid(&cmdResult)
 				assert.Success(t, name, err)
 			})
@@ -248,12 +247,25 @@ func Success() Assertion {
 	return ExitCodeIs(0)
 }
 
+// Error asserts that the command exited with a nonzero exit code
+func Error() Assertion {
+	return simpleFuncAssert{
+		valid: func(r *CommandResult) error {
+			if r.ExitCode == 0 {
+				return xerrors.Errorf("expected nonzero exit code, got %v", r.ExitCode)
+			}
+			return nil
+		},
+		name: fmt.Sprintf("error"),
+	}
+}
+
 // ExitCodeIs asserts that the command exited with the given code
 func ExitCodeIs(code int) Assertion {
 	return simpleFuncAssert{
 		valid: func(r *CommandResult) error {
 			if r.ExitCode != code {
-				return xerrors.Errorf("exit code of %v expected, got %v", code, r.ExitCode)
+				return xerrors.Errorf("exit code of %v expected, got %v, (%s)", code, r.ExitCode, string(r.Stderr))
 			}
 			return nil
 		},
@@ -279,7 +291,7 @@ func GetResult(result **CommandResult) Assertion {
 			*result = r
 			return nil
 		},
-		name: "get-stdout",
+		name: "get-result",
 	}
 }
 

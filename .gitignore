@@ -2,3 +2,4 @@
 ci/bin
 cmd/coder/coder
 ci/integration/bin
+ci/integration/env.sh

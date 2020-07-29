@@ -114,11 +114,12 @@ func TestHostRunner(t *testing.T) {
 }
 
 func TestCoderCLI(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
+	defer cancel()
 
 	c, err := tcli.NewContainerRunner(ctx, &tcli.ContainerConfig{
-		Image: "ubuntu:latest",
-		Name:  "test-container",
+		Image: "codercom/enterprise-dev",
+		Name:  "coder-cli-tests",
 		BindMounts: map[string]string{
 			binpath: "/bin/coder",
 		},
@@ -137,5 +138,37 @@ func TestCoderCLI(t *testing.T) {
 		tcli.StderrMatches("Commands:"),
 		tcli.StderrMatches("Usage: coder"),
 		tcli.StdoutEmpty(),
+	)
+
+	creds := login(ctx, t)
+	c.Run(ctx, fmt.Sprintf("mkdir -p ~/.config/coder && echo -ne %s > ~/.config/coder/session", creds.token)).Assert(t,
+		tcli.Success(),
+	)
+	c.Run(ctx, fmt.Sprintf("echo -ne %s > ~/.config/coder/url", creds.url)).Assert(t,
+		tcli.Success(),
+	)
+
+	c.Run(ctx, "coder envs").Assert(t,
+		tcli.Success(),
+	)
+
+	c.Run(ctx, "coder urls").Assert(t,
+		tcli.Error(),
+	)
+
+	c.Run(ctx, "coder sync").Assert(t,
+		tcli.Error(),
+	)
+
+	c.Run(ctx, "coder sh").Assert(t,
+		tcli.Error(),
+	)
+
+	c.Run(ctx, "coder logout").Assert(t,
+		tcli.Success(),
+	)
+
+	c.Run(ctx, "coder envs").Assert(t,
+		tcli.Error(),
 	)
 }
