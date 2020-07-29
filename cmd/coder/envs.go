@@ -14,7 +14,7 @@ type envsCmd struct {
 func (cmd envsCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
 		Name: "envs",
-		Desc: "get a list of active environment",
+		Desc: "get a list of environments owned by the authenticated user",
 	}
 }
 
