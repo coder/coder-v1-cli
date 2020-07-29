@@ -43,6 +43,21 @@ func init() {
 	}
 }
 
+// write session tokens to the given container runner
+func headlessLogin(ctx context.Context, t *testing.T, runner *tcli.ContainerRunner) {
+	creds := login(ctx, t)
+	cmd := exec.CommandContext(ctx, "mkdir -p ~/.config/coder && cat > ~/.config/coder/session")
+
+	// !IMPORTANT: be careful that this does not appear in logs
+	cmd.Stdin = strings.NewReader(creds.token)
+	runner.RunCmd(cmd).Assert(t,
+		tcli.Success(),
+	)
+	runner.Run(ctx, fmt.Sprintf("echo -ne %s > ~/.config/coder/url", creds.url)).Assert(t,
+		tcli.Success(),
+	)
+}
+
 func TestCoderCLI(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
@@ -77,17 +92,7 @@ func TestCoderCLI(t *testing.T) {
 		tcli.StdoutEmpty(),
 	)
 
-	creds := login(ctx, t)
-	cmd := exec.CommandContext(ctx, "mkdir -p ~/.config/coder && cat > ~/.config/coder/session")
-
-	// !IMPORTANT: be careful that this does not appear in logs
-	cmd.Stdin = strings.NewReader(creds.token)
-	c.RunCmd(cmd).Assert(t,
-		tcli.Success(),
-	)
-	c.Run(ctx, fmt.Sprintf("echo -ne %s > ~/.config/coder/url", creds.url)).Assert(t,
-		tcli.Success(),
-	)
+	headlessLogin(ctx, t, c)
 
 	c.Run(ctx, "coder envs").Assert(t,
 		tcli.Success(),

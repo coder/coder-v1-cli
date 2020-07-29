@@ -174,11 +174,10 @@ func (r *ContainerRunner) RunCmd(cmd *exec.Cmd) *Assertable {
 // Assert runs the Assertable and
 func (a Assertable) Assert(t *testing.T, option ...Assertion) {
 	slog.Helper()
-	var cmdResult CommandResult
-
 	var (
 		stdout bytes.Buffer
 		stderr bytes.Buffer
+		result CommandResult
 	)
 
 	a.cmd.Stdout = &stdout
@@ -186,63 +185,42 @@ func (a Assertable) Assert(t *testing.T, option ...Assertion) {
 
 	start := time.Now()
 	err := a.cmd.Run()
-	cmdResult.Duration = time.Since(start)
+	result.Duration = time.Since(start)
 
 	if exitErr, ok := err.(*exec.ExitError); ok {
-		cmdResult.ExitCode = exitErr.ExitCode()
+		result.ExitCode = exitErr.ExitCode()
 	} else if err != nil {
-		cmdResult.ExitCode = -1
+		// TODO: handle this case better
+		result.ExitCode = -1
 	} else {
-		cmdResult.ExitCode = 0
+		result.ExitCode = 0
 	}
 
-	cmdResult.Stdout = stdout.Bytes()
-	cmdResult.Stderr = stderr.Bytes()
+	result.Stdout = stdout.Bytes()
+	result.Stderr = stderr.Bytes()
 
 	slogtest.Info(t, "command output",
 		slog.F("command", a.cmd),
-		slog.F("stdout", string(cmdResult.Stdout)),
-		slog.F("stderr", string(cmdResult.Stderr)),
-		slog.F("exit-code", cmdResult.ExitCode),
-		slog.F("duration", cmdResult.Duration),
+		slog.F("stdout", string(result.Stdout)),
+		slog.F("stderr", string(result.Stderr)),
+		slog.F("exit_code", result.ExitCode),
+		slog.F("duration", result.Duration),
 	)
 
-	for _, o := range option {
-		o.Valid(t, &cmdResult)
+	for _, assertion := range option {
+		assertion(t, &result)
 	}
 }
 
 // Assertion specifies an assertion on the given CommandResult.
-// Pass custom Assertion types to cover special cases.
-type Assertion interface {
-	Valid(t *testing.T, r *CommandResult)
-}
-
-// Named is an optional extension of Assertion that provides a helpful label
-// to *testing.T
-type Named interface {
-	Name() string
-}
+// Pass custom Assertion functions to cover special cases.
+type Assertion func(t *testing.T, r *CommandResult)
 
 // CommandResult contains the aggregated result of a command execution
 type CommandResult struct {
 	Stdout, Stderr []byte
 	ExitCode       int
 	Duration       time.Duration
-}
-
-type simpleFuncAssert struct {
-	valid func(t *testing.T, r *CommandResult)
-	name  string
-}
-
-func (s simpleFuncAssert) Valid(t *testing.T, r *CommandResult) {
-	slog.Helper()
-	s.valid(t, r)
-}
-
-func (s simpleFuncAssert) Name() string {
-	return s.name
 }
 
 // Success asserts that the command exited with an exit code of 0
@@ -253,112 +231,75 @@ func Success() Assertion {
 
 // Error asserts that the command exited with a nonzero exit code
 func Error() Assertion {
-	return simpleFuncAssert{
-		valid: func(t *testing.T, r *CommandResult) {
-			slog.Helper()
-			assert.True(t, "exit code is nonzero", r.ExitCode != 0)
-		},
-		name: fmt.Sprintf("error"),
+	return func(t *testing.T, r *CommandResult) {
+		slog.Helper()
+		assert.True(t, "exit code is nonzero", r.ExitCode != 0)
 	}
 }
 
 // ExitCodeIs asserts that the command exited with the given code
 func ExitCodeIs(code int) Assertion {
-	return simpleFuncAssert{
-		valid: func(t *testing.T, r *CommandResult) {
-			slog.Helper()
-			assert.Equal(t, "exit code is as expected", code, r.ExitCode)
-		},
-		name: fmt.Sprintf("exitcode"),
+	return func(t *testing.T, r *CommandResult) {
+		slog.Helper()
+		assert.Equal(t, "exit code is as expected", code, r.ExitCode)
 	}
 }
 
 // StdoutEmpty asserts that the command did not write any data to Stdout
 func StdoutEmpty() Assertion {
-	return simpleFuncAssert{
-		valid: func(t *testing.T, r *CommandResult) {
-			slog.Helper()
-			empty(t, "stdout", r.Stdout)
-		},
-		name: fmt.Sprintf("stdout-empty"),
+	return func(t *testing.T, r *CommandResult) {
+		slog.Helper()
+		empty(t, "stdout", r.Stdout)
 	}
 }
 
 // GetResult offers an escape hatch from tcli
 // The pointer passed as "result" will be assigned to the command's *CommandResult
 func GetResult(result **CommandResult) Assertion {
-	return simpleFuncAssert{
-		valid: func(t *testing.T, r *CommandResult) {
-			slog.Helper()
-			empty(t, "stdout", r.Stdout)
-			*result = r
-		},
-		name: "get-result",
+	return func(t *testing.T, r *CommandResult) {
+		slog.Helper()
+		*result = r
 	}
 }
 
 // StderrEmpty asserts that the command did not write any data to Stderr
 func StderrEmpty() Assertion {
-	return simpleFuncAssert{
-		valid: func(t *testing.T, r *CommandResult) {
-			slog.Helper()
-			empty(t, "stderr", r.Stderr)
-		},
-		name: fmt.Sprintf("stderr-empty"),
+	return func(t *testing.T, r *CommandResult) {
+		slog.Helper()
+		empty(t, "stderr", r.Stderr)
 	}
 }
 
 // StdoutMatches asserts that Stdout contains a substring which matches the given regexp
 func StdoutMatches(pattern string) Assertion {
-	return simpleFuncAssert{
-		valid: func(t *testing.T, r *CommandResult) {
-			slog.Helper()
-			matches(t, "stdout", pattern, r.Stdout)
-		},
-		name: fmt.Sprintf("stdout-matches"),
+	return func(t *testing.T, r *CommandResult) {
+		slog.Helper()
+		matches(t, "stdout", pattern, r.Stdout)
 	}
 }
 
 // StderrMatches asserts that Stderr contains a substring which matches the given regexp
 func StderrMatches(pattern string) Assertion {
-	return simpleFuncAssert{
-		valid: func(t *testing.T, r *CommandResult) {
-			slog.Helper()
-			matches(t, "stderr", pattern, r.Stderr)
-		},
-		name: fmt.Sprintf("stderr-matches"),
-	}
-}
-
-// CombinedMatches asserts that either Stdout or Stderr a substring which matches the given regexp
-func CombinedMatches(pattern string) Assertion {
-	return simpleFuncAssert{
-		valid: func(t *testing.T, r *CommandResult) {
-			slog.Helper()
-			StdoutMatches(pattern).Valid(t, r)
-			StderrMatches(pattern).Valid(t, r)
-		},
-		name: fmt.Sprintf("combined-matches"),
+	return func(t *testing.T, r *CommandResult) {
+		slog.Helper()
+		matches(t, "stderr", pattern, r.Stderr)
 	}
 }
 
 func matches(t *testing.T, name, pattern string, target []byte) {
 	slog.Helper()
+	fields := []slog.Field{
+		slog.F("pattern", pattern),
+		slog.F("target", string(target)),
+		slog.F("sink", name),
+	}
 
 	ok, err := regexp.Match(pattern, target)
 	if err != nil {
-		slogtest.Fatal(t, "failed to attempt regexp match", slog.Error(err),
-			slog.F("pattern", pattern),
-			slog.F("target", string(target)),
-			slog.F("sink", name),
-		)
+		slogtest.Fatal(t, "failed to attempt regexp match", append(fields, slog.Error(err))...)
 	}
 	if !ok {
-		slogtest.Fatal(t, "expected to find pattern, no match found",
-			slog.F("pattern", pattern),
-			slog.F("target", string(target)),
-			slog.F("sink", name),
-		)
+		slogtest.Fatal(t, "expected to find pattern, no match found", fields...)
 	}
 }
 
@@ -371,32 +312,26 @@ func empty(t *testing.T, name string, a []byte) {
 
 // DurationLessThan asserts that the command completed in less than the given duration
 func DurationLessThan(dur time.Duration) Assertion {
-	return simpleFuncAssert{
-		valid: func(t *testing.T, r *CommandResult) {
-			slog.Helper()
-			if r.Duration > dur {
-				slogtest.Fatal(t, "duration longer than expected",
-					slog.F("expected_less_than", dur.String),
-					slog.F("actual", r.Duration.String()),
-				)
-			}
-		},
-		name: fmt.Sprintf("duration-lessthan"),
+	return func(t *testing.T, r *CommandResult) {
+		slog.Helper()
+		if r.Duration > dur {
+			slogtest.Fatal(t, "duration longer than expected",
+				slog.F("expected_less_than", dur.String),
+				slog.F("actual", r.Duration.String()),
+			)
+		}
 	}
 }
 
 // DurationGreaterThan asserts that the command completed in greater than the given duration
 func DurationGreaterThan(dur time.Duration) Assertion {
-	return simpleFuncAssert{
-		valid: func(t *testing.T, r *CommandResult) {
-			slog.Helper()
-			if r.Duration < dur {
-				slogtest.Fatal(t, "duration shorter than expected",
-					slog.F("expected_greater_than", dur.String),
-					slog.F("actual", r.Duration.String()),
-				)
-			}
-		},
-		name: fmt.Sprintf("duration-greaterthan"),
+	return func(t *testing.T, r *CommandResult) {
+		slog.Helper()
+		if r.Duration < dur {
+			slogtest.Fatal(t, "duration shorter than expected",
+				slog.F("expected_greater_than", dur.String),
+				slog.F("actual", r.Duration.String()),
+			)
+		}
 	}
 }
