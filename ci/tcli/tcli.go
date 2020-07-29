@@ -181,8 +181,7 @@ func (a Assertable) Assert(t *testing.T, option ...Assertion) {
 	if exitErr, ok := err.(*exec.ExitError); ok {
 		result.ExitCode = exitErr.ExitCode()
 	} else if err != nil {
-		// TODO: handle this case better
-		result.ExitCode = -1
+		slogtest.Fatal(t, "command failed to run", slog.Error(err), slog.F("command", a.cmd))
 	} else {
 		result.ExitCode = 0
 	}
