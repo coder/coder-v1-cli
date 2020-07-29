@@ -6,6 +6,7 @@ import (
 	"net/url"
 )
 
+// Client wraps the Coder HTTP API
 type Client struct {
 	BaseURL *url.URL
 	Token   string

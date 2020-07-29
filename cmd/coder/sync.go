@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -34,7 +33,7 @@ func (cmd *syncCmd) RegisterFlags(fl *pflag.FlagSet) {
 }
 
 // version returns local rsync protocol version as a string.
-func (_ *syncCmd) version() string {
+func rsyncVersion() string {
 	cmd := exec.Command("rsync", "--version")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -93,13 +92,13 @@ func (cmd *syncCmd) Run(fl *pflag.FlagSet) {
 		Client:    entClient,
 	}
 
-	localVersion := cmd.version()
+	localVersion := rsyncVersion()
 	remoteVersion, rsyncErr := s.Version()
 
 	if rsyncErr != nil {
 		flog.Info("Unable to determine remote rsync version.  Proceeding cautiously.")
 	} else if localVersion != remoteVersion {
-		flog.Fatal(fmt.Sprintf("rsync protocol mismatch. %s.", localVersion, rsyncErr))
+		flog.Fatal("rsync protocol mismatch: local = %v, remote = %v", localVersion, rsyncErr)
 	}
 
 	for err == nil || err == sync.ErrRestartSync {
