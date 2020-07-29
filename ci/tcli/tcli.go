@@ -173,57 +173,49 @@ func (r *ContainerRunner) RunCmd(cmd *exec.Cmd) *Assertable {
 
 // Assert runs the Assertable and
 func (a Assertable) Assert(t *testing.T, option ...Assertion) {
-	t.Run(a.tname, func(t *testing.T) {
-		var cmdResult CommandResult
+	slog.Helper()
+	var cmdResult CommandResult
 
-		var (
-			stdout bytes.Buffer
-			stderr bytes.Buffer
-		)
+	var (
+		stdout bytes.Buffer
+		stderr bytes.Buffer
+	)
 
-		a.cmd.Stdout = &stdout
-		a.cmd.Stderr = &stderr
+	a.cmd.Stdout = &stdout
+	a.cmd.Stderr = &stderr
 
-		start := time.Now()
-		err := a.cmd.Run()
-		cmdResult.Duration = time.Since(start)
+	start := time.Now()
+	err := a.cmd.Run()
+	cmdResult.Duration = time.Since(start)
 
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			cmdResult.ExitCode = exitErr.ExitCode()
-		} else if err != nil {
-			cmdResult.ExitCode = -1
-		} else {
-			cmdResult.ExitCode = 0
-		}
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		cmdResult.ExitCode = exitErr.ExitCode()
+	} else if err != nil {
+		cmdResult.ExitCode = -1
+	} else {
+		cmdResult.ExitCode = 0
+	}
 
-		cmdResult.Stdout = stdout.Bytes()
-		cmdResult.Stderr = stderr.Bytes()
+	cmdResult.Stdout = stdout.Bytes()
+	cmdResult.Stderr = stderr.Bytes()
 
-		slogtest.Info(t, "command output",
-			slog.F("command", a.cmd),
-			slog.F("stdout", string(cmdResult.Stdout)),
-			slog.F("stderr", string(cmdResult.Stderr)),
-			slog.F("exit-code", cmdResult.ExitCode),
-			slog.F("duration", cmdResult.Duration),
-		)
+	slogtest.Info(t, "command output",
+		slog.F("command", a.cmd),
+		slog.F("stdout", string(cmdResult.Stdout)),
+		slog.F("stderr", string(cmdResult.Stderr)),
+		slog.F("exit-code", cmdResult.ExitCode),
+		slog.F("duration", cmdResult.Duration),
+	)
 
-		for ix, o := range option {
-			name := fmt.Sprintf("assertion_#%v", ix)
-			if named, ok := o.(Named); ok {
-				name = named.Name()
-			}
-			t.Run(name, func(t *testing.T) {
-				err := o.Valid(&cmdResult)
-				assert.Success(t, name, err)
-			})
-		}
-	})
+	for _, o := range option {
+		o.Valid(t, &cmdResult)
+	}
 }
 
 // Assertion specifies an assertion on the given CommandResult.
 // Pass custom Assertion types to cover special cases.
 type Assertion interface {
-	Valid(r *CommandResult) error
+	Valid(t *testing.T, r *CommandResult)
 }
 
 // Named is an optional extension of Assertion that provides a helpful label
@@ -240,12 +232,13 @@ type CommandResult struct {
 }
 
 type simpleFuncAssert struct {
-	valid func(r *CommandResult) error
+	valid func(t *testing.T, r *CommandResult)
 	name  string
 }
 
-func (s simpleFuncAssert) Valid(r *CommandResult) error {
-	return s.valid(r)
+func (s simpleFuncAssert) Valid(t *testing.T, r *CommandResult) {
+	slog.Helper()
+	s.valid(t, r)
 }
 
 func (s simpleFuncAssert) Name() string {
@@ -254,17 +247,16 @@ func (s simpleFuncAssert) Name() string {
 
 // Success asserts that the command exited with an exit code of 0
 func Success() Assertion {
+	slog.Helper()
 	return ExitCodeIs(0)
 }
 
 // Error asserts that the command exited with a nonzero exit code
 func Error() Assertion {
 	return simpleFuncAssert{
-		valid: func(r *CommandResult) error {
-			if r.ExitCode == 0 {
-				return xerrors.Errorf("expected nonzero exit code, got %v", r.ExitCode)
-			}
-			return nil
+		valid: func(t *testing.T, r *CommandResult) {
+			slog.Helper()
+			assert.True(t, "exit code is nonzero", r.ExitCode != 0)
 		},
 		name: fmt.Sprintf("error"),
 	}
@@ -273,11 +265,9 @@ func Error() Assertion {
 // ExitCodeIs asserts that the command exited with the given code
 func ExitCodeIs(code int) Assertion {
 	return simpleFuncAssert{
-		valid: func(r *CommandResult) error {
-			if r.ExitCode != code {
-				return xerrors.Errorf("exit code of %v expected, got %v, (%s)", code, r.ExitCode, string(r.Stderr))
-			}
-			return nil
+		valid: func(t *testing.T, r *CommandResult) {
+			slog.Helper()
+			assert.Equal(t, "exit code is as expected", code, r.ExitCode)
 		},
 		name: fmt.Sprintf("exitcode"),
 	}
@@ -286,8 +276,9 @@ func ExitCodeIs(code int) Assertion {
 // StdoutEmpty asserts that the command did not write any data to Stdout
 func StdoutEmpty() Assertion {
 	return simpleFuncAssert{
-		valid: func(r *CommandResult) error {
-			return empty("stdout", r.Stdout)
+		valid: func(t *testing.T, r *CommandResult) {
+			slog.Helper()
+			empty(t, "stdout", r.Stdout)
 		},
 		name: fmt.Sprintf("stdout-empty"),
 	}
@@ -297,9 +288,10 @@ func StdoutEmpty() Assertion {
 // The pointer passed as "result" will be assigned to the command's *CommandResult
 func GetResult(result **CommandResult) Assertion {
 	return simpleFuncAssert{
-		valid: func(r *CommandResult) error {
+		valid: func(t *testing.T, r *CommandResult) {
+			slog.Helper()
+			empty(t, "stdout", r.Stdout)
 			*result = r
-			return nil
 		},
 		name: "get-result",
 	}
@@ -308,8 +300,9 @@ func GetResult(result **CommandResult) Assertion {
 // StderrEmpty asserts that the command did not write any data to Stderr
 func StderrEmpty() Assertion {
 	return simpleFuncAssert{
-		valid: func(r *CommandResult) error {
-			return empty("stderr", r.Stderr)
+		valid: func(t *testing.T, r *CommandResult) {
+			slog.Helper()
+			empty(t, "stderr", r.Stderr)
 		},
 		name: fmt.Sprintf("stderr-empty"),
 	}
@@ -318,8 +311,9 @@ func StderrEmpty() Assertion {
 // StdoutMatches asserts that Stdout contains a substring which matches the given regexp
 func StdoutMatches(pattern string) Assertion {
 	return simpleFuncAssert{
-		valid: func(r *CommandResult) error {
-			return matches("stdout", pattern, r.Stdout)
+		valid: func(t *testing.T, r *CommandResult) {
+			slog.Helper()
+			matches(t, "stdout", pattern, r.Stdout)
 		},
 		name: fmt.Sprintf("stdout-matches"),
 	}
@@ -328,8 +322,9 @@ func StdoutMatches(pattern string) Assertion {
 // StderrMatches asserts that Stderr contains a substring which matches the given regexp
 func StderrMatches(pattern string) Assertion {
 	return simpleFuncAssert{
-		valid: func(r *CommandResult) error {
-			return matches("stderr", pattern, r.Stderr)
+		valid: func(t *testing.T, r *CommandResult) {
+			slog.Helper()
+			matches(t, "stderr", pattern, r.Stderr)
 		},
 		name: fmt.Sprintf("stderr-matches"),
 	}
@@ -338,45 +333,53 @@ func StderrMatches(pattern string) Assertion {
 // CombinedMatches asserts that either Stdout or Stderr a substring which matches the given regexp
 func CombinedMatches(pattern string) Assertion {
 	return simpleFuncAssert{
-		valid: func(r *CommandResult) error {
-			//stdoutValid := StdoutMatches(pattern).Valid(r)
-			//stderrValid := StderrMatches(pattern).Valid(r)
-			// TODO: combine errors
-			return nil
+		valid: func(t *testing.T, r *CommandResult) {
+			slog.Helper()
+			StdoutMatches(pattern).Valid(t, r)
+			StderrMatches(pattern).Valid(t, r)
 		},
 		name: fmt.Sprintf("combined-matches"),
 	}
 }
 
-func matches(name, pattern string, target []byte) error {
+func matches(t *testing.T, name, pattern string, target []byte) {
+	slog.Helper()
+
 	ok, err := regexp.Match(pattern, target)
 	if err != nil {
-		return xerrors.Errorf("failed to attempt regexp match: %w", err)
-	}
-	if !ok {
-		return xerrors.Errorf(
-			"expected to find pattern (%s) in %s, no match found in (%v)",
-			pattern, name, string(target),
+		slogtest.Fatal(t, "failed to attempt regexp match", slog.Error(err),
+			slog.F("pattern", pattern),
+			slog.F("target", string(target)),
+			slog.F("sink", name),
 		)
 	}
-	return nil
+	if !ok {
+		slogtest.Fatal(t, "expected to find pattern, no match found",
+			slog.F("pattern", pattern),
+			slog.F("target", string(target)),
+			slog.F("sink", name),
+		)
+	}
 }
 
-func empty(name string, a []byte) error {
+func empty(t *testing.T, name string, a []byte) {
+	slog.Helper()
 	if len(a) > 0 {
-		return xerrors.Errorf("expected %s to be empty, got (%s)", name, string(a))
+		slogtest.Fatal(t, "expected "+name+" to be empty", slog.F("got", string(a)))
 	}
-	return nil
 }
 
 // DurationLessThan asserts that the command completed in less than the given duration
 func DurationLessThan(dur time.Duration) Assertion {
 	return simpleFuncAssert{
-		valid: func(r *CommandResult) error {
+		valid: func(t *testing.T, r *CommandResult) {
+			slog.Helper()
 			if r.Duration > dur {
-				return xerrors.Errorf("expected duration less than %s, took %s", dur.String(), r.Duration.String())
+				slogtest.Fatal(t, "duration longer than expected",
+					slog.F("expected_less_than", dur.String),
+					slog.F("actual", r.Duration.String()),
+				)
 			}
-			return nil
 		},
 		name: fmt.Sprintf("duration-lessthan"),
 	}
@@ -385,11 +388,14 @@ func DurationLessThan(dur time.Duration) Assertion {
 // DurationGreaterThan asserts that the command completed in greater than the given duration
 func DurationGreaterThan(dur time.Duration) Assertion {
 	return simpleFuncAssert{
-		valid: func(r *CommandResult) error {
+		valid: func(t *testing.T, r *CommandResult) {
+			slog.Helper()
 			if r.Duration < dur {
-				return xerrors.Errorf("expected duration greater than %s, took %s", dur.String(), r.Duration.String())
+				slogtest.Fatal(t, "duration shorter than expected",
+					slog.F("expected_greater_than", dur.String),
+					slog.F("actual", r.Duration.String()),
+				)
 			}
-			return nil
 		},
 		name: fmt.Sprintf("duration-greaterthan"),
 	}
