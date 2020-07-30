@@ -17,7 +17,7 @@ import (
 	"go.coder.com/flog"
 
 	"cdr.dev/coder-cli/internal/activity"
-	"cdr.dev/coder-cli/internal/xterminal"
+	"cdr.dev/coder-cli/internal/x/xterminal"
 	"cdr.dev/wsep"
 )
 

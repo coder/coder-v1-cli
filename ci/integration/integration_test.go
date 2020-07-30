@@ -4,10 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
+	"math/rand"
+	"regexp"
 	"testing"
 	"time"
 
@@ -16,50 +14,6 @@ import (
 	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/slogtest/assert"
 )
-
-func build(path string) error {
-	cmd := exec.Command(
-		"sh", "-c",
-		fmt.Sprintf("cd ../../ && go build -o %s ./cmd/coder", path),
-	)
-	cmd.Env = append(os.Environ(), "GOOS=linux", "CGO_ENABLED=0")
-
-	_, err := cmd.CombinedOutput()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-var binpath string
-
-func init() {
-	cwd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-
-	binpath = filepath.Join(cwd, "bin", "coder")
-	err = build(binpath)
-	if err != nil {
-		panic(err)
-	}
-}
-
-// write session tokens to the given container runner
-func headlessLogin(ctx context.Context, t *testing.T, runner *tcli.ContainerRunner) {
-	creds := login(ctx, t)
-	cmd := exec.CommandContext(ctx, "sh", "-c", "mkdir -p ~/.config/coder && cat > ~/.config/coder/session")
-
-	// !IMPORTANT: be careful that this does not appear in logs
-	cmd.Stdin = strings.NewReader(creds.token)
-	runner.RunCmd(cmd).Assert(t,
-		tcli.Success(),
-	)
-	runner.Run(ctx, fmt.Sprintf("echo -ne %s > ~/.config/coder/url", creds.url)).Assert(t,
-		tcli.Success(),
-	)
-}
 
 func TestCoderCLI(t *testing.T) {
 	t.Parallel()
@@ -116,7 +70,7 @@ func TestCoderCLI(t *testing.T) {
 	var user entclient.User
 	c.Run(ctx, `coder users ls -o json | jq -c '.[] | select( .username == "charlie")'`).Assert(t,
 		tcli.Success(),
-		jsonUnmarshals(&user),
+		stdoutUnmarshalsJSON(&user),
 	)
 	assert.Equal(t, "user email is as expected", "charlie@coder.com", user.Email)
 	assert.Equal(t, "username is as expected", "Charlie", user.Name)
@@ -135,10 +89,80 @@ func TestCoderCLI(t *testing.T) {
 	)
 }
 
-func jsonUnmarshals(target interface{}) tcli.Assertion {
+func TestSecrets(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
+	defer cancel()
+
+	c, err := tcli.NewContainerRunner(ctx, &tcli.ContainerConfig{
+		Image: "codercom/enterprise-dev",
+		Name:  "secrets-cli-tests",
+		BindMounts: map[string]string{
+			binpath: "/bin/coder",
+		},
+	})
+	assert.Success(t, "new run container", err)
+	defer c.Close()
+
+	headlessLogin(ctx, t, c)
+
+	c.Run(ctx, "coder secrets ls").Assert(t,
+		tcli.Success(),
+	)
+
+	name, value := randString(8), randString(8)
+
+	c.Run(ctx, "coder secrets create").Assert(t,
+		tcli.Error(),
+		tcli.StdoutEmpty(),
+		tcli.StderrMatches("required flag"),
+	)
+
+	c.Run(ctx, fmt.Sprintf("coder secrets create --name %s --value %s", name, value)).Assert(t,
+		tcli.Success(),
+		tcli.StderrEmpty(),
+	)
+
+	c.Run(ctx, "coder secrets ls").Assert(t,
+		tcli.Success(),
+		tcli.StderrEmpty(),
+		tcli.StdoutMatches("Value"),
+		tcli.StdoutMatches(regexp.QuoteMeta(name)),
+	)
+
+	c.Run(ctx, "coder secrets view "+name).Assert(t,
+		tcli.Success(),
+		tcli.StderrEmpty(),
+		tcli.StdoutMatches(regexp.QuoteMeta(value)),
+	)
+
+	c.Run(ctx, "coder secrets rm").Assert(t,
+		tcli.Error(),
+	)
+	c.Run(ctx, "coder secrets rm "+name).Assert(t,
+		tcli.Success(),
+	)
+	c.Run(ctx, "coder secrets view "+name).Assert(t,
+		tcli.Error(),
+		tcli.StdoutEmpty(),
+	)
+}
+
+func stdoutUnmarshalsJSON(target interface{}) tcli.Assertion {
 	return func(t *testing.T, r *tcli.CommandResult) {
 		slog.Helper()
 		err := json.Unmarshal(r.Stdout, target)
 		assert.Success(t, "json unmarshals", err)
 	}
+}
+
+var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+func randString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return string(b)
 }
