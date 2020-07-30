@@ -22,6 +22,7 @@ func (c Client) DelDevURL(envID, urlID string) error {
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		return bodyError(res)
@@ -51,6 +52,7 @@ func (c Client) InsertDevURL(envID string, port int, name, access string) error 
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		return bodyError(res)
@@ -80,6 +82,7 @@ func (c Client) UpdateDevURL(envID, urlID string, port int, name, access string)
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		return bodyError(res)
