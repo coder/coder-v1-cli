@@ -4,14 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"reflect"
-	"strings"
-	"text/tabwriter"
 
+	"cdr.dev/coder-cli/internal/xcli"
 	"github.com/spf13/pflag"
 
 	"go.coder.com/cli"
-	"go.coder.com/flog"
 )
 
 type usersCmd struct {
@@ -39,41 +36,28 @@ type listCmd struct {
 	outputFmt string
 }
 
-func tabDelimited(data interface{}) string {
-	v := reflect.ValueOf(data)
-	s := &strings.Builder{}
-	for i := 0; i < v.NumField(); i++ {
-		s.WriteString(fmt.Sprintf("%s\t", v.Field(i).Interface()))
-	}
-	return s.String()
-}
-
 func (cmd *listCmd) Run(fl *pflag.FlagSet) {
 	entClient := requireAuth()
 
 	users, err := entClient.Users()
-	if err != nil {
-		flog.Fatal("failed to get users: %v", err)
-	}
+	xcli.RequireSuccess(err, "failed to get users: %v", err)
 
 	switch cmd.outputFmt {
 	case "human":
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+		w := xcli.HumanReadableWriter()
+		if len(users) > 0 {
+			_, err = fmt.Fprintln(w, xcli.TabDelimitedStructHeaders(users[0]))
+			xcli.RequireSuccess(err, "failed to write: %v", err)
+		}
 		for _, u := range users {
-			_, err = fmt.Fprintln(w, tabDelimited(u))
-			if err != nil {
-				flog.Fatal("failed to write: %v", err)
-			}
+			_, err = fmt.Fprintln(w, xcli.TabDelimitedStructValues(u))
+			xcli.RequireSuccess(err, "failed to write: %v", err)
 		}
 		err = w.Flush()
-		if err != nil {
-			flog.Fatal("failed to flush writer: %v", err)
-		}
+		xcli.RequireSuccess(err, "failed to flush writer: %v", err)
 	case "json":
 		err = json.NewEncoder(os.Stdout).Encode(users)
-		if err != nil {
-			flog.Fatal("failed to encode users to json: %v", err)
-		}
+		xcli.RequireSuccess(err, "failed to encode users to json: %v", err)
 	default:
 		exitUsage(fl)
 	}

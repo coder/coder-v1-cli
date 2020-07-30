@@ -43,6 +43,7 @@ func (r *rootCmd) Subcommands() []cli.Command {
 		&versionCmd{},
 		&configSSHCmd{},
 		&usersCmd{},
+		&secretsCmd{},
 	}
 }
 
