@@ -18,6 +18,26 @@ import (
 
 type urlsCmd struct{}
 
+func (cmd *urlsCmd) Subcommands() []cli.Command {
+	return []cli.Command{
+		&listSubCmd{},
+		&createSubCmd{},
+		&delSubCmd{},
+	}
+}
+
+func (cmd urlsCmd) Spec() cli.CommandSpec {
+	return cli.CommandSpec{
+		Name:  "urls",
+		Usage: "[subcommand] <flags>",
+		Desc:  "interact with environment devurls",
+	}
+}
+
+func (cmd urlsCmd) Run(fl *pflag.FlagSet) {
+	exitUsage(fl)
+}
+
 // DevURL is the parsed json response record for a devURL from cemanager
 type DevURL struct {
 	ID     string `json:"id"`
@@ -55,6 +75,48 @@ func accessLevelIsValid(level string) bool {
 		flog.Error("Invalid access level")
 	}
 	return ok
+}
+
+type listSubCmd struct {
+	outputFmt string
+}
+
+// Run gets the list of active devURLs from the cemanager for the
+// specified environment and outputs info to stdout.
+func (sub listSubCmd) Run(fl *pflag.FlagSet) {
+	envName := fl.Arg(0)
+	devURLs := urlList(envName)
+
+	switch sub.outputFmt {
+	case "human":
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.TabIndent)
+		for _, devURL := range devURLs {
+			fmt.Fprintf(w, "%s\t%d\t%s\n", devURL.URL, devURL.Port, devURL.Access)
+		}
+		err := w.Flush()
+		if err != nil {
+			flog.Fatal("failed to flush writer: %v", err)
+		}
+	case "json":
+		err := json.NewEncoder(os.Stdout).Encode(devURLs)
+		if err != nil {
+			flog.Fatal("failed to encode devurls to json: %v", err)
+		}
+	default:
+		exitUsage(fl)
+	}
+}
+
+func (sub *listSubCmd) RegisterFlags(fl *pflag.FlagSet) {
+	fl.StringVarP(&sub.outputFmt, "output", "o", "human", "output format (human | json)")
+}
+
+func (sub *listSubCmd) Spec() cli.CommandSpec {
+	return cli.CommandSpec{
+		Name:  "ls",
+		Usage: "<env> <flags>",
+		Desc:  "list all devurls",
+	}
 }
 
 type createSubCmd struct {
@@ -181,14 +243,6 @@ func (sub delSubCmd) Run(fl *pflag.FlagSet) {
 	}
 }
 
-func (cmd urlsCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "urls",
-		Usage: "<env name>",
-		Desc:  "get all development urls for external access",
-	}
-}
-
 // urlList returns the list of active devURLs from the cemanager.
 func urlList(envName string) []DevURL {
 	entClient := requireAuth()
@@ -216,24 +270,4 @@ func urlList(envName string) []DevURL {
 	}
 
 	return devURLs
-}
-
-// Run gets the list of active devURLs from the cemanager for the
-// specified environment and outputs info to stdout.
-func (cmd urlsCmd) Run(fl *pflag.FlagSet) {
-	envName := fl.Arg(0)
-	devURLs := urlList(envName)
-
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.TabIndent)
-	for _, devURL := range devURLs {
-		fmt.Fprintf(w, "%s\t%d\t%s\n", devURL.URL, devURL.Port, devURL.Access)
-	}
-	w.Flush()
-}
-
-func (cmd *urlsCmd) Subcommands() []cli.Command {
-	return []cli.Command{
-		&createSubCmd{},
-		&delSubCmd{},
-	}
 }
