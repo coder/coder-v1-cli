@@ -3,8 +3,6 @@ package entclient
 import (
 	"fmt"
 	"net/http"
-
-	"golang.org/x/xerrors"
 )
 
 type delDevURLRequest struct {
@@ -50,12 +48,14 @@ func (c Client) InsertDevURL(envID string, port int, name, access string) error 
 		Access: access,
 		Name:   name,
 	})
-	if res != nil && res.StatusCode == http.StatusConflict {
-		return xerrors.Errorf("Failed to create devurl. Check that the port and name are unique.")
-	}
 	if err != nil {
 		return err
 	}
+
+	if res.StatusCode != http.StatusOK {
+		return bodyError(res)
+	}
+
 	return nil
 }
 
@@ -77,11 +77,13 @@ func (c Client) UpdateDevURL(envID, urlID string, port int, name, access string)
 		Access: access,
 		Name:   name,
 	})
-	if res != nil && res.StatusCode == http.StatusConflict {
-		return xerrors.Errorf("Failed to update devurl. Check that the port and name are unique.")
-	}
 	if err != nil {
 		return err
 	}
+
+	if res.StatusCode != http.StatusOK {
+		return bodyError(res)
+	}
+
 	return nil
 }
