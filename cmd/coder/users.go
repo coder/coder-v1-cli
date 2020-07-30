@@ -38,7 +38,7 @@ type listCmd struct {
 }
 
 func (cmd *listCmd) Run(fl *pflag.FlagSet) {
-	xvalidate.Validate(cmd)
+	xvalidate.Validate(fl, cmd)
 	entClient := requireAuth()
 
 	users, err := entClient.Users()
@@ -77,7 +77,7 @@ func (cmd *listCmd) Spec() cli.CommandSpec {
 	}
 }
 
-func (cmd *listCmd) Validate() (e []error) {
+func (cmd *listCmd) Validate(fl *pflag.FlagSet) (e []error) {
 	if !(cmd.outputFmt == "json" || cmd.outputFmt == "human") {
 		e = append(e, fmt.Errorf(`--output must be "json" or "human"`))
 	}
