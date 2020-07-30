@@ -44,6 +44,7 @@ type DevURL struct {
 	URL    string `json:"url"`
 	Port   int    `json:"port"`
 	Access string `json:"access"`
+	Name   string `json:"name"`
 }
 
 var urlAccessLevel = map[string]string{
