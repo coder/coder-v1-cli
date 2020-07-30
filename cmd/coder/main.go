@@ -6,7 +6,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 
-	"cdr.dev/coder-cli/internal/xterminal"
+	"cdr.dev/coder-cli/internal/x/xterminal"
 	"github.com/spf13/pflag"
 
 	"go.coder.com/flog"
@@ -61,4 +61,11 @@ func main() {
 	defer xterminal.Restore(os.Stdout.Fd(), stdoutState)
 
 	cli.RunRoot(&rootCmd{})
+}
+
+// requireSuccess prints the given message and format args as a fatal error if err != nil
+func requireSuccess(err error, msg string, args ...interface{}) {
+	if err != nil {
+		flog.Fatal(msg, args...)
+	}
 }

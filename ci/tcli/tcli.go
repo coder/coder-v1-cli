@@ -163,13 +163,16 @@ type Assertable struct {
 }
 
 // Assert runs the Assertable and
-func (a Assertable) Assert(t *testing.T, option ...Assertion) {
+func (a *Assertable) Assert(t *testing.T, option ...Assertion) {
 	slog.Helper()
 	var (
 		stdout bytes.Buffer
 		stderr bytes.Buffer
 		result CommandResult
 	)
+	if a.cmd == nil {
+		slogtest.Fatal(t, "test failed to initialize: no command specified")
+	}
 
 	a.cmd.Stdout = &stdout
 	a.cmd.Stderr = &stderr

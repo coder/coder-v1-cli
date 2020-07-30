@@ -1,4 +1,4 @@
-package xcli
+package xvalidate
 
 import (
 	"bytes"
@@ -6,15 +6,7 @@ import (
 	"go.coder.com/flog"
 )
 
-// RequireSuccess prints the given message and format args as a fatal error if err != nil
-func RequireSuccess(err error, msg string, args ...interface{}) {
-	if err != nil {
-		flog.Fatal(msg, args...)
-	}
-}
-
 // cerrors contains a list of errors.
-// New cerrors should be created via Combine.
 type cerrors struct {
 	cerrors []error
 }
@@ -68,10 +60,7 @@ func flatten(errs []error) []error {
 	return nerrs
 }
 
-// Combine combines multiple errors into one.
-// If no errors are provided, nil is returned.
-// If a single error is provided, it is returned.
-// Otherwise, an cerrors is returned.
+// combineErrors combines multiple errors into one
 func combineErrors(errs ...error) error {
 	errs = stripNils(errs)
 	switch len(errs) {
@@ -101,5 +90,7 @@ func Validate(v Validator) {
 	errs := v.Validate()
 
 	err := combineErrors(errs...)
-	RequireSuccess(err, "failed to validate this command\n%v", err)
+	if err != nil {
+		flog.Fatal("failed to validate this command\n%v", err)
+	}
 }

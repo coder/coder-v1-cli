@@ -59,7 +59,8 @@ type InsertSecretReq struct {
 
 // InsertSecret adds a new secret for the authed user
 func (c *Client) InsertSecret(req InsertSecretReq) error {
-	_, err := c.request(http.MethodPost, "/api/users/me/secrets", req)
+	var resp interface{}
+	err := c.requestBody(http.MethodPost, "/api/users/me/secrets", req, &resp)
 	return err
 }
 
@@ -67,7 +68,7 @@ func (c *Client) InsertSecret(req InsertSecretReq) error {
 func (c *Client) DeleteSecretByName(name string) error {
 	id, err := c.secretNameToID(name)
 	if err != nil {
-		return nil
+		return err
 	}
 	_, err = c.request(http.MethodDelete, "/api/users/me/secrets/"+id, nil)
 	return err

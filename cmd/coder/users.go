@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"cdr.dev/coder-cli/internal/xcli"
+	"cdr.dev/coder-cli/internal/x/xtabwriter"
+	"cdr.dev/coder-cli/internal/x/xvalidate"
 	"github.com/spf13/pflag"
 
 	"go.coder.com/cli"
@@ -37,31 +38,31 @@ type listCmd struct {
 }
 
 func (cmd *listCmd) Run(fl *pflag.FlagSet) {
+	xvalidate.Validate(cmd)
 	entClient := requireAuth()
 
 	users, err := entClient.Users()
-	xcli.RequireSuccess(err, "failed to get users: %v", err)
+	requireSuccess(err, "failed to get users: %v", err)
 
 	switch cmd.outputFmt {
 	case "human":
-		w := xcli.HumanReadableWriter()
+		w := xtabwriter.NewWriter()
 		if len(users) > 0 {
-			_, err = fmt.Fprintln(w, xcli.TabDelimitedStructHeaders(users[0]))
-			xcli.RequireSuccess(err, "failed to write: %v", err)
+			_, err = fmt.Fprintln(w, xtabwriter.StructFieldNames(users[0]))
+			requireSuccess(err, "failed to write: %v", err)
 		}
 		for _, u := range users {
-			_, err = fmt.Fprintln(w, xcli.TabDelimitedStructValues(u))
-			xcli.RequireSuccess(err, "failed to write: %v", err)
+			_, err = fmt.Fprintln(w, xtabwriter.StructValues(u))
+			requireSuccess(err, "failed to write: %v", err)
 		}
 		err = w.Flush()
-		xcli.RequireSuccess(err, "failed to flush writer: %v", err)
+		requireSuccess(err, "failed to flush writer: %v", err)
 	case "json":
 		err = json.NewEncoder(os.Stdout).Encode(users)
-		xcli.RequireSuccess(err, "failed to encode users to json: %v", err)
+		requireSuccess(err, "failed to encode users to json: %v", err)
 	default:
 		exitUsage(fl)
 	}
-
 }
 
 func (cmd *listCmd) RegisterFlags(fl *pflag.FlagSet) {
@@ -74,4 +75,11 @@ func (cmd *listCmd) Spec() cli.CommandSpec {
 		Usage: "<flags>",
 		Desc:  "list all users",
 	}
+}
+
+func (cmd *listCmd) Validate() (e []error) {
+	if !(cmd.outputFmt == "json" || cmd.outputFmt == "human") {
+		e = append(e, fmt.Errorf(`--output must be "json" or "human"`))
+	}
+	return e
 }

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"cdr.dev/coder-cli/internal/xcli"
-
 	"go.coder.com/flog"
 
 	"cdr.dev/coder-cli/internal/entclient"
@@ -29,10 +27,10 @@ outer:
 // getEnvs returns all environments for the user.
 func getEnvs(client *entclient.Client) []entclient.Environment {
 	me, err := client.Me()
-	xcli.RequireSuccess(err, "get self: %+v", err)
+	requireSuccess(err, "get self: %+v", err)
 
 	orgs, err := client.Orgs()
-	xcli.RequireSuccess(err, "get orgs: %+v", err)
+	requireSuccess(err, "get orgs: %+v", err)
 
 	orgs = userOrgs(me, orgs)
 
@@ -40,7 +38,7 @@ func getEnvs(client *entclient.Client) []entclient.Environment {
 
 	for _, org := range orgs {
 		envs, err := client.Envs(me, org)
-		xcli.RequireSuccess(err, "get envs for %v: %+v", org.Name, err)
+		requireSuccess(err, "get envs for %v: %+v", org.Name, err)
 
 		for _, env := range envs {
 			allEnvs = append(allEnvs, env)
