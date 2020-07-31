@@ -18,12 +18,12 @@ func makeSecretsCmd() cli.Command {
 	return cli.Command{
 		Name:        "secrets",
 		Usage:       "",
-		Description: "interact with secrets",
+		Description: "Interact with secrets objects owned by the active user.",
 		Subcommands: []cli.Command{
 			{
 				Name:        "ls",
 				Usage:       "",
-				Description: "",
+				Description: "list all secrets owned by the active user",
 				Action:      listSecrets,
 			},
 			makeCreateSecret(),
@@ -54,11 +54,12 @@ func makeCreateSecret() cli.Command {
 
 	return cli.Command{
 		Name:        "create",
-		Usage:       "",
-		Description: "",
+		Usage:       "create a new secret",
+		Description: "Create a new secret object to store application secrets and access them securely from within your environments.",
+		ArgsUsage:   "[secret_name]",
 		Before: func(c *cli.Context) error {
 			if c.Args().First() == "" {
-				return xerrors.Errorf("[name] is a required field argument")
+				return xerrors.Errorf("[secret_name] is a required argument")
 			}
 			if fromPrompt && (fromLiteral != "" || fromFile != "") {
 				return xerrors.Errorf("--from-prompt cannot be set along with --from-file or --from-literal")

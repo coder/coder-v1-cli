@@ -9,38 +9,14 @@ import (
 	"runtime"
 
 	"cdr.dev/coder-cli/internal/x/xterminal"
-	"github.com/spf13/pflag"
 	"github.com/urfave/cli"
 
-	cdrcli "go.coder.com/cli"
 	"go.coder.com/flog"
 )
 
 var (
 	version string = "unknown"
 )
-
-type rootCmd struct{}
-
-func (r *rootCmd) Run(fl *pflag.FlagSet) {
-
-	fl.Usage()
-}
-
-func (r *rootCmd) Spec() cdrcli.CommandSpec {
-	return cdrcli.CommandSpec{
-		Name:  "coder",
-		Usage: "[subcommand] [flags]",
-		Desc:  "coder provides a CLI for working with an existing Coder Enterprise installation.",
-	}
-}
-
-func (r *rootCmd) Subcommands() []cdrcli.Command {
-	return []cdrcli.Command{
-		&syncCmd{},
-		&urlsCmd{},
-	}
-}
 
 func main() {
 	if os.Getenv("PPROF") != "" {
@@ -67,6 +43,7 @@ func main() {
 		makeConfigSSHCmd(),
 		makeSecretsCmd(),
 		makeEnvsCommand(),
+		makeSyncCmd(),
 	}
 	err = app.Run(os.Args)
 	if err != nil {

@@ -34,7 +34,7 @@ func TestCoderCLI(t *testing.T) {
 		tcli.StderrEmpty(),
 	)
 
-	c.Run(ctx, "coder version").Assert(t,
+	c.Run(ctx, "coder --version").Assert(t,
 		tcli.StderrEmpty(),
 		tcli.Success(),
 		tcli.StdoutMatches("linux"),
