@@ -82,8 +82,8 @@ func TestDevURLCLI(t *testing.T) {
 	// 	tcli.Success(),
 	// 	jsonUnmarshals(&durl))
 
-	// // == devurl del should function
-	// c.Run(ctx, `coder urls del env1 3002`).Assert(t,
+	// // == devurl rm should function
+	// c.Run(ctx, `coder urls rm env1 3002`).Assert(t,
 	// 	tcli.Success())
 
 	// // == removed devurl should no longer be there

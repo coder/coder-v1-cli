@@ -88,6 +88,10 @@ func (sub listSubCmd) Run(fl *pflag.FlagSet) {
 	envName := fl.Arg(0)
 	devURLs := urlList(envName)
 
+	if len(devURLs) == 0 {
+		return
+	}
+
 	switch sub.outputFmt {
 	case "human":
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.TabIndent)
@@ -95,14 +99,10 @@ func (sub listSubCmd) Run(fl *pflag.FlagSet) {
 			fmt.Fprintf(w, "%s\t%d\t%s\n", devURL.URL, devURL.Port, devURL.Access)
 		}
 		err := w.Flush()
-		if err != nil {
-			flog.Fatal("failed to flush writer: %v", err)
-		}
+		requireSuccess(err, "failed to flush writer: %v", err)
 	case "json":
 		err := json.NewEncoder(os.Stdout).Encode(devURLs)
-		if err != nil {
-			flog.Fatal("failed to encode devurls to json: %v", err)
-		}
+		requireSuccess(err, "failed to encode devurls to json: %v", err)
 	default:
 		exitUsage(fl)
 	}
@@ -116,7 +116,7 @@ func (sub *listSubCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
 		Name:  "ls",
 		Usage: "<env> <flags>",
-		Desc:  "list all devurls",
+		Desc:  "list all devurls for a given environment",
 	}
 }
 
@@ -169,7 +169,7 @@ func (sub createSubCmd) Run(fl *pflag.FlagSet) {
 
 	name = sub.urlname
 	if name != "" && !devURLNameValidRx.MatchString(name) {
-		flog.Error("update devurl: name must be < 64 chars in length, begin with a letter and only contain letters or digits.")
+		flog.Fatal("update devurl: name must be < 64 chars in length, begin with a letter and only contain letters or digits.")
 		return
 	}
 	entClient := requireAuth()
@@ -180,15 +180,11 @@ func (sub createSubCmd) Run(fl *pflag.FlagSet) {
 	if found {
 		flog.Info("Updating devurl for port %v", port)
 		err := entClient.UpdateDevURL(env.ID, urlID, portNum, name, access)
-		if err != nil {
-			flog.Error("update devurl: %s", err.Error())
-		}
+		requireSuccess(err, "update devurl: %s", err)
 	} else {
 		flog.Info("Adding devurl for port %v", port)
 		err := entClient.InsertDevURL(env.ID, portNum, name, access)
-		if err != nil {
-			flog.Error("insert devurl: %s", err.Error())
-		}
+		requireSuccess(err, "insert devurl: %s", err)
 	}
 }
 
@@ -196,9 +192,9 @@ type delSubCmd struct{}
 
 func (sub delSubCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
-		Name:  "del",
+		Name:  "rm",
 		Usage: "<env name> <port>",
-		Desc:  "delete a devurl",
+		Desc:  "remove a devurl",
 	}
 }
 
@@ -239,9 +235,7 @@ func (sub delSubCmd) Run(fl *pflag.FlagSet) {
 	}
 
 	err = entClient.DelDevURL(env.ID, urlID)
-	if err != nil {
-		flog.Error("delete devurl: %s", err.Error())
-	}
+	requireSuccess(err, "delete devurl: %s", err)
 }
 
 // urlList returns the list of active devURLs from the cemanager.
@@ -253,9 +247,7 @@ func urlList(envName string) []DevURL {
 	reqURL := fmt.Sprintf(reqString, entClient.BaseURL, env.ID, entClient.Token)
 
 	resp, err := http.Get(reqURL)
-	if err != nil {
-		flog.Fatal("%v", err)
-	}
+	requireSuccess(err, "%v", err)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
@@ -266,9 +258,7 @@ func urlList(envName string) []DevURL {
 
 	devURLs := make([]DevURL, 0)
 	err = dec.Decode(&devURLs)
-	if err != nil {
-		flog.Fatal("%v", err)
-	}
+	requireSuccess(err, "%v", err)
 
 	return devURLs
 }
