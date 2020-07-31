@@ -40,7 +40,6 @@ func (r *rootCmd) Subcommands() []cdrcli.Command {
 		&envsCmd{},
 		&syncCmd{},
 		&urlsCmd{},
-		&secretsCmd{},
 	}
 }
 
@@ -67,6 +66,7 @@ func main() {
 		makeShellCmd(),
 		makeUsersCmd(),
 		makeConfigSSHCmd(),
+		makeSecretsCmd(),
 	}
 	err = app.Run(os.Args)
 	if err != nil {
