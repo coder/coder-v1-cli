@@ -35,6 +35,12 @@ func main() {
 	app.Name = "coder"
 	app.Usage = "coder provides a CLI for working with an existing Coder Enterprise installation"
 	app.Version = fmt.Sprintf("%s %s %s/%s", version, runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	app.Author = "Coder Technologies Inc."
+	app.CommandNotFound = func(c *cli.Context, s string) {
+		flog.Fatal("command %q not found", s)
+	}
+	app.Email = "support@coder.com"
+
 	app.Commands = []cli.Command{
 		makeLoginCmd(),
 		makeLogoutCmd(),

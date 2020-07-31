@@ -28,8 +28,8 @@ func makeSecretsCmd() cli.Command {
 			makeCreateSecret(),
 			{
 				Name:      "rm",
-				Usage:     "Remove a secret by name",
-				ArgsUsage: "[secret_name]",
+				Usage:     "Remove one or more secrets by name",
+				ArgsUsage: "[...secret_name]",
 				Action:    removeSecret,
 			},
 			{
@@ -175,14 +175,23 @@ func viewSecret(c *cli.Context) {
 func removeSecret(c *cli.Context) {
 	var (
 		client = requireAuth()
-		name   = c.Args().First()
+		names  = append([]string{c.Args().First()}, c.Args().Tail()...)
 	)
-	if name == "" {
-		flog.Fatal("[name] is a required argument")
+	if len(names) < 1 || names[0] == "" {
+		flog.Fatal("[...secret_name] is a required argument")
 	}
 
-	err := client.DeleteSecretByName(name)
-	requireSuccess(err, "failed to delete secret: %v", err)
-
-	flog.Info("Successfully deleted secret %q", name)
+	errorSeen := false
+	for _, n := range names {
+		err := client.DeleteSecretByName(n)
+		if err != nil {
+			flog.Error("failed to delete secret: %v", err)
+			errorSeen = true
+		} else {
+			flog.Info("Successfully deleted secret %q", n)
+		}
+	}
+	if errorSeen {
+		os.Exit(1)
+	}
 }
