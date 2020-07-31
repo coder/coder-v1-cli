@@ -3,25 +3,21 @@ package main
 import (
 	"os"
 
-	"github.com/spf13/pflag"
-
-	"go.coder.com/cli"
-	"go.coder.com/flog"
-
 	"cdr.dev/coder-cli/internal/config"
+	"github.com/urfave/cli"
+
+	"go.coder.com/flog"
 )
 
-type logoutCmd struct {
-}
-
-func (cmd logoutCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name: "logout",
-		Desc: "remove local authentication credentials (if any)",
+func makeLogoutCmd() cli.Command {
+	return cli.Command{
+		Name:   "logout",
+		Usage:  "Remove local authentication credentials if any exist",
+		Action: logout,
 	}
 }
 
-func (cmd logoutCmd) Run(_ *pflag.FlagSet) {
+func logout(c *cli.Context) {
 	err := config.Session.Delete()
 	if err != nil {
 		if os.IsNotExist(err) {

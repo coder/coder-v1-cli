@@ -1,51 +1,22 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"runtime"
 
 	"cdr.dev/coder-cli/internal/x/xterminal"
-	"github.com/spf13/pflag"
+	"github.com/urfave/cli"
 
 	"go.coder.com/flog"
-
-	"go.coder.com/cli"
 )
 
 var (
-	version string = "No version built"
+	version string = "unknown"
 )
-
-type rootCmd struct{}
-
-func (r *rootCmd) Run(fl *pflag.FlagSet) {
-	fl.Usage()
-}
-
-func (r *rootCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "coder",
-		Usage: "[subcommand] [flags]",
-		Desc:  "coder provides a CLI for working with an existing Coder Enterprise installation.",
-	}
-}
-
-func (r *rootCmd) Subcommands() []cli.Command {
-	return []cli.Command{
-		&envsCmd{},
-		&loginCmd{},
-		&logoutCmd{},
-		&shellCmd{},
-		&syncCmd{},
-		&urlsCmd{},
-		&versionCmd{},
-		&configSSHCmd{},
-		&usersCmd{},
-		&secretsCmd{},
-	}
-}
 
 func main() {
 	if os.Getenv("PPROF") != "" {
@@ -60,7 +31,31 @@ func main() {
 	}
 	defer xterminal.Restore(os.Stdout.Fd(), stdoutState)
 
-	cli.RunRoot(&rootCmd{})
+	app := cli.NewApp()
+	app.Name = "coder"
+	app.Usage = "coder provides a CLI for working with an existing Coder Enterprise installation"
+	app.Version = fmt.Sprintf("%s %s %s/%s", version, runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	app.Author = "Coder Technologies Inc."
+	app.CommandNotFound = func(c *cli.Context, s string) {
+		flog.Fatal("command %q not found", s)
+	}
+	app.Email = "support@coder.com"
+
+	app.Commands = []cli.Command{
+		makeLoginCmd(),
+		makeLogoutCmd(),
+		makeShellCmd(),
+		makeUsersCmd(),
+		makeConfigSSHCmd(),
+		makeSecretsCmd(),
+		makeEnvsCommand(),
+		makeSyncCmd(),
+		makeURLCmd(),
+	}
+	err = app.Run(os.Args)
+	if err != nil {
+		flog.Fatal("%v", err)
+	}
 }
 
 // requireSuccess prints the given message and format args as a fatal error if err != nil

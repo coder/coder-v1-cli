@@ -36,7 +36,6 @@ func TestSecrets(t *testing.T) {
 
 	c.Run(ctx, "coder secrets create").Assert(t,
 		tcli.Error(),
-		tcli.StdoutEmpty(),
 	)
 
 	// this tests the "Value:" prompt fallback

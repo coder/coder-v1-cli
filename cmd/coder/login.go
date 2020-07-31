@@ -7,30 +7,27 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pkg/browser"
-	"github.com/spf13/pflag"
-
-	"go.coder.com/cli"
-	"go.coder.com/flog"
-
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/loginsrv"
+	"github.com/pkg/browser"
+	"github.com/urfave/cli"
+
+	"go.coder.com/flog"
 )
 
-type loginCmd struct {
-}
-
-func (cmd loginCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "login",
-		Usage: "[Coder Enterprise URL eg. http://my.coder.domain/ ]",
-		Desc:  "authenticate this client for future operations",
+func makeLoginCmd() cli.Command {
+	return cli.Command{
+		Name:      "login",
+		Usage:     "Authenticate this client for future operations",
+		ArgsUsage: "[Coder Enterprise URL eg. http://my.coder.domain/]",
+		Action:    login,
 	}
 }
-func (cmd loginCmd) Run(fl *pflag.FlagSet) {
-	rawURL := fl.Arg(0)
+
+func login(c *cli.Context) {
+	rawURL := c.Args().First()
 	if rawURL == "" || !strings.HasPrefix(rawURL, "http") {
-		exitUsage(fl)
+		flog.Fatal("invalid URL")
 	}
 
 	u, err := url.Parse(rawURL)

@@ -7,48 +7,40 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/pflag"
+	"cdr.dev/coder-cli/internal/activity"
+	"cdr.dev/coder-cli/internal/x/xterminal"
+	"cdr.dev/wsep"
+	"github.com/urfave/cli"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/time/rate"
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 
-	"go.coder.com/cli"
 	"go.coder.com/flog"
-
-	"cdr.dev/coder-cli/internal/activity"
-	"cdr.dev/coder-cli/internal/x/xterminal"
-	"cdr.dev/wsep"
 )
 
-type shellCmd struct{}
-
-func (cmd *shellCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:    "sh",
-		Usage:   "<env name> [<command [args...]>]",
-		Desc:    "execute a remote command on the environment\nIf no command is specified, the default shell is opened.",
-		RawArgs: true,
+func makeShellCmd() cli.Command {
+	return cli.Command{
+		Name:            "sh",
+		Usage:           "Open a shell and execute commands in a Coder environment",
+		Description:     "Execute a remote command on the environment\\nIf no command is specified, the default shell is opened.",
+		ArgsUsage:       "[env_name] [<command [args...]>]",
+		SkipFlagParsing: true,
+		SkipArgReorder:  true,
+		Action:          shell,
 	}
 }
 
-type resizeEvent struct {
-	height, width uint16
-}
-
-func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
-	if len(fl.Args()) < 1 {
-		exitUsage(fl)
-	}
+func shell(c *cli.Context) {
 	var (
-		envName = fl.Arg(0)
+		envName = c.Args().First()
 		ctx     = context.Background()
 	)
 
 	command := "sh"
 	args := []string{"-c"}
-	if len(fl.Args()) > 1 {
-		args = append(args, strings.Join(fl.Args()[1:], " "))
+	if len(c.Args().Tail()) > 0 {
+		args = append(args, strings.Join(c.Args().Tail(), " "))
 	} else {
 		// Bring user into shell if no command is specified.
 		args = append(args, "exec $(getent passwd $(whoami) | awk -F: '{ print $7 }')")

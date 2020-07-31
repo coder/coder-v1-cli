@@ -10,32 +10,48 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/spf13/pflag"
+	"github.com/urfave/cli"
+	"golang.org/x/xerrors"
 
-	"go.coder.com/cli"
 	"go.coder.com/flog"
 )
 
-type urlsCmd struct{}
-
-func (cmd *urlsCmd) Subcommands() []cli.Command {
-	return []cli.Command{
-		&listSubCmd{},
-		&createSubCmd{},
-		&delSubCmd{},
+func makeURLCmd() cli.Command {
+	var outputFmt string
+	return cli.Command{
+		Name:         "urls",
+		Usage:        "Interact with environment DevURLs",
+		ArgsUsage:    "",
+		Before:       nil,
+		After:        nil,
+		OnUsageError: nil,
+		Subcommands: []cli.Command{
+			makeCreateDevURL(),
+			{
+				Name:      "ls",
+				Usage:     "List all DevURLs for an environment",
+				ArgsUsage: "[env_name]",
+				Before:    nil,
+				Action:    makeListDevURLs(&outputFmt),
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:        "output",
+						Usage:       "human | json",
+						Value:       "human",
+						Destination: &outputFmt,
+					},
+				},
+			},
+			{
+				Name:      "rm",
+				Usage:     "Remove a dev url",
+				ArgsUsage: "",
+				Before:    nil,
+				Action:    removeDevURL,
+				Flags:     nil,
+			},
+		},
 	}
-}
-
-func (cmd urlsCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "urls",
-		Usage: "[subcommand] <flags>",
-		Desc:  "interact with environment devurls",
-	}
-}
-
-func (cmd urlsCmd) Run(fl *pflag.FlagSet) {
-	exitUsage(fl)
 }
 
 // DevURL is the parsed json response record for a devURL from cemanager
@@ -78,64 +94,104 @@ func accessLevelIsValid(level string) bool {
 	return ok
 }
 
-type listSubCmd struct {
-	outputFmt string
-}
-
 // Run gets the list of active devURLs from the cemanager for the
 // specified environment and outputs info to stdout.
-func (sub listSubCmd) Run(fl *pflag.FlagSet) {
-	envName := fl.Arg(0)
-	devURLs := urlList(envName)
+func makeListDevURLs(outputFmt *string) func(c *cli.Context) {
+	return func(c *cli.Context) {
+		envName := c.Args().First()
+		devURLs := urlList(envName)
 
-	if len(devURLs) == 0 {
-		return
-	}
-
-	switch sub.outputFmt {
-	case "human":
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.TabIndent)
-		for _, devURL := range devURLs {
-			fmt.Fprintf(w, "%s\t%d\t%s\n", devURL.URL, devURL.Port, devURL.Access)
+		if len(devURLs) == 0 {
+			return
 		}
-		err := w.Flush()
-		requireSuccess(err, "failed to flush writer: %v", err)
-	case "json":
-		err := json.NewEncoder(os.Stdout).Encode(devURLs)
-		requireSuccess(err, "failed to encode devurls to json: %v", err)
-	default:
-		exitUsage(fl)
+
+		switch *outputFmt {
+		case "human":
+			w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.TabIndent)
+			for _, devURL := range devURLs {
+				fmt.Fprintf(w, "%s\t%d\t%s\n", devURL.URL, devURL.Port, devURL.Access)
+			}
+			err := w.Flush()
+			requireSuccess(err, "failed to flush writer: %v", err)
+		case "json":
+			err := json.NewEncoder(os.Stdout).Encode(devURLs)
+			requireSuccess(err, "failed to encode devurls to json: %v", err)
+		default:
+			flog.Fatal("unknown --output value %q", *outputFmt)
+		}
 	}
 }
 
-func (sub *listSubCmd) RegisterFlags(fl *pflag.FlagSet) {
-	fl.StringVarP(&sub.outputFmt, "output", "o", "human", "output format (human | json)")
-}
+func makeCreateDevURL() cli.Command {
+	var (
+		access  string
+		urlname string
+	)
+	return cli.Command{
+		Name:      "create",
+		Usage:     "Create a new devurl for an environment",
+		ArgsUsage: "[env_name] [port] [--access <level>] [--name <name>]",
+		Aliases:   []string{"edit"},
+		Before: func(c *cli.Context) error {
+			if c.Args().First() == "" || c.Args().Get(1) == "" {
+				return xerrors.Errorf("[env_name] and [port] are required arguments")
+			}
+			return nil
+		},
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:        "access",
+				Usage:       "Set DevURL access to [private | org | authed | public]",
+				Value:       "private",
+				Destination: &access,
+			},
+			cli.StringFlag{
+				Name:        "name",
+				Usage:       "DevURL name",
+				Required:    true,
+				Destination: &urlname,
+			},
+		},
+		// Run creates or updates a devURL
+		Action: func(c *cli.Context) {
+			var (
+				envName = c.Args().First()
+				port    = c.Args().Get(1)
+			)
 
-func (sub *listSubCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "ls",
-		Usage: "<env> <flags>",
-		Desc:  "list all devurls for a given environment",
-	}
-}
+			if envName == "" {
+				cli.ShowCommandHelpAndExit(c, c.Command.FullName(), 1)
+			}
 
-type createSubCmd struct {
-	access  string
-	urlname string
-}
+			portNum, err := validatePort(port)
+			if err != nil {
+				cli.ShowCommandHelpAndExit(c, c.Command.FullName(), 1)
+			}
 
-func (sub *createSubCmd) RegisterFlags(fl *pflag.FlagSet) {
-	fl.StringVarP(&sub.access, "access", "a", "private", "[private | org | authed | public] set devurl access")
-	fl.StringVarP(&sub.urlname, "name", "n", "", "devurl name")
-}
+			access = strings.ToUpper(access)
+			if !accessLevelIsValid(access) {
+				cli.ShowCommandHelpAndExit(c, c.Command.FullName(), 1)
+			}
 
-func (sub createSubCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:    "create",
-		Usage:   "<env name> <port> [--access <level>] [--name <name>]",
-		Aliases: []string{"edit"},
-		Desc:    "create or update a devurl for external access",
+			if urlname != "" && !devURLNameValidRx.MatchString(urlname) {
+				flog.Fatal("update devurl: name must be < 64 chars in length, begin with a letter and only contain letters or digits.")
+				return
+			}
+			entClient := requireAuth()
+
+			env := findEnv(entClient, envName)
+
+			urlID, found := devURLID(portNum, urlList(envName))
+			if found {
+				flog.Info("Updating devurl for port %v", port)
+				err := entClient.UpdateDevURL(env.ID, urlID, portNum, urlname, access)
+				requireSuccess(err, "update devurl: %s", err)
+			} else {
+				flog.Info("Adding devurl for port %v", port)
+				err := entClient.InsertDevURL(env.ID, portNum, urlname, access)
+				requireSuccess(err, "insert devurl: %s", err)
+			}
+		},
 	}
 }
 
@@ -143,60 +199,6 @@ func (sub createSubCmd) Spec() cli.CommandSpec {
 // via the --name subcommand. Named devurls must begin with a letter, and
 // consist solely of letters and digits, with a max length of 64 chars.
 var devURLNameValidRx = regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9]{0,63}$")
-
-// Run creates or updates a devURL, specified by env ID and port
-// (fl.Arg(0) and fl.Arg(1)), with access level (fl.Arg(2)) on
-// the cemanager.
-func (sub createSubCmd) Run(fl *pflag.FlagSet) {
-	envName := fl.Arg(0)
-	port := fl.Arg(1)
-	name := fl.Arg(2)
-	access := fl.Arg(3)
-
-	if envName == "" {
-		exitUsage(fl)
-	}
-
-	portNum, err := validatePort(port)
-	if err != nil {
-		exitUsage(fl)
-	}
-
-	access = strings.ToUpper(sub.access)
-	if !accessLevelIsValid(access) {
-		exitUsage(fl)
-	}
-
-	name = sub.urlname
-	if name != "" && !devURLNameValidRx.MatchString(name) {
-		flog.Fatal("update devurl: name must be < 64 chars in length, begin with a letter and only contain letters or digits.")
-		return
-	}
-	entClient := requireAuth()
-
-	env := findEnv(entClient, envName)
-
-	urlID, found := devURLID(portNum, urlList(envName))
-	if found {
-		flog.Info("Updating devurl for port %v", port)
-		err := entClient.UpdateDevURL(env.ID, urlID, portNum, name, access)
-		requireSuccess(err, "update devurl: %s", err)
-	} else {
-		flog.Info("Adding devurl for port %v", port)
-		err := entClient.InsertDevURL(env.ID, portNum, name, access)
-		requireSuccess(err, "insert devurl: %s", err)
-	}
-}
-
-type delSubCmd struct{}
-
-func (sub delSubCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "rm",
-		Usage: "<env name> <port>",
-		Desc:  "remove a devurl",
-	}
-}
 
 // devURLID returns the ID of a devURL, given the env name and port
 // from a list of DevURL records.
@@ -211,18 +213,14 @@ func devURLID(port int, urls []DevURL) (string, bool) {
 }
 
 // Run deletes a devURL, specified by env ID and port, from the cemanager.
-func (sub delSubCmd) Run(fl *pflag.FlagSet) {
-	envName := fl.Arg(0)
-	port := fl.Arg(1)
-
-	if envName == "" {
-		exitUsage(fl)
-	}
+func removeDevURL(c *cli.Context) {
+	var (
+		envName = c.Args().First()
+		port    = c.Args().Get(1)
+	)
 
 	portNum, err := validatePort(port)
-	if err != nil {
-		exitUsage(fl)
-	}
+	requireSuccess(err, "failed to validate port: %v", err)
 
 	entClient := requireAuth()
 	env := findEnv(entClient, envName)
