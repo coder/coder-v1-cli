@@ -16,13 +16,12 @@ import (
 )
 
 func makeLoginCmd() cli.Command {
-	cmd := cli.Command{
-		Name:        "login",
-		Usage:       "[Coder Enterprise URL eg. http://my.coder.domain/ ]",
-		Description: "authenticate this client for future operations",
-		Action:      login,
+	return cli.Command{
+		Name:      "login",
+		Usage:     "Authenticate this client for future operations",
+		ArgsUsage: "[Coder Enterprise URL eg. http://my.coder.domain/]",
+		Action:    login,
 	}
-	return cmd
 }
 
 func login(c *cli.Context) {

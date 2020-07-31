@@ -17,27 +17,26 @@ import (
 func makeSecretsCmd() cli.Command {
 	return cli.Command{
 		Name:        "secrets",
-		Usage:       "",
+		Usage:       "Interact with Coder Secrets",
 		Description: "Interact with secrets objects owned by the active user.",
 		Subcommands: []cli.Command{
 			{
-				Name:        "ls",
-				Usage:       "",
-				Description: "list all secrets owned by the active user",
-				Action:      listSecrets,
+				Name:   "ls",
+				Usage:  "List all secrets owned by the active user",
+				Action: listSecrets,
 			},
 			makeCreateSecret(),
 			{
-				Name:        "rm",
-				Usage:       "",
-				Description: "",
-				Action:      removeSecret,
+				Name:      "rm",
+				Usage:     "Remove a secret by name",
+				ArgsUsage: "[secret_name]",
+				Action:    removeSecret,
 			},
 			{
-				Name:        "view",
-				Usage:       "",
-				Description: "",
-				Action:      viewSecret,
+				Name:      "view",
+				Usage:     "View a secret by name",
+				ArgsUsage: "[secret_name]",
+				Action:    viewSecret,
 			},
 		},
 		Flags: nil,
@@ -54,7 +53,7 @@ func makeCreateSecret() cli.Command {
 
 	return cli.Command{
 		Name:        "create",
-		Usage:       "create a new secret",
+		Usage:       "Create a new secret",
 		Description: "Create a new secret object to store application secrets and access them securely from within your environments.",
 		ArgsUsage:   "[secret_name]",
 		Before: func(c *cli.Context) error {

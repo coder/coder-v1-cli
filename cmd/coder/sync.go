@@ -19,7 +19,7 @@ func makeSyncCmd() cli.Command {
 	var init bool
 	return cli.Command{
 		Name:        "sync",
-		Usage:       "synchronize local files to a Coder environment",
+		Usage:       "Synchronize local files to a Coder environment",
 		Description: "Establish a one way directory sync to a Coder environment.",
 		ArgsUsage:   "[local directory] [<env name>:<remote directory>]",
 		Before: func(c *cli.Context) error {

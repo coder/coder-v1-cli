@@ -26,8 +26,8 @@ func makeConfigSSHCmd() cli.Command {
 
 	return cli.Command{
 		Name:        "config-ssh",
-		UsageText:   "",
-		Description: "add your Coder Enterprise environments to ~/.ssh/config",
+		Usage:       "Configure SSH to access Coder environments",
+		Description: "Inject the proper OpenSSH configuration into your local SSH config file.",
 		Action:      configSSH(&configpath, &remove),
 		Flags: []cli.Flag{
 			cli.StringFlag{

@@ -9,14 +9,13 @@ import (
 func makeEnvsCommand() cli.Command {
 	return cli.Command{
 		Name:        "envs",
-		UsageText:   "",
-		Description: "interact with Coder environments",
+		Usage:       "Interact with Coder environments",
+		Description: "Perform operations on the Coder environments owned by the active user.",
 		Subcommands: []cli.Command{
 			{
 				Name:        "ls",
 				Usage:       "list all environments owned by the active user",
-				UsageText:   "",
-				Description: "",
+				Description: "List all Coder environments owned by the active user.",
 				ArgsUsage:   "[...flags]>",
 				Action: func(c *cli.Context) {
 					entClient := requireAuth()

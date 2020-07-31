@@ -22,12 +22,11 @@ import (
 func makeShellCmd() cli.Command {
 	return cli.Command{
 		Name:            "sh",
-		Usage:           "<env name> [<command [args...]>]",
-		Description:     "execute a remote command on the environment\\nIf no command is specified, the default shell is opened.",
+		Usage:           "Open a shell and execute commands in a Coder environment",
+		Description:     "Execute a remote command on the environment\\nIf no command is specified, the default shell is opened.",
+		ArgsUsage:       "[env_name] [<command [args...]>]",
 		SkipFlagParsing: true,
 		SkipArgReorder:  true,
-		UsageText:       "",
-		ArgsUsage:       "",
 		Action:          shell,
 	}
 }

@@ -11,10 +11,9 @@ import (
 
 func makeLogoutCmd() cli.Command {
 	return cli.Command{
-		Name: "logout",
-		//Usage:       "",
-		Description: "remove local authentication credentials (if any)",
-		Action:      logout,
+		Name:   "logout",
+		Usage:  "Remove local authentication credentials if any exist",
+		Action: logout,
 	}
 }
 

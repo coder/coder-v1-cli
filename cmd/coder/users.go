@@ -14,28 +14,19 @@ import (
 func makeUsersCmd() cli.Command {
 	var output string
 	return cli.Command{
-		Name:         "users",
-		ShortName:    "",
-		Aliases:      nil,
-		Usage:        "[subcommand] <flags>",
-		UsageText:    "",
-		Description:  "",
-		ArgsUsage:    "",
-		Action:       nil,
-		OnUsageError: nil,
+		Name:      "users",
+		Usage:     "Interact with Coder user accounts",
+		ArgsUsage: "[subcommand] <flags>",
 		Subcommands: []cli.Command{
 			{
 				Name:        "ls",
-				Usage:       "",
-				UsageText:   "",
+				Usage:       "list all user accounts",
 				Description: "",
-				ArgsUsage:   "",
-				Category:    "",
 				Action:      listUsers(&output),
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:        "output",
-						Usage:       "",
+						Usage:       "(json | human)",
 						Required:    false,
 						Value:       "human",
 						Destination: &output,
