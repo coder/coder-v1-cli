@@ -17,14 +17,6 @@ import (
 	"go.coder.com/cli"
 )
 
-var (
-	_ cli.FlaggedCommand = secretsCmd{}
-	_ cli.ParentCommand  = secretsCmd{}
-
-	_ cli.FlaggedCommand = &listSecretsCmd{}
-	_ cli.FlaggedCommand = &createSecretCmd{}
-)
-
 type secretsCmd struct {
 }
 

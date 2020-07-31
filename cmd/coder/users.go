@@ -6,80 +6,72 @@ import (
 	"os"
 
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
-	"cdr.dev/coder-cli/internal/x/xvalidate"
-	"github.com/spf13/pflag"
+	"github.com/urfave/cli"
 
-	"go.coder.com/cli"
+	"go.coder.com/flog"
 )
 
-type usersCmd struct {
-}
-
-func (cmd usersCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "users",
-		Usage: "[subcommand] <flags>",
-		Desc:  "interact with user accounts",
+func makeUsersCmd() cli.Command {
+	var output string
+	return cli.Command{
+		Name:         "users",
+		ShortName:    "",
+		Aliases:      nil,
+		Usage:        "[subcommand] <flags>",
+		UsageText:    "",
+		Description:  "",
+		ArgsUsage:    "",
+		Action:       nil,
+		OnUsageError: nil,
+		Subcommands: []cli.Command{
+			{
+				Name:        "ls",
+				Usage:       "",
+				UsageText:   "",
+				Description: "",
+				ArgsUsage:   "",
+				Category:    "",
+				Action:      listUsers(&output),
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:        "output",
+						Usage:       "",
+						Required:    false,
+						Value:       "human",
+						Destination: &output,
+					},
+				},
+			},
+		},
+		HelpName: "",
 	}
 }
 
-func (cmd usersCmd) Run(fl *pflag.FlagSet) {
-	exitUsage(fl)
-}
+func listUsers(outputFmt *string) func(c *cli.Context) {
+	return func(c *cli.Context) {
+		entClient := requireAuth()
 
-func (cmd *usersCmd) Subcommands() []cli.Command {
-	return []cli.Command{
-		&listCmd{},
-	}
-}
+		users, err := entClient.Users()
+		requireSuccess(err, "failed to get users: %v", err)
 
-type listCmd struct {
-	outputFmt string
-}
-
-func (cmd *listCmd) Run(fl *pflag.FlagSet) {
-	xvalidate.Validate(fl, cmd)
-	entClient := requireAuth()
-
-	users, err := entClient.Users()
-	requireSuccess(err, "failed to get users: %v", err)
-
-	switch cmd.outputFmt {
-	case "human":
-		w := xtabwriter.NewWriter()
-		if len(users) > 0 {
-			_, err = fmt.Fprintln(w, xtabwriter.StructFieldNames(users[0]))
-			requireSuccess(err, "failed to write: %v", err)
+		switch *outputFmt {
+		case "human":
+			w := xtabwriter.NewWriter()
+			if len(users) > 0 {
+				_, err = fmt.Fprintln(w, xtabwriter.StructFieldNames(users[0]))
+				requireSuccess(err, "failed to write: %v", err)
+			}
+			for _, u := range users {
+				_, err = fmt.Fprintln(w, xtabwriter.StructValues(u))
+				requireSuccess(err, "failed to write: %v", err)
+			}
+			err = w.Flush()
+			requireSuccess(err, "failed to flush writer: %v", err)
+		case "json":
+			err = json.NewEncoder(os.Stdout).Encode(users)
+			requireSuccess(err, "failed to encode users to json: %v", err)
+		default:
+			flog.Fatal("unknown value for --output")
 		}
-		for _, u := range users {
-			_, err = fmt.Fprintln(w, xtabwriter.StructValues(u))
-			requireSuccess(err, "failed to write: %v", err)
-		}
-		err = w.Flush()
-		requireSuccess(err, "failed to flush writer: %v", err)
-	case "json":
-		err = json.NewEncoder(os.Stdout).Encode(users)
-		requireSuccess(err, "failed to encode users to json: %v", err)
-	default:
-		exitUsage(fl)
 	}
-}
-
-func (cmd *listCmd) RegisterFlags(fl *pflag.FlagSet) {
-	fl.StringVarP(&cmd.outputFmt, "output", "o", "human", "output format (human | json)")
-}
-
-func (cmd *listCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "ls",
-		Usage: "<flags>",
-		Desc:  "list all users",
-	}
-}
-
-func (cmd *listCmd) Validate(fl *pflag.FlagSet) (e []error) {
-	if !(cmd.outputFmt == "json" || cmd.outputFmt == "human") {
-		e = append(e, fmt.Errorf(`--output must be "json" or "human"`))
-	}
-	return e
 }
