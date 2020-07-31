@@ -3,9 +3,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"math/rand"
-	"regexp"
 	"testing"
 	"time"
 
@@ -89,65 +87,6 @@ func TestCoderCLI(t *testing.T) {
 	)
 }
 
-func TestSecrets(t *testing.T) {
-	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
-	defer cancel()
-
-	c, err := tcli.NewContainerRunner(ctx, &tcli.ContainerConfig{
-		Image: "codercom/enterprise-dev",
-		Name:  "secrets-cli-tests",
-		BindMounts: map[string]string{
-			binpath: "/bin/coder",
-		},
-	})
-	assert.Success(t, "new run container", err)
-	defer c.Close()
-
-	headlessLogin(ctx, t, c)
-
-	c.Run(ctx, "coder secrets ls").Assert(t,
-		tcli.Success(),
-	)
-
-	name, value := randString(8), randString(8)
-
-	c.Run(ctx, "coder secrets create").Assert(t,
-		tcli.Error(),
-		tcli.StdoutEmpty(),
-		tcli.StderrMatches("required flag"),
-	)
-
-	c.Run(ctx, fmt.Sprintf("coder secrets create --name %s --value %s", name, value)).Assert(t,
-		tcli.Success(),
-		tcli.StderrEmpty(),
-	)
-
-	c.Run(ctx, "coder secrets ls").Assert(t,
-		tcli.Success(),
-		tcli.StderrEmpty(),
-		tcli.StdoutMatches("Value"),
-		tcli.StdoutMatches(regexp.QuoteMeta(name)),
-	)
-
-	c.Run(ctx, "coder secrets view "+name).Assert(t,
-		tcli.Success(),
-		tcli.StderrEmpty(),
-		tcli.StdoutMatches(regexp.QuoteMeta(value)),
-	)
-
-	c.Run(ctx, "coder secrets rm").Assert(t,
-		tcli.Error(),
-	)
-	c.Run(ctx, "coder secrets rm "+name).Assert(t,
-		tcli.Success(),
-	)
-	c.Run(ctx, "coder secrets view "+name).Assert(t,
-		tcli.Error(),
-		tcli.StdoutEmpty(),
-	)
-}
-
 func stdoutUnmarshalsJSON(target interface{}) tcli.Assertion {
 	return func(t *testing.T, r *tcli.CommandResult) {
 		slog.Helper()
@@ -159,7 +98,7 @@ func stdoutUnmarshalsJSON(target interface{}) tcli.Assertion {
 var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 func randString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	b := make([]byte, length)
 	for i := range b {
 		b[i] = charset[seededRand.Intn(len(charset))]

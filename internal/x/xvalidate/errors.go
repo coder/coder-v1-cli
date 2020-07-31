@@ -2,6 +2,9 @@ package xvalidate
 
 import (
 	"bytes"
+	"fmt"
+
+	"github.com/spf13/pflag"
 
 	"go.coder.com/flog"
 )
@@ -81,16 +84,18 @@ func combineErrors(errs ...error) error {
 
 // Validator is a command capable of validating its flags
 type Validator interface {
-	Validate() []error
+	Validate(fl *pflag.FlagSet) []error
 }
 
 // Validate performs validation and exits with a nonzero status code if validation fails.
 // The proper errors are printed to stderr.
-func Validate(v Validator) {
-	errs := v.Validate()
+func Validate(fl *pflag.FlagSet, v Validator) {
+	errs := v.Validate(fl)
 
 	err := combineErrors(errs...)
 	if err != nil {
+		fl.Usage()
+		fmt.Println("")
 		flog.Fatal("failed to validate this command\n%v", err)
 	}
 }

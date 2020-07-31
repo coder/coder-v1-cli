@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"cdr.dev/coder-cli/internal/x/xvalidate"
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/pflag"
 	"golang.org/x/xerrors"
 
@@ -111,45 +113,79 @@ func (cmd viewSecretsCmd) Run(fl *pflag.FlagSet) {
 }
 
 type createSecretCmd struct {
-	name, value, description string
-}
-
-func (cmd *createSecretCmd) Validate() (e []error) {
-	if cmd.name == "" {
-		e = append(e, xerrors.New("--name is a required flag"))
-	}
-	if cmd.value == "" {
-		e = append(e, xerrors.New("--value is a required flag"))
-	}
-	return e
+	description string
+	fromFile    string
+	fromLiteral string
+	fromPrompt  bool
 }
 
 func (cmd *createSecretCmd) Spec() cli.CommandSpec {
 	return cli.CommandSpec{
 		Name:  "create",
-		Usage: `--name MYSQL_KEY --value 123456 --description "MySQL credential for database access"`,
-		Desc:  "insert a new secret",
+		Usage: `[secret_name] [...flags]`,
+		Desc:  "create a new secret",
 	}
+}
+
+func (cmd *createSecretCmd) Validate(fl *pflag.FlagSet) (e []error) {
+	if cmd.fromPrompt && (cmd.fromLiteral != "" || cmd.fromFile != "") {
+		e = append(e, xerrors.Errorf("--from-prompt cannot be set along with --from-file or --from-literal"))
+	}
+	if cmd.fromLiteral != "" && cmd.fromFile != "" {
+		e = append(e, xerrors.Errorf("--from-literal and --from-file cannot both be set"))
+	}
+	if !cmd.fromPrompt && cmd.fromFile == "" && cmd.fromLiteral == "" {
+		e = append(e, xerrors.Errorf("one of [--from-literal, --from-file, --from-prompt] is required"))
+	}
+	return e
 }
 
 func (cmd *createSecretCmd) Run(fl *pflag.FlagSet) {
 	var (
 		client = requireAuth()
+		name   = fl.Arg(0)
+		value  string
+		err    error
 	)
-	xvalidate.Validate(cmd)
+	if name == "" {
+		exitUsage(fl)
+	}
+	xvalidate.Validate(fl, cmd)
 
-	err := client.InsertSecret(entclient.InsertSecretReq{
-		Name:        cmd.name,
-		Value:       cmd.value,
+	if cmd.fromLiteral != "" {
+		value = cmd.fromLiteral
+	} else if cmd.fromFile != "" {
+		contents, err := ioutil.ReadFile(cmd.fromFile)
+		requireSuccess(err, "failed to read file: %v", err)
+		value = string(contents)
+	} else {
+		prompt := promptui.Prompt{
+			Label: "value",
+			Mask:  '*',
+			Validate: func(s string) error {
+				if len(s) < 1 {
+					return xerrors.Errorf("a length > 0 is required")
+				}
+				return nil
+			},
+		}
+		value, err = prompt.Run()
+		requireSuccess(err, "failed to prompt for value: %v", err)
+	}
+
+	err = client.InsertSecret(entclient.InsertSecretReq{
+		Name:        name,
+		Value:       value,
 		Description: cmd.description,
 	})
 	requireSuccess(err, "failed to insert secret: %v", err)
 }
 
 func (cmd *createSecretCmd) RegisterFlags(fl *pflag.FlagSet) {
-	fl.StringVar(&cmd.name, "name", "", "the name of the secret")
-	fl.StringVar(&cmd.value, "value", "", "the value of the secret")
-	fl.StringVar(&cmd.description, "description", "", "a description of the secret")
+	fl.StringVar(&cmd.fromFile, "from-file", "", "specify a file from which to read the value of the secret")
+	fl.StringVar(&cmd.fromLiteral, "from-literal", "", "specify the value of the secret")
+	fl.BoolVar(&cmd.fromPrompt, "from-prompt", false, "specify the value of the secret through a prompt")
+	fl.StringVar(&cmd.description, "description", "", "specify a description of the secret")
 }
 
 type deleteSecretsCmd struct{}
