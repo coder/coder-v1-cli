@@ -122,7 +122,7 @@ func configSSH(filepath *string, remove *bool) func(c *cli.Context) {
 			flog.Fatal("failed to fetch and write ssh key: %v", err)
 		}
 
-		fmt.Printf("An auto-generated ssh config was written to %q\n", filepath)
+		fmt.Printf("An auto-generated ssh config was written to %q\n", *filepath)
 		fmt.Printf("Your private ssh key was written to %q\n", privateKeyFilepath)
 		fmt.Println("You should now be able to ssh into your environment")
 		fmt.Printf("For example, try running\n\n\t$ ssh coder.%s\n\n", envs[0].Name)
