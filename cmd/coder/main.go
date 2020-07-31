@@ -37,7 +37,6 @@ func (r *rootCmd) Spec() cdrcli.CommandSpec {
 
 func (r *rootCmd) Subcommands() []cdrcli.Command {
 	return []cdrcli.Command{
-		&envsCmd{},
 		&syncCmd{},
 		&urlsCmd{},
 	}
@@ -67,6 +66,7 @@ func main() {
 		makeUsersCmd(),
 		makeConfigSSHCmd(),
 		makeSecretsCmd(),
+		makeEnvsCommand(),
 	}
 	err = app.Run(os.Args)
 	if err != nil {

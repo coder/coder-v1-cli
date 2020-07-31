@@ -3,27 +3,31 @@ package main
 import (
 	"fmt"
 
-	"github.com/spf13/pflag"
-
-	"go.coder.com/cli"
+	"github.com/urfave/cli"
 )
 
-type envsCmd struct {
-}
+func makeEnvsCommand() cli.Command {
+	return cli.Command{
+		Name:        "envs",
+		UsageText:   "",
+		Description: "interact with Coder environments",
+		Subcommands: []cli.Command{
+			{
+				Name:        "ls",
+				Usage:       "list all environments owned by the active user",
+				UsageText:   "",
+				Description: "",
+				ArgsUsage:   "[...flags]>",
+				Action: func(c *cli.Context) {
+					entClient := requireAuth()
+					envs := getEnvs(entClient)
 
-func (cmd envsCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name: "envs",
-		Desc: "get a list of environments owned by the authenticated user",
-	}
-}
-
-func (cmd envsCmd) Run(fl *pflag.FlagSet) {
-	entClient := requireAuth()
-
-	envs := getEnvs(entClient)
-
-	for _, env := range envs {
-		fmt.Println(env.Name)
+					for _, env := range envs {
+						fmt.Println(env.Name)
+					}
+				},
+				Flags: nil,
+			},
+		},
 	}
 }

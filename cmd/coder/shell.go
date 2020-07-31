@@ -26,24 +26,9 @@ func makeShellCmd() cli.Command {
 		Description:     "execute a remote command on the environment\\nIf no command is specified, the default shell is opened.",
 		SkipFlagParsing: true,
 		SkipArgReorder:  true,
-
-		ShortName:              "",
-		Aliases:                nil,
-		UsageText:              "",
-		ArgsUsage:              "",
-		Category:               "",
-		BashComplete:           nil,
-		Before:                 nil,
-		After:                  nil,
-		Action:                 shell,
-		OnUsageError:           nil,
-		Subcommands:            nil,
-		Flags:                  nil,
-		HideHelp:               false,
-		Hidden:                 false,
-		UseShortOptionHandling: false,
-		HelpName:               "",
-		CustomHelpTemplate:     "",
+		UsageText:       "",
+		ArgsUsage:       "",
+		Action:          shell,
 	}
 }
 
