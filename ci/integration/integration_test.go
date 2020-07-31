@@ -40,16 +40,19 @@ func TestCoderCLI(t *testing.T) {
 		tcli.StdoutMatches("linux"),
 	)
 
-	c.Run(ctx, "coder help").Assert(t,
+	c.Run(ctx, "coder --help").Assert(t,
 		tcli.Success(),
-		tcli.StderrMatches("Commands:"),
-		tcli.StderrMatches("Usage: coder"),
-		tcli.StdoutEmpty(),
+		tcli.StdoutMatches("COMMANDS:"),
+		tcli.StdoutMatches("USAGE:"),
 	)
 
 	headlessLogin(ctx, t, c)
 
 	c.Run(ctx, "coder envs").Assert(t,
+		tcli.Success(),
+	)
+
+	c.Run(ctx, "coder envs ls").Assert(t,
 		tcli.Success(),
 	)
 
@@ -66,14 +69,14 @@ func TestCoderCLI(t *testing.T) {
 	)
 
 	var user entclient.User
-	c.Run(ctx, `coder users ls -o json | jq -c '.[] | select( .username == "charlie")'`).Assert(t,
+	c.Run(ctx, `coder users ls --output json | jq -c '.[] | select( .username == "charlie")'`).Assert(t,
 		tcli.Success(),
 		stdoutUnmarshalsJSON(&user),
 	)
 	assert.Equal(t, "user email is as expected", "charlie@coder.com", user.Email)
 	assert.Equal(t, "username is as expected", "Charlie", user.Name)
 
-	c.Run(ctx, "coder users ls -o human | grep charlie").Assert(t,
+	c.Run(ctx, "coder users ls --output human | grep charlie").Assert(t,
 		tcli.Success(),
 		tcli.StdoutMatches("charlie"),
 	)
@@ -82,7 +85,7 @@ func TestCoderCLI(t *testing.T) {
 		tcli.Success(),
 	)
 
-	c.Run(ctx, "coder envs").Assert(t,
+	c.Run(ctx, "coder envs ls").Assert(t,
 		tcli.Error(),
 	)
 }
