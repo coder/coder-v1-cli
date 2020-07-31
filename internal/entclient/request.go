@@ -39,7 +39,7 @@ func (c Client) requestBody(
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode > 299 {
 		return bodyError(resp)
 	}
 

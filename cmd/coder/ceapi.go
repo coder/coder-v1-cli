@@ -27,14 +27,10 @@ outer:
 // getEnvs returns all environments for the user.
 func getEnvs(client *entclient.Client) []entclient.Environment {
 	me, err := client.Me()
-	if err != nil {
-		flog.Fatal("get self: %+v", err)
-	}
+	requireSuccess(err, "get self: %+v", err)
 
 	orgs, err := client.Orgs()
-	if err != nil {
-		flog.Fatal("get orgs: %+v", err)
-	}
+	requireSuccess(err, "get orgs: %+v", err)
 
 	orgs = userOrgs(me, orgs)
 
@@ -42,9 +38,8 @@ func getEnvs(client *entclient.Client) []entclient.Environment {
 
 	for _, org := range orgs {
 		envs, err := client.Envs(me, org)
-		if err != nil {
-			flog.Fatal("get envs for %v: %+v", org.Name, err)
-		}
+		requireSuccess(err, "get envs for %v: %+v", org.Name, err)
+
 		for _, env := range envs {
 			allEnvs = append(allEnvs, env)
 		}
