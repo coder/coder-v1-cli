@@ -31,7 +31,6 @@ func makeUsersCmd() cli.Command {
 				},
 			},
 		},
-		HelpName: "",
 	}
 }
 

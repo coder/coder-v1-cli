@@ -39,7 +39,6 @@ func makeSecretsCmd() cli.Command {
 				Action:    viewSecret,
 			},
 		},
-		Flags: nil,
 	}
 }
 

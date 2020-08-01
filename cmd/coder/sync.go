@@ -18,10 +18,9 @@ import (
 func makeSyncCmd() cli.Command {
 	var init bool
 	return cli.Command{
-		Name:        "sync",
-		Usage:       "Synchronize local files to a Coder environment",
-		Description: "Establish a one way directory sync to a Coder environment.",
-		ArgsUsage:   "[local directory] [<env name>:<remote directory>]",
+		Name:      "sync",
+		Usage:     "Establish a one way directory sync to a Coder environment",
+		ArgsUsage: "[local directory] [<env name>:<remote directory>]",
 		Before: func(c *cli.Context) error {
 			if c.Args().Get(0) == "" || c.Args().Get(1) == "" {
 				return xerrors.Errorf("[local] and [remote] arguments are required")
