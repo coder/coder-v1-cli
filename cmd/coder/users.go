@@ -25,7 +25,7 @@ func makeUsersCmd() cli.Command {
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:        "output",
-						Usage:       "(json | human)",
+						Usage:       "json | human",
 						Value:       "human",
 						Destination: &output,
 					},

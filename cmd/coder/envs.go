@@ -1,13 +1,18 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/urfave/cli"
+
+	"go.coder.com/flog"
 )
 
 func makeEnvsCommand() cli.Command {
+	var outputFmt string
 	return cli.Command{
 		Name:        "envs",
 		Usage:       "Interact with Coder environments",
@@ -23,19 +28,34 @@ func makeEnvsCommand() cli.Command {
 					entClient := requireAuth()
 					envs := getEnvs(entClient)
 
-					w := xtabwriter.NewWriter()
-					if len(envs) > 0 {
-						_, err := fmt.Fprintln(w, xtabwriter.StructFieldNames(envs[0]))
-						requireSuccess(err, "failed to write header: %v", err)
+					switch outputFmt {
+					case "human":
+						w := xtabwriter.NewWriter()
+						if len(envs) > 0 {
+							_, err := fmt.Fprintln(w, xtabwriter.StructFieldNames(envs[0]))
+							requireSuccess(err, "failed to write header: %v", err)
+						}
+						for _, env := range envs {
+							_, err := fmt.Fprintln(w, xtabwriter.StructValues(env))
+							requireSuccess(err, "failed to write row: %v", err)
+						}
+						err := w.Flush()
+						requireSuccess(err, "failed to flush tab writer: %v", err)
+					case "json":
+						err := json.NewEncoder(os.Stdout).Encode(envs)
+						requireSuccess(err, "failed to write json: %v", err)
+					default:
+						flog.Fatal("unknown --output value %q", outputFmt)
 					}
-					for _, env := range envs {
-						_, err := fmt.Fprintln(w, xtabwriter.StructValues(env))
-						requireSuccess(err, "failed to write row: %v", err)
-					}
-					err := w.Flush()
-					requireSuccess(err, "failed to flush tab writer: %v", err)
 				},
-				Flags: nil,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:        "output",
+						Usage:       "json | human",
+						Value:       "human",
+						Destination: &outputFmt,
+					},
+				},
 			},
 		},
 	}

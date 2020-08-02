@@ -31,7 +31,7 @@ func makeSecretsCmd() cli.Command {
 				Name:      "rm",
 				Usage:     "Remove one or more secrets by name",
 				ArgsUsage: "[...secret_name]",
-				Action:    removeSecret,
+				Action:    removeSecrets,
 			},
 			{
 				Name:      "view",
@@ -172,7 +172,7 @@ func viewSecret(c *cli.Context) {
 	requireSuccess(err, "failed to write: %v", err)
 }
 
-func removeSecret(c *cli.Context) {
+func removeSecrets(c *cli.Context) {
 	var (
 		client = requireAuth()
 		names  = append([]string{c.Args().First()}, c.Args().Tail()...)
