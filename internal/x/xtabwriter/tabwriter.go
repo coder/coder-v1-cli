@@ -17,7 +17,7 @@ func NewWriter() *tabwriter.Writer {
 
 // StructValues tab delimits the values of a given struct.
 //
-// Tag a field `tab:"omit"` to hide it from output.
+// Tag a field `tab:"-"` to hide it from output.
 func StructValues(data interface{}) string {
 	v := reflect.ValueOf(data)
 	s := &strings.Builder{}
@@ -32,7 +32,7 @@ func StructValues(data interface{}) string {
 
 // StructFieldNames tab delimits the field names of a given struct.
 //
-// Tag a field `tab:"omit"` to hide it from output.
+// Tag a field `tab:"-"` to hide it from output.
 func StructFieldNames(data interface{}) string {
 	v := reflect.ValueOf(data)
 	s := &strings.Builder{}
@@ -47,5 +47,5 @@ func StructFieldNames(data interface{}) string {
 }
 
 func shouldHideField(f reflect.StructField) bool {
-	return f.Tag.Get(structFieldTagKey) == "omit"
+	return f.Tag.Get(structFieldTagKey) == "-"
 }

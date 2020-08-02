@@ -7,12 +7,12 @@ import (
 
 // Secret describes a Coder secret
 type Secret struct {
-	ID          string    `json:"id" tab:"omit"`
+	ID          string    `json:"id" tab:"-"`
 	Name        string    `json:"name"`
 	Value       string    `json:"value,omitempty"`
 	Description string    `json:"description"`
 	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" tab:"omit"`
+	UpdatedAt   time.Time `json:"updated_at" tab:"-"`
 }
 
 // Secrets gets all secrets owned by the authed user
