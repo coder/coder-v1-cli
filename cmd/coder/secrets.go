@@ -19,6 +19,7 @@ func makeSecretsCmd() cli.Command {
 		Name:        "secrets",
 		Usage:       "Interact with Coder Secrets",
 		Description: "Interact with secrets objects owned by the active user.",
+		Action:      exitHelp,
 		Subcommands: []cli.Command{
 			{
 				Name:   "ls",

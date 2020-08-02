@@ -14,8 +14,9 @@ import (
 func makeUsersCmd() cli.Command {
 	var output string
 	return cli.Command{
-		Name:  "users",
-		Usage: "Interact with Coder user accounts",
+		Name:   "users",
+		Usage:  "Interact with Coder user accounts",
+		Action: exitHelp,
 		Subcommands: []cli.Command{
 			{
 				Name:   "ls",

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/urfave/cli"
 )
 
@@ -11,6 +12,7 @@ func makeEnvsCommand() cli.Command {
 		Name:        "envs",
 		Usage:       "Interact with Coder environments",
 		Description: "Perform operations on the Coder environments owned by the active user.",
+		Action:      exitHelp,
 		Subcommands: []cli.Command{
 			{
 				Name:        "ls",
@@ -21,9 +23,17 @@ func makeEnvsCommand() cli.Command {
 					entClient := requireAuth()
 					envs := getEnvs(entClient)
 
-					for _, env := range envs {
-						fmt.Println(env.Name)
+					w := xtabwriter.NewWriter()
+					if len(envs) > 0 {
+						_, err := fmt.Fprintln(w, xtabwriter.StructFieldNames(envs[0]))
+						requireSuccess(err, "failed to write header: %v", err)
 					}
+					for _, env := range envs {
+						_, err := fmt.Fprintln(w, xtabwriter.StructValues(env))
+						requireSuccess(err, "failed to write row: %v", err)
+					}
+					err := w.Flush()
+					requireSuccess(err, "failed to flush tab writer: %v", err)
 				},
 				Flags: nil,
 			},

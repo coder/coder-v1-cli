@@ -25,7 +25,7 @@ func StructValues(data interface{}) string {
 		if shouldHideField(v.Type().Field(i)) {
 			continue
 		}
-		s.WriteString(fmt.Sprintf("%s\t", v.Field(i).Interface()))
+		s.WriteString(fmt.Sprintf("%v\t", v.Field(i).Interface()))
 	}
 	return s.String()
 }
