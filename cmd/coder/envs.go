@@ -1,16 +1,22 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
+	"os"
 
+	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/urfave/cli"
+
+	"go.coder.com/flog"
 )
 
 func makeEnvsCommand() cli.Command {
+	var outputFmt string
 	return cli.Command{
 		Name:        "envs",
 		Usage:       "Interact with Coder environments",
 		Description: "Perform operations on the Coder environments owned by the active user.",
+		Action:      exitHelp,
 		Subcommands: []cli.Command{
 			{
 				Name:        "ls",
@@ -21,11 +27,27 @@ func makeEnvsCommand() cli.Command {
 					entClient := requireAuth()
 					envs := getEnvs(entClient)
 
-					for _, env := range envs {
-						fmt.Println(env.Name)
+					switch outputFmt {
+					case "human":
+						err := xtabwriter.WriteTable(len(envs), func(i int) interface{} {
+							return envs[i]
+						})
+						requireSuccess(err, "failed to write table: %v", err)
+					case "json":
+						err := json.NewEncoder(os.Stdout).Encode(envs)
+						requireSuccess(err, "failed to write json: %v", err)
+					default:
+						flog.Fatal("unknown --output value %q", outputFmt)
 					}
 				},
-				Flags: nil,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:        "output",
+						Usage:       "json | human",
+						Value:       "human",
+						Destination: &outputFmt,
+					},
+				},
 			},
 		},
 	}

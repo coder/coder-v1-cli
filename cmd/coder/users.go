@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
@@ -14,8 +13,9 @@ import (
 func makeUsersCmd() cli.Command {
 	var output string
 	return cli.Command{
-		Name:  "users",
-		Usage: "Interact with Coder user accounts",
+		Name:   "users",
+		Usage:  "Interact with Coder user accounts",
+		Action: exitHelp,
 		Subcommands: []cli.Command{
 			{
 				Name:   "ls",
@@ -24,7 +24,7 @@ func makeUsersCmd() cli.Command {
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:        "output",
-						Usage:       "(json | human)",
+						Usage:       "json | human",
 						Value:       "human",
 						Destination: &output,
 					},
@@ -43,17 +43,10 @@ func listUsers(outputFmt *string) func(c *cli.Context) {
 
 		switch *outputFmt {
 		case "human":
-			w := xtabwriter.NewWriter()
-			if len(users) > 0 {
-				_, err = fmt.Fprintln(w, xtabwriter.StructFieldNames(users[0]))
-				requireSuccess(err, "failed to write: %v", err)
-			}
-			for _, u := range users {
-				_, err = fmt.Fprintln(w, xtabwriter.StructValues(u))
-				requireSuccess(err, "failed to write: %v", err)
-			}
-			err = w.Flush()
-			requireSuccess(err, "failed to flush writer: %v", err)
+			err := xtabwriter.WriteTable(len(users), func(i int) interface{} {
+				return users[i]
+			})
+			requireSuccess(err, "failed to write table: %v", err)
 		case "json":
 			err = json.NewEncoder(os.Stdout).Encode(users)
 			requireSuccess(err, "failed to encode users to json: %v", err)

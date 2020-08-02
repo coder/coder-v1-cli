@@ -25,7 +25,7 @@ func StructValues(data interface{}) string {
 		if shouldHideField(v.Type().Field(i)) {
 			continue
 		}
-		s.WriteString(fmt.Sprintf("%s\t", v.Field(i).Interface()))
+		s.WriteString(fmt.Sprintf("%v\t", v.Field(i).Interface()))
 	}
 	return s.String()
 }
@@ -44,6 +44,32 @@ func StructFieldNames(data interface{}) string {
 		s.WriteString(fmt.Sprintf("%s\t", field.Name))
 	}
 	return s.String()
+}
+
+// WriteTable writes the given list elements to stdout in a human readable
+// tabular format. Headers abide by the `tab` struct tag.
+//
+// `tab:"-"` omits the field and no tag defaults to the Go identifier.
+func WriteTable(length int, each func(i int) interface{}) error {
+	if length < 1 {
+		return nil
+	}
+	w := NewWriter()
+	defer w.Flush()
+	for ix := 0; ix < length; ix++ {
+		item := each(ix)
+		if ix == 0 {
+			_, err := fmt.Fprintln(w, StructFieldNames(item))
+			if err != nil {
+				return err
+			}
+		}
+		_, err := fmt.Fprintln(w, StructValues(item))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func shouldHideField(f reflect.StructField) bool {

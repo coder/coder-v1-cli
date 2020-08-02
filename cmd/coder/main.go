@@ -40,6 +40,7 @@ func main() {
 		flog.Fatal("command %q not found", s)
 	}
 	app.Email = "support@coder.com"
+	app.Action = exitHelp
 
 	app.Commands = []cli.Command{
 		makeLoginCmd(),
@@ -63,4 +64,8 @@ func requireSuccess(err error, msg string, args ...interface{}) {
 	if err != nil {
 		flog.Fatal(msg, args...)
 	}
+}
+
+func exitHelp(c *cli.Context) {
+	cli.ShowCommandHelpAndExit(c, c.Command.FullName(), 1)
 }

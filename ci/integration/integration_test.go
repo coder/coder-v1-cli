@@ -49,7 +49,7 @@ func TestCoderCLI(t *testing.T) {
 	headlessLogin(ctx, t, c)
 
 	c.Run(ctx, "coder envs").Assert(t,
-		tcli.Success(),
+		tcli.Error(),
 	)
 
 	c.Run(ctx, "coder envs ls").Assert(t,

@@ -19,6 +19,7 @@ func makeSecretsCmd() cli.Command {
 		Name:        "secrets",
 		Usage:       "Interact with Coder Secrets",
 		Description: "Interact with secrets objects owned by the active user.",
+		Action:      exitHelp,
 		Subcommands: []cli.Command{
 			{
 				Name:   "ls",
@@ -30,7 +31,7 @@ func makeSecretsCmd() cli.Command {
 				Name:      "rm",
 				Usage:     "Remove one or more secrets by name",
 				ArgsUsage: "[...secret_name]",
-				Action:    removeSecret,
+				Action:    removeSecrets,
 			},
 			{
 				Name:      "view",
@@ -171,7 +172,7 @@ func viewSecret(c *cli.Context) {
 	requireSuccess(err, "failed to write: %v", err)
 }
 
-func removeSecret(c *cli.Context) {
+func removeSecrets(c *cli.Context) {
 	var (
 		client = requireAuth()
 		names  = append([]string{c.Args().First()}, c.Args().Tail()...)
