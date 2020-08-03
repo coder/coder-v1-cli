@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
@@ -30,17 +29,10 @@ func makeEnvsCommand() cli.Command {
 
 					switch outputFmt {
 					case "human":
-						w := xtabwriter.NewWriter()
-						if len(envs) > 0 {
-							_, err := fmt.Fprintln(w, xtabwriter.StructFieldNames(envs[0]))
-							requireSuccess(err, "failed to write header: %v", err)
-						}
-						for _, env := range envs {
-							_, err := fmt.Fprintln(w, xtabwriter.StructValues(env))
-							requireSuccess(err, "failed to write row: %v", err)
-						}
-						err := w.Flush()
-						requireSuccess(err, "failed to flush tab writer: %v", err)
+						err := xtabwriter.WriteTable(len(envs), func(i int) interface{} {
+							return envs[i]
+						})
+						requireSuccess(err, "failed to write table: %v", err)
 					case "json":
 						err := json.NewEncoder(os.Stdout).Encode(envs)
 						requireSuccess(err, "failed to write json: %v", err)
