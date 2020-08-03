@@ -126,6 +126,10 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 		Env:     cmdEnv,
 	})
 	if err != nil {
+		var closeErr websocket.CloseError
+		if xerrors.As(err, &closeErr) {
+			return xerrors.Errorf("network error, is %q online?", envName)
+		}
 		return err
 	}
 
@@ -157,10 +161,14 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 		}
 	}()
 	err = process.Wait()
-	if err != nil && xerrors.Is(err, ctx.Err()) {
-		return xerrors.Errorf("network error, is %q online?", envName)
+	if err != nil {
+		var closeErr websocket.CloseError
+		if xerrors.Is(err, ctx.Err()) || xerrors.As(err, &closeErr) {
+			return xerrors.Errorf("network error, is %q online?", envName)
+		}
+		return err
 	}
-	return err
+	return nil
 }
 
 func heartbeat(ctx context.Context, c *websocket.Conn, interval time.Duration) {
