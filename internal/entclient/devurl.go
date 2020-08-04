@@ -1,6 +1,7 @@
 package entclient
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 )
@@ -20,11 +21,10 @@ type delDevURLRequest struct {
 }
 
 // DelDevURL deletes the specified devurl
-func (c Client) DelDevURL(envID, urlID string) error {
-	reqString := "/api/environments/%s/devurls/%s"
-	reqURL := fmt.Sprintf(reqString, envID, urlID)
+func (c Client) DelDevURL(ctx context.Context, envID, urlID string) error {
+	reqURL := fmt.Sprintf("/api/environments/%s/devurls/%s", envID, urlID)
 
-	res, err := c.request("DELETE", reqURL, delDevURLRequest{
+	res, err := c.request(ctx, "DELETE", reqURL, delDevURLRequest{
 		EnvID:    envID,
 		DevURLID: urlID,
 	})
@@ -48,11 +48,10 @@ type createDevURLRequest struct {
 }
 
 // InsertDevURL inserts a new devurl for the authenticated user
-func (c Client) InsertDevURL(envID string, port int, name, access string) error {
-	reqString := "/api/environments/%s/devurls"
-	reqURL := fmt.Sprintf(reqString, envID)
+func (c Client) InsertDevURL(ctx context.Context, envID string, port int, name, access string) error {
+	reqURL := fmt.Sprintf("/api/environments/%s/devurls", envID)
 
-	res, err := c.request("POST", reqURL, createDevURLRequest{
+	res, err := c.request(ctx, "POST", reqURL, createDevURLRequest{
 		EnvID:  envID,
 		Port:   port,
 		Access: access,
@@ -73,11 +72,10 @@ func (c Client) InsertDevURL(envID string, port int, name, access string) error 
 type updateDevURLRequest createDevURLRequest
 
 // UpdateDevURL updates an existing devurl for the authenticated user
-func (c Client) UpdateDevURL(envID, urlID string, port int, name, access string) error {
-	reqString := "/api/environments/%s/devurls/%s"
-	reqURL := fmt.Sprintf(reqString, envID, urlID)
+func (c Client) UpdateDevURL(ctx context.Context, envID, urlID string, port int, name, access string) error {
+	reqURL := fmt.Sprintf("/api/environments/%s/devurls/%s", envID, urlID)
 
-	res, err := c.request("PUT", reqURL, updateDevURLRequest{
+	res, err := c.request(ctx, "PUT", reqURL, updateDevURLRequest{
 		EnvID:  envID,
 		Port:   port,
 		Access: access,

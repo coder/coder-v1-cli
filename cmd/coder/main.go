@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,6 +20,9 @@ var (
 )
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	if os.Getenv("PPROF") != "" {
 		go func() {
 			log.Println(http.ListenAndServe("localhost:6060", nil))
@@ -49,7 +53,7 @@ func main() {
 		makeURLCmd(),
 		completionCmd,
 	)
-	err = app.Execute()
+	err = app.ExecuteContext(ctx)
 	if err != nil {
 		os.Exit(1)
 	}

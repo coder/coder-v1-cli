@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/internal/sync"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -70,7 +71,7 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 			remoteDir = remoteTokens[1]
 		)
 
-		env, err := findEnv(entClient, envName)
+		env, err := findEnv(cmd.Context(), entClient, envName, entclient.Me)
 		if err != nil {
 			return err
 		}

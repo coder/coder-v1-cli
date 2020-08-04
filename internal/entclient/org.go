@@ -1,5 +1,7 @@
 package entclient
 
+import "context"
+
 // Org describes an Organization in Coder
 type Org struct {
 	ID      string `json:"id"`
@@ -8,8 +10,8 @@ type Org struct {
 }
 
 // Orgs gets all Organizations
-func (c Client) Orgs() ([]Org, error) {
+func (c Client) Orgs(ctx context.Context) ([]Org, error) {
 	var os []Org
-	err := c.requestBody("GET", "/api/orgs", nil, &os)
+	err := c.requestBody(ctx, "GET", "/api/orgs", nil, &os)
 	return os, err
 }

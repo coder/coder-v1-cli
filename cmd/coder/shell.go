@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"cdr.dev/coder-cli/internal/activity"
+	"cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/internal/x/xterminal"
 	"cdr.dev/wsep"
 	"github.com/spf13/cobra"
@@ -19,23 +20,22 @@ import (
 	"go.coder.com/flog"
 )
 
-func getEnvsForCompletion() []string {
-	// TODO(@cmoog): Enable this if speed issue can be resolved. Otherwise, all commands will take > 1 second.
-	return nil
-
-	var envNames []string
-	client, err := newClient()
-	if err != nil {
-		return envNames
+func getEnvsForCompletion(user string) func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		var envNames []string
+		client, err := newClient()
+		if err != nil {
+			return envNames, cobra.ShellCompDirectiveDefault
+		}
+		envs, err := getEnvs(context.TODO(), client, user)
+		if err != nil {
+			return envNames, cobra.ShellCompDirectiveDefault
+		}
+		for _, e := range envs {
+			envNames = append(envNames, e.Name)
+		}
+		return envNames, cobra.ShellCompDirectiveDefault
 	}
-	envs, err := getEnvs(client)
-	if err != nil {
-		return envNames
-	}
-	for _, e := range envs {
-		envNames = append(envNames, e.Name)
-	}
-	return envNames
 }
 
 func makeShellCmd() *cobra.Command {
@@ -45,7 +45,7 @@ func makeShellCmd() *cobra.Command {
 		Long:               "Execute a remote command on the environment\\nIf no command is specified, the default shell is opened.",
 		Args:               cobra.MinimumNArgs(1),
 		DisableFlagParsing: true,
-		ValidArgs:          getEnvsForCompletion(),
+		ValidArgsFunction:  getEnvsForCompletion(entclient.Me),
 		RunE:               shell,
 		Example:            "coder sh backend-env",
 	}
@@ -99,7 +99,7 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	var (
 		entClient = requireAuth()
 	)
-	env, err := findEnv(entClient, envName)
+	env, err := findEnv(ctx, entClient, envName, entclient.Me)
 	if err != nil {
 		return err
 	}

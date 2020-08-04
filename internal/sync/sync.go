@@ -322,7 +322,7 @@ func (s Sync) Run() error {
 	s.remoteCmd(ctx, "mkdir", "-p", s.RemoteDir)
 
 	ap := activity.NewPusher(s.Client, s.Env.ID, activityName)
-	ap.Push()
+	ap.Push(ctx)
 
 	setConsoleTitle("⏳ syncing project")
 	err = s.initSync()
@@ -382,7 +382,7 @@ func (s Sync) Run() error {
 			}
 			s.workEventGroup(eventGroup)
 			eventGroup = eventGroup[:0]
-			ap.Push()
+			ap.Push(context.TODO())
 		}
 	}
 }

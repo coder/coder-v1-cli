@@ -1,6 +1,7 @@
 package entclient
 
 import (
+	"context"
 	"time"
 )
 
@@ -14,10 +15,10 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at" tab:"-"`
 }
 
-// Me gets the details of the authenticated user
-func (c Client) Me() (*User, error) {
+// Me gets the details of the authenticated user.
+func (c Client) Me(ctx context.Context) (*User, error) {
 	var u User
-	err := c.requestBody("GET", "/api/users/me", nil, &u)
+	err := c.requestBody(ctx, "GET", "/api/users/me", nil, &u)
 	if err != nil {
 		return nil, err
 	}
@@ -31,9 +32,9 @@ type SSHKey struct {
 }
 
 // SSHKey gets the current SSH kepair of the authenticated user
-func (c Client) SSHKey() (*SSHKey, error) {
+func (c Client) SSHKey(ctx context.Context) (*SSHKey, error) {
 	var key SSHKey
-	err := c.requestBody("GET", "/api/users/me/sshkey", nil, &key)
+	err := c.requestBody(ctx, "GET", "/api/users/me/sshkey", nil, &key)
 	if err != nil {
 		return nil, err
 	}

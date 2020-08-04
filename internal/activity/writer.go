@@ -1,6 +1,9 @@
 package activity
 
-import "io"
+import (
+	"context"
+	"io"
+)
 
 type activityWriter struct {
 	p  *Pusher
@@ -9,7 +12,7 @@ type activityWriter struct {
 
 // Write writes to the underlying writer and tracks activity
 func (w *activityWriter) Write(p []byte) (n int, err error) {
-	w.p.Push()
+	w.p.Push(context.Background())
 	return w.wr.Write(p)
 }
 

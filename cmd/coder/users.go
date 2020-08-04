@@ -33,7 +33,7 @@ func listUsers(outputFmt *string) func(cmd *cobra.Command, args []string) error 
 	return func(cmd *cobra.Command, args []string) error {
 		entClient := requireAuth()
 
-		users, err := entClient.Users()
+		users, err := entClient.Users(cmd.Context())
 		if err != nil {
 			return xerrors.Errorf("get users: %w", err)
 		}

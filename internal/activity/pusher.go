@@ -1,6 +1,7 @@
 package activity
 
 import (
+	"context"
 	"time"
 
 	"cdr.dev/coder-cli/internal/entclient"
@@ -32,12 +33,12 @@ func NewPusher(c *entclient.Client, envID, source string) *Pusher {
 }
 
 // Push pushes activity, abiding by a rate limit
-func (p *Pusher) Push() {
+func (p *Pusher) Push(ctx context.Context) {
 	if !p.rate.Allow() {
 		return
 	}
 
-	err := p.client.PushActivity(p.source, p.envID)
+	err := p.client.PushActivity(ctx, p.source, p.envID)
 	if err != nil {
 		flog.Error("push activity: %s", err.Error())
 	}
