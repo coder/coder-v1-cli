@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"cdr.dev/coder-cli/ci/tcli"
-	"cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/slogtest/assert"
 )
@@ -66,19 +65,6 @@ func TestCoderCLI(t *testing.T) {
 
 	c.Run(ctx, "coder sh").Assert(t,
 		tcli.Error(),
-	)
-
-	var user entclient.User
-	c.Run(ctx, `coder users ls --output json | jq -c '.[] | select( .username == "charlie")'`).Assert(t,
-		tcli.Success(),
-		stdoutUnmarshalsJSON(&user),
-	)
-	assert.Equal(t, "user email is as expected", "charlie@coder.com", user.Email)
-	assert.Equal(t, "username is as expected", "Charlie", user.Name)
-
-	c.Run(ctx, "coder users ls --output human | grep charlie").Assert(t,
-		tcli.Success(),
-		tcli.StdoutMatches("charlie"),
 	)
 
 	c.Run(ctx, "coder logout").Assert(t,
