@@ -32,6 +32,9 @@ func makeURLCmd() cli.Command {
 					if !(outputFmt == "json" || outputFmt == "human") {
 						return xerrors.Errorf("unknown --output value %q")
 					}
+					if c.Args().First() == "" {
+						return xerrors.New("argument [env_name] is required")
+					}
 					return nil
 				},
 				Action: makeListDevURLs(&outputFmt),
@@ -106,23 +109,31 @@ func accessLevelIsValid(level string) bool {
 
 // Run gets the list of active devURLs from the cemanager for the
 // specified environment and outputs info to stdout.
-func makeListDevURLs(outputFmt *string) func(c *cli.Context) {
-	return func(c *cli.Context) {
+func makeListDevURLs(outputFmt *string) func(c *cli.Context) error {
+	return func(c *cli.Context) error {
 		envName := c.Args().First()
-		devURLs := urlList(envName)
+		devURLs, err := urlList(envName)
+		if err != nil {
+			return err
+		}
 
 		switch *outputFmt {
 		case "human":
 			err := xtabwriter.WriteTable(len(devURLs), func(i int) interface{} {
 				return devURLs[i]
 			})
-			requireSuccess(err, "failed to write table: %v", err)
+			if err != nil {
+				return xerrors.Errorf("failed to write table: %w", err)
+			}
 		case "json":
 			err := json.NewEncoder(os.Stdout).Encode(devURLs)
-			requireSuccess(err, "failed to encode devurls to json: %v", err)
+			if err != nil {
+				return xerrors.Errorf("failed to encode DevURLs to json: %w", err)
+			}
 		default:
-			flog.Fatal("unknown --output value %q", *outputFmt)
+			return xerrors.Errorf("unknown --output value %q", *outputFmt)
 		}
+		return nil
 	}
 }
 
@@ -157,7 +168,7 @@ func makeCreateDevURL() cli.Command {
 			},
 		},
 		// Run creates or updates a devURL
-		Action: func(c *cli.Context) {
+		Action: func(c *cli.Context) error {
 			var (
 				envName = c.Args().First()
 				port    = c.Args().Get(1)
@@ -178,23 +189,35 @@ func makeCreateDevURL() cli.Command {
 			}
 
 			if urlname != "" && !devURLNameValidRx.MatchString(urlname) {
-				flog.Fatal("update devurl: name must be < 64 chars in length, begin with a letter and only contain letters or digits.")
-				return
+				return xerrors.New("update devurl: name must be < 64 chars in length, begin with a letter and only contain letters or digits.")
 			}
 			entClient := requireAuth()
 
-			env := findEnv(entClient, envName)
+			env, err := findEnv(entClient, envName)
+			if err != nil {
+				return err
+			}
 
-			urlID, found := devURLID(portNum, urlList(envName))
+			urls, err := urlList(envName)
+			if err != nil {
+				return err
+			}
+
+			urlID, found := devURLID(portNum, urls)
 			if found {
 				flog.Info("Updating devurl for port %v", port)
 				err := entClient.UpdateDevURL(env.ID, urlID, portNum, urlname, access)
-				requireSuccess(err, "update devurl: %s", err)
+				if err != nil {
+					return xerrors.Errorf("failed to update DevURL: %w", err)
+				}
 			} else {
 				flog.Info("Adding devurl for port %v", port)
 				err := entClient.InsertDevURL(env.ID, portNum, urlname, access)
-				requireSuccess(err, "insert devurl: %s", err)
+				if err != nil {
+					return xerrors.Errorf("failed to insert DevURL: %w", err)
+				}
 			}
+			return nil
 		},
 	}
 }
@@ -217,50 +240,70 @@ func devURLID(port int, urls []DevURL) (string, bool) {
 }
 
 // Run deletes a devURL, specified by env ID and port, from the cemanager.
-func removeDevURL(c *cli.Context) {
+func removeDevURL(c *cli.Context) error {
 	var (
 		envName = c.Args().First()
 		port    = c.Args().Get(1)
 	)
 
 	portNum, err := validatePort(port)
-	requireSuccess(err, "failed to validate port: %v", err)
+	if err != nil {
+		return xerrors.Errorf("failed to validate port: %w", err)
+	}
 
 	entClient := requireAuth()
-	env := findEnv(entClient, envName)
+	env, err := findEnv(entClient, envName)
+	if err != nil {
+		return err
+	}
 
-	urlID, found := devURLID(portNum, urlList(envName))
+	urls, err := urlList(envName)
+	if err != nil {
+		return err
+	}
+
+	urlID, found := devURLID(portNum, urls)
 	if found {
 		flog.Info("Deleting devurl for port %v", port)
 	} else {
-		flog.Fatal("No devurl found for port %v", port)
+		return xerrors.Errorf("No devurl found for port %v", port)
 	}
 
 	err = entClient.DelDevURL(env.ID, urlID)
-	requireSuccess(err, "delete devurl: %s", err)
+	if err != nil {
+		return xerrors.Errorf("failed to delete DevURL: %w", err)
+	}
+	return nil
 }
 
 // urlList returns the list of active devURLs from the cemanager.
-func urlList(envName string) []DevURL {
+func urlList(envName string) ([]DevURL, error) {
 	entClient := requireAuth()
-	env := findEnv(entClient, envName)
+	env, err := findEnv(entClient, envName)
+	if err != nil {
+		return nil, err
+	}
 
 	reqString := "%s/api/environments/%s/devurls?session_token=%s"
 	reqURL := fmt.Sprintf(reqString, entClient.BaseURL, env.ID, entClient.Token)
 
 	resp, err := http.Get(reqURL)
-	requireSuccess(err, "%v", err)
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		flog.Fatal("non-success status code: %d", resp.StatusCode)
+		return nil, xerrors.Errorf("non-success status code: %d", resp.StatusCode)
 	}
 
 	dec := json.NewDecoder(resp.Body)
 
 	devURLs := make([]DevURL, 0)
 	err = dec.Decode(&devURLs)
-	requireSuccess(err, "%v", err)
+	if err != nil {
+		return nil, err
+	}
 
-	return devURLs
+	return devURLs, nil
 }

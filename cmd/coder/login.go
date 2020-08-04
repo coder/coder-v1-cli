@@ -11,6 +11,7 @@ import (
 	"cdr.dev/coder-cli/internal/loginsrv"
 	"github.com/pkg/browser"
 	"github.com/urfave/cli"
+	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
@@ -24,20 +25,20 @@ func makeLoginCmd() cli.Command {
 	}
 }
 
-func login(c *cli.Context) {
+func login(c *cli.Context) error {
 	rawURL := c.Args().First()
 	if rawURL == "" || !strings.HasPrefix(rawURL, "http") {
-		flog.Fatal("invalid URL")
+		return xerrors.Errorf("invalid URL")
 	}
 
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		flog.Fatal("parse url: %v", err)
+		return xerrors.Errorf("parse url: %v", err)
 	}
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		flog.Fatal("create login server: %+v", err)
+		return xerrors.Errorf("create login server: %+v", err)
 	}
 	defer listener.Close()
 
@@ -54,7 +55,7 @@ func login(c *cli.Context) {
 		(&url.URL{Scheme: u.Scheme, Host: u.Host}).String(),
 	)
 	if err != nil {
-		flog.Fatal("write url: %v", err)
+		return xerrors.Errorf("write url: %v", err)
 	}
 
 	authURL := url.URL{
@@ -74,7 +75,8 @@ func login(c *cli.Context) {
 	err = config.Session.Write(srv.Token)
 	srv.TokenCond.L.Unlock()
 	if err != nil {
-		flog.Fatal("set session: %v", err)
+		return xerrors.Errorf("set session: %v", err)
 	}
 	flog.Success("logged in")
+	return nil
 }

@@ -55,8 +55,8 @@ func rsyncVersion() string {
 	return versionString[1]
 }
 
-func makeRunSync(init *bool) func(c *cli.Context) {
-	return func(c *cli.Context) {
+func makeRunSync(init *bool) func(c *cli.Context) error {
+	return func(c *cli.Context) error {
 		var (
 			local  = c.Args().Get(0)
 			remote = c.Args().Get(1)
@@ -66,10 +66,10 @@ func makeRunSync(init *bool) func(c *cli.Context) {
 
 		info, err := os.Stat(local)
 		if err != nil {
-			flog.Fatal("%v", err)
+			return err
 		}
 		if !info.IsDir() {
-			flog.Fatal("%s must be a directory", local)
+			return xerrors.Errorf("%s must be a directory", local)
 		}
 
 		remoteTokens := strings.SplitN(remote, ":", 2)
@@ -81,7 +81,10 @@ func makeRunSync(init *bool) func(c *cli.Context) {
 			remoteDir = remoteTokens[1]
 		)
 
-		env := findEnv(entClient, envName)
+		env, err := findEnv(entClient, envName)
+		if err != nil {
+			return err
+		}
 
 		absLocal, err := filepath.Abs(local)
 		if err != nil {
@@ -90,7 +93,7 @@ func makeRunSync(init *bool) func(c *cli.Context) {
 
 		s := sync.Sync{
 			Init:      *init,
-			Env:       env,
+			Env:       *env,
 			RemoteDir: remoteDir,
 			LocalDir:  absLocal,
 			Client:    entClient,
@@ -109,7 +112,8 @@ func makeRunSync(init *bool) func(c *cli.Context) {
 			err = s.Run()
 		}
 		if err != nil {
-			flog.Fatal("%v", err)
+			return err
 		}
+		return nil
 	}
 }

@@ -6,8 +6,7 @@ import (
 
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/urfave/cli"
-
-	"go.coder.com/flog"
+	"golang.org/x/xerrors"
 )
 
 func makeUsersCmd() cli.Command {
@@ -34,24 +33,31 @@ func makeUsersCmd() cli.Command {
 	}
 }
 
-func listUsers(outputFmt *string) func(c *cli.Context) {
-	return func(c *cli.Context) {
+func listUsers(outputFmt *string) func(c *cli.Context) error {
+	return func(c *cli.Context) error {
 		entClient := requireAuth()
 
 		users, err := entClient.Users()
-		requireSuccess(err, "failed to get users: %v", err)
+		if err != nil {
+			return xerrors.Errorf("failed to get users: %w", err)
+		}
 
 		switch *outputFmt {
 		case "human":
 			err := xtabwriter.WriteTable(len(users), func(i int) interface{} {
 				return users[i]
 			})
-			requireSuccess(err, "failed to write table: %v", err)
+			if err != nil {
+				return xerrors.Errorf("failed to write table: %w", err)
+			}
 		case "json":
 			err = json.NewEncoder(os.Stdout).Encode(users)
-			requireSuccess(err, "failed to encode users to json: %v", err)
+			if err != nil {
+				return xerrors.Errorf("failed to encode users to json: %w", err)
+			}
 		default:
-			flog.Fatal("unknown value for --output")
+			return xerrors.New("unknown value for --output")
 		}
+		return nil
 	}
 }

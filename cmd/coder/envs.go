@@ -6,8 +6,7 @@ import (
 
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/urfave/cli"
-
-	"go.coder.com/flog"
+	"golang.org/x/xerrors"
 )
 
 func makeEnvsCommand() cli.Command {
@@ -23,22 +22,30 @@ func makeEnvsCommand() cli.Command {
 				Usage:       "list all environments owned by the active user",
 				Description: "List all Coder environments owned by the active user.",
 				ArgsUsage:   "[...flags]>",
-				Action: func(c *cli.Context) {
+				Action: func(c *cli.Context) error {
 					entClient := requireAuth()
-					envs := getEnvs(entClient)
+					envs, err := getEnvs(entClient)
+					if err != nil {
+						return err
+					}
 
 					switch outputFmt {
 					case "human":
 						err := xtabwriter.WriteTable(len(envs), func(i int) interface{} {
 							return envs[i]
 						})
-						requireSuccess(err, "failed to write table: %v", err)
+						if err != nil {
+							return xerrors.Errorf("failed to write table: %w", err)
+						}
 					case "json":
 						err := json.NewEncoder(os.Stdout).Encode(envs)
-						requireSuccess(err, "failed to write json: %v", err)
+						if err != nil {
+							return xerrors.Errorf("failed to write environments as JSON: %w", err)
+						}
 					default:
-						flog.Fatal("unknown --output value %q", outputFmt)
+						return xerrors.Errorf("unknown --output value %q", outputFmt)
 					}
+					return nil
 				},
 				Flags: []cli.Flag{
 					cli.StringFlag{

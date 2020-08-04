@@ -59,13 +59,6 @@ func main() {
 	}
 }
 
-// requireSuccess prints the given message and format args as a fatal error if err != nil
-func requireSuccess(err error, msg string, args ...interface{}) {
-	if err != nil {
-		flog.Fatal(msg, args...)
-	}
-}
-
 func exitHelp(c *cli.Context) {
 	cli.ShowCommandHelpAndExit(c, c.Command.FullName(), 1)
 }

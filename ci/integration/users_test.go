@@ -17,7 +17,7 @@ func TestUsers(t *testing.T) {
 
 	c, err := tcli.NewContainerRunner(ctx, &tcli.ContainerConfig{
 		Image: "codercom/enterprise-dev",
-		Name:  "coder-cli-tests",
+		Name:  "users-cli-tests",
 		BindMounts: map[string]string{
 			binpath: "/bin/coder",
 		},

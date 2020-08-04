@@ -71,7 +71,7 @@ func makeCreateSecret() cli.Command {
 			}
 			return nil
 		},
-		Action: func(c *cli.Context) {
+		Action: func(c *cli.Context) error {
 			var (
 				client = requireAuth()
 				name   = c.Args().First()
@@ -82,7 +82,9 @@ func makeCreateSecret() cli.Command {
 				value = fromLiteral
 			} else if fromFile != "" {
 				contents, err := ioutil.ReadFile(fromFile)
-				requireSuccess(err, "failed to read file: %v", err)
+				if err != nil {
+					return xerrors.Errorf("failed to read file: %w", err)
+				}
 				value = string(contents)
 			} else {
 				prompt := promptui.Prompt{
@@ -96,7 +98,9 @@ func makeCreateSecret() cli.Command {
 					},
 				}
 				value, err = prompt.Run()
-				requireSuccess(err, "failed to prompt for value: %v", err)
+				if err != nil {
+					return xerrors.Errorf("failed to prompt for value: %w", err)
+				}
 			}
 
 			err = client.InsertSecret(entclient.InsertSecretReq{
@@ -104,7 +108,10 @@ func makeCreateSecret() cli.Command {
 				Value:       value,
 				Description: description,
 			})
-			requireSuccess(err, "failed to insert secret: %v", err)
+			if err != nil {
+				return xerrors.Errorf("failed to insert secret: %w", err)
+			}
+			return nil
 		},
 		Flags: []cli.Flag{
 			cli.StringFlag{
@@ -132,15 +139,17 @@ func makeCreateSecret() cli.Command {
 	}
 }
 
-func listSecrets(_ *cli.Context) {
+func listSecrets(_ *cli.Context) error {
 	client := requireAuth()
 
 	secrets, err := client.Secrets()
-	requireSuccess(err, "failed to get secrets: %v", err)
+	if err != nil {
+		return xerrors.Errorf("failed to get secrets: %w", err)
+	}
 
 	if len(secrets) < 1 {
 		flog.Info("No secrets found")
-		return
+		return nil
 	}
 
 	err = xtabwriter.WriteTable(len(secrets), func(i int) interface{} {
@@ -148,39 +157,47 @@ func listSecrets(_ *cli.Context) {
 		s.Value = "******" // value is omitted from bulk responses
 		return s
 	})
-	requireSuccess(err, "failed to write table of secrets: %w", err)
+	if err != nil {
+		return xerrors.Errorf("failed to write table of secrets: %w", err)
+	}
+	return nil
 }
 
-func viewSecret(c *cli.Context) {
+func viewSecret(c *cli.Context) error {
 	var (
 		client = requireAuth()
 		name   = c.Args().First()
 	)
 	if name == "" {
-		flog.Fatal("[name] is a required argument")
+		return xerrors.New("[name] is a required argument")
 	}
 
 	secret, err := client.SecretByName(name)
-	requireSuccess(err, "failed to get secret by name: %v", err)
+	if err != nil {
+		return xerrors.Errorf("failed to get secret by name: %w", err)
+	}
 
 	_, err = fmt.Fprintln(os.Stdout, secret.Value)
-	requireSuccess(err, "failed to write: %v", err)
+	if err != nil {
+		return xerrors.Errorf("failed to write: %w", err)
+	}
+	return nil
 }
 
-func removeSecrets(c *cli.Context) {
+func removeSecrets(c *cli.Context) error {
 	var (
 		client = requireAuth()
 		names  = append([]string{c.Args().First()}, c.Args().Tail()...)
 	)
 	if len(names) < 1 || names[0] == "" {
-		flog.Fatal("[...secret_name] is a required argument")
+		return xerrors.New("[...secret_name] is a required argument")
 	}
 
 	errorSeen := false
 	for _, n := range names {
 		err := client.DeleteSecretByName(n)
 		if err != nil {
-			flog.Error("failed to delete secret: %v", err)
+			flog.Error("Failed to delete secret: %v", err)
 			errorSeen = true
 		} else {
 			flog.Info("Successfully deleted secret %q", n)
@@ -189,4 +206,5 @@ func removeSecrets(c *cli.Context) {
 	if errorSeen {
 		os.Exit(1)
 	}
+	return nil
 }

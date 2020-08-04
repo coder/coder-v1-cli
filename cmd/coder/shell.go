@@ -27,11 +27,17 @@ func makeShellCmd() cli.Command {
 		ArgsUsage:       "[env_name] [<command [args...]>]",
 		SkipFlagParsing: true,
 		SkipArgReorder:  true,
-		Action:          shell,
+		Before: func(c *cli.Context) error {
+			if c.Args().First() == "" {
+				return xerrors.New("argument [env_name] is required")
+			}
+			return nil
+		},
+		Action: shell,
 	}
 }
 
-func shell(c *cli.Context) {
+func shell(c *cli.Context) error {
 	var (
 		envName = c.Args().First()
 		ctx     = context.Background()
@@ -51,8 +57,9 @@ func shell(c *cli.Context) {
 		os.Exit(exitErr.Code)
 	}
 	if err != nil {
-		flog.Fatal("run command: %v", err)
+		return xerrors.Errorf("run command: %w", err)
 	}
+	return nil
 }
 
 func sendResizeEvents(ctx context.Context, termfd uintptr, process wsep.Process) {
@@ -77,8 +84,11 @@ func sendResizeEvents(ctx context.Context, termfd uintptr, process wsep.Process)
 func runCommand(ctx context.Context, envName string, command string, args []string) error {
 	var (
 		entClient = requireAuth()
-		env       = findEnv(entClient, envName)
 	)
+	env, err := findEnv(entClient, envName)
+	if err != nil {
+		return err
+	}
 
 	termfd := os.Stdout.Fd()
 
@@ -94,7 +104,7 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	conn, err := entClient.DialWsep(ctx, env)
+	conn, err := entClient.DialWsep(ctx, *env)
 	if err != nil {
 		return err
 	}
@@ -174,7 +184,7 @@ func heartbeat(ctx context.Context, c *websocket.Conn, interval time.Duration) {
 		case <-ticker.C:
 			err := c.Ping(ctx)
 			if err != nil {
-				flog.Error("failed to ping websocket: %v", err)
+				flog.Fatal("\nFailed to ping websocket: %v, exiting...", err)
 			}
 		}
 	}

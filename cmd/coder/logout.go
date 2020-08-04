@@ -5,6 +5,7 @@ import (
 
 	"cdr.dev/coder-cli/internal/config"
 	"github.com/urfave/cli"
+	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
@@ -17,14 +18,15 @@ func makeLogoutCmd() cli.Command {
 	}
 }
 
-func logout(c *cli.Context) {
+func logout(_ *cli.Context) error {
 	err := config.Session.Delete()
 	if err != nil {
 		if os.IsNotExist(err) {
 			flog.Info("no active session")
-			return
+			return nil
 		}
-		flog.Fatal("delete session: %v", err)
+		return xerrors.Errorf("delete session: %w", err)
 	}
 	flog.Success("logged out")
+	return nil
 }
