@@ -143,17 +143,12 @@ func listSecrets(_ *cli.Context) {
 		return
 	}
 
-	w := xtabwriter.NewWriter()
-	_, err = fmt.Fprintln(w, xtabwriter.StructFieldNames(secrets[0]))
-	requireSuccess(err, "failed to write: %v", err)
-	for _, s := range secrets {
+	err = xtabwriter.WriteTable(len(secrets), func(i int) interface{} {
+		s := secrets[i]
 		s.Value = "******" // value is omitted from bulk responses
-
-		_, err = fmt.Fprintln(w, xtabwriter.StructValues(s))
-		requireSuccess(err, "failed to write: %v", err)
-	}
-	err = w.Flush()
-	requireSuccess(err, "failed to flush writer: %v", err)
+		return s
+	})
+	requireSuccess(err, "failed to write table of secrets: %w", err)
 }
 
 func viewSecret(c *cli.Context) {

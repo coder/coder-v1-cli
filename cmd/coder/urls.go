@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 
+	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/urfave/cli"
 	"golang.org/x/xerrors"
 
@@ -19,20 +19,22 @@ import (
 func makeURLCmd() cli.Command {
 	var outputFmt string
 	return cli.Command{
-		Name:         "urls",
-		Usage:        "Interact with environment DevURLs",
-		ArgsUsage:    "",
-		Before:       nil,
-		After:        nil,
-		OnUsageError: nil,
+		Name:   "urls",
+		Usage:  "Interact with environment DevURLs",
+		Action: exitHelp,
 		Subcommands: []cli.Command{
 			makeCreateDevURL(),
 			{
 				Name:      "ls",
 				Usage:     "List all DevURLs for an environment",
 				ArgsUsage: "[env_name]",
-				Before:    nil,
-				Action:    makeListDevURLs(&outputFmt),
+				Before: func(c *cli.Context) error {
+					if !(outputFmt == "json" || outputFmt == "human") {
+						return xerrors.Errorf("unknown --output value %q")
+					}
+					return nil
+				},
+				Action: makeListDevURLs(&outputFmt),
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:        "output",
@@ -45,10 +47,18 @@ func makeURLCmd() cli.Command {
 			{
 				Name:      "rm",
 				Usage:     "Remove a dev url",
-				ArgsUsage: "",
-				Before:    nil,
-				Action:    removeDevURL,
-				Flags:     nil,
+				ArgsUsage: "[env_name] [port]",
+				Before: func(c *cli.Context) error {
+					var (
+						envName = c.Args().First()
+						port    = c.Args().Get(1)
+					)
+					if envName == "" || port == "" {
+						return xerrors.Errorf("[env_name] and [port] are required arguments")
+					}
+					return nil
+				},
+				Action: removeDevURL,
 			},
 		},
 	}
@@ -56,11 +66,11 @@ func makeURLCmd() cli.Command {
 
 // DevURL is the parsed json response record for a devURL from cemanager
 type DevURL struct {
-	ID     string `json:"id"`
+	ID     string `json:"id" tab:"-"`
 	URL    string `json:"url"`
 	Port   int    `json:"port"`
+	Name   string `json:"name" tab:"-"`
 	Access string `json:"access"`
-	Name   string `json:"name"`
 }
 
 var urlAccessLevel = map[string]string{
@@ -101,18 +111,12 @@ func makeListDevURLs(outputFmt *string) func(c *cli.Context) {
 		envName := c.Args().First()
 		devURLs := urlList(envName)
 
-		if len(devURLs) == 0 {
-			return
-		}
-
 		switch *outputFmt {
 		case "human":
-			w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.TabIndent)
-			for _, devURL := range devURLs {
-				fmt.Fprintf(w, "%s\t%d\t%s\n", devURL.URL, devURL.Port, devURL.Access)
-			}
-			err := w.Flush()
-			requireSuccess(err, "failed to flush writer: %v", err)
+			err := xtabwriter.WriteTable(len(devURLs), func(i int) interface{} {
+				return devURLs[i]
+			})
+			requireSuccess(err, "failed to write table: %v", err)
 		case "json":
 			err := json.NewEncoder(os.Stdout).Encode(devURLs)
 			requireSuccess(err, "failed to encode devurls to json: %v", err)
