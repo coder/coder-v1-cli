@@ -21,7 +21,7 @@ func makeEnvsCommand() cli.Command {
 				Name:        "ls",
 				Usage:       "list all environments owned by the active user",
 				Description: "List all Coder environments owned by the active user.",
-				ArgsUsage:   "[...flags]>",
+				ArgsUsage:   "[...flags]",
 				Action: func(c *cli.Context) error {
 					entClient := requireAuth()
 					envs, err := getEnvs(entClient)
@@ -35,12 +35,12 @@ func makeEnvsCommand() cli.Command {
 							return envs[i]
 						})
 						if err != nil {
-							return xerrors.Errorf("failed to write table: %w", err)
+							return xerrors.Errorf("write table: %w", err)
 						}
 					case "json":
 						err := json.NewEncoder(os.Stdout).Encode(envs)
 						if err != nil {
-							return xerrors.Errorf("failed to write environments as JSON: %w", err)
+							return xerrors.Errorf("write environments as JSON: %w", err)
 						}
 					default:
 						return xerrors.Errorf("unknown --output value %q", outputFmt)

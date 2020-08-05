@@ -83,7 +83,7 @@ func makeCreateSecret() cli.Command {
 			} else if fromFile != "" {
 				contents, err := ioutil.ReadFile(fromFile)
 				if err != nil {
-					return xerrors.Errorf("failed to read file: %w", err)
+					return xerrors.Errorf("read file: %w", err)
 				}
 				value = string(contents)
 			} else {
@@ -99,7 +99,7 @@ func makeCreateSecret() cli.Command {
 				}
 				value, err = prompt.Run()
 				if err != nil {
-					return xerrors.Errorf("failed to prompt for value: %w", err)
+					return xerrors.Errorf("prompt for value: %w", err)
 				}
 			}
 
@@ -109,7 +109,7 @@ func makeCreateSecret() cli.Command {
 				Description: description,
 			})
 			if err != nil {
-				return xerrors.Errorf("failed to insert secret: %w", err)
+				return xerrors.Errorf("insert secret: %w", err)
 			}
 			return nil
 		},
@@ -144,7 +144,7 @@ func listSecrets(_ *cli.Context) error {
 
 	secrets, err := client.Secrets()
 	if err != nil {
-		return xerrors.Errorf("failed to get secrets: %w", err)
+		return xerrors.Errorf("get secrets: %w", err)
 	}
 
 	if len(secrets) < 1 {
@@ -158,7 +158,7 @@ func listSecrets(_ *cli.Context) error {
 		return s
 	})
 	if err != nil {
-		return xerrors.Errorf("failed to write table of secrets: %w", err)
+		return xerrors.Errorf("write table of secrets: %w", err)
 	}
 	return nil
 }
@@ -174,12 +174,12 @@ func viewSecret(c *cli.Context) error {
 
 	secret, err := client.SecretByName(name)
 	if err != nil {
-		return xerrors.Errorf("failed to get secret by name: %w", err)
+		return xerrors.Errorf("get secret by name: %w", err)
 	}
 
 	_, err = fmt.Fprintln(os.Stdout, secret.Value)
 	if err != nil {
-		return xerrors.Errorf("failed to write: %w", err)
+		return xerrors.Errorf("write secret value: %w", err)
 	}
 	return nil
 }

@@ -123,12 +123,12 @@ func makeListDevURLs(outputFmt *string) func(c *cli.Context) error {
 				return devURLs[i]
 			})
 			if err != nil {
-				return xerrors.Errorf("failed to write table: %w", err)
+				return xerrors.Errorf("write table: %w", err)
 			}
 		case "json":
 			err := json.NewEncoder(os.Stdout).Encode(devURLs)
 			if err != nil {
-				return xerrors.Errorf("failed to encode DevURLs to json: %w", err)
+				return xerrors.Errorf("encode DevURLs as json: %w", err)
 			}
 		default:
 			return xerrors.Errorf("unknown --output value %q", *outputFmt)
@@ -208,13 +208,13 @@ func makeCreateDevURL() cli.Command {
 				flog.Info("Updating devurl for port %v", port)
 				err := entClient.UpdateDevURL(env.ID, urlID, portNum, urlname, access)
 				if err != nil {
-					return xerrors.Errorf("failed to update DevURL: %w", err)
+					return xerrors.Errorf("update DevURL: %w", err)
 				}
 			} else {
 				flog.Info("Adding devurl for port %v", port)
 				err := entClient.InsertDevURL(env.ID, portNum, urlname, access)
 				if err != nil {
-					return xerrors.Errorf("failed to insert DevURL: %w", err)
+					return xerrors.Errorf("insert DevURL: %w", err)
 				}
 			}
 			return nil
@@ -248,7 +248,7 @@ func removeDevURL(c *cli.Context) error {
 
 	portNum, err := validatePort(port)
 	if err != nil {
-		return xerrors.Errorf("failed to validate port: %w", err)
+		return xerrors.Errorf("validate port: %w", err)
 	}
 
 	entClient := requireAuth()
@@ -271,7 +271,7 @@ func removeDevURL(c *cli.Context) error {
 
 	err = entClient.DelDevURL(env.ID, urlID)
 	if err != nil {
-		return xerrors.Errorf("failed to delete DevURL: %w", err)
+		return xerrors.Errorf("delete DevURL: %w", err)
 	}
 	return nil
 }

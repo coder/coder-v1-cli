@@ -59,7 +59,7 @@ func getEnvs(client *entclient.Client) ([]entclient.Environment, error) {
 func findEnv(client *entclient.Client, name string) (*entclient.Environment, error) {
 	envs, err := getEnvs(client)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to get environments: %w", err)
+		return nil, xerrors.Errorf("get environments: %w", err)
 	}
 
 	var found []string

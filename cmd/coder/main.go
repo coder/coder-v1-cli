@@ -27,7 +27,7 @@ func main() {
 
 	stdoutState, err := xterminal.MakeOutputRaw(os.Stdout.Fd())
 	if err != nil {
-		flog.Fatal("failed to set output to raw: %v", err)
+		flog.Fatal("set output to raw: %v", err)
 	}
 	defer xterminal.Restore(os.Stdout.Fd(), stdoutState)
 

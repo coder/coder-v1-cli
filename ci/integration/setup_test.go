@@ -39,7 +39,7 @@ func build(path string) error {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return xerrors.Errorf("failed to build coder-cli (%v): %w", string(out), err)
+		return xerrors.Errorf("build coder-cli (%v): %w", string(out), err)
 	}
 	return nil
 }

@@ -39,7 +39,7 @@ func listUsers(outputFmt *string) func(c *cli.Context) error {
 
 		users, err := entClient.Users()
 		if err != nil {
-			return xerrors.Errorf("failed to get users: %w", err)
+			return xerrors.Errorf("get users: %w", err)
 		}
 
 		switch *outputFmt {
@@ -48,12 +48,12 @@ func listUsers(outputFmt *string) func(c *cli.Context) error {
 				return users[i]
 			})
 			if err != nil {
-				return xerrors.Errorf("failed to write table: %w", err)
+				return xerrors.Errorf("write table: %w", err)
 			}
 		case "json":
 			err = json.NewEncoder(os.Stdout).Encode(users)
 			if err != nil {
-				return xerrors.Errorf("failed to encode users to json: %w", err)
+				return xerrors.Errorf("encode users as json: %w", err)
 			}
 		default:
 			return xerrors.New("unknown value for --output")

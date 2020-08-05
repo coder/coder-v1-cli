@@ -66,7 +66,7 @@ func configSSH(filepath *string, remove *bool) func(c *cli.Context) error {
 			// SSH configs are not always already there.
 			currentConfig = ""
 		} else if err != nil {
-			return xerrors.Errorf("failed to read ssh config file %q: %w", filepath, err)
+			return xerrors.Errorf("read ssh config file %q: %w", filepath, err)
 		}
 
 		startIndex := strings.Index(currentConfig, startToken)
@@ -80,7 +80,7 @@ func configSSH(filepath *string, remove *bool) func(c *cli.Context) error {
 
 			err = writeStr(*filepath, currentConfig)
 			if err != nil {
-				return xerrors.Errorf("failed to write to ssh config file %q: %v", *filepath, err)
+				return xerrors.Errorf("write to ssh config file %q: %v", *filepath, err)
 			}
 
 			return nil
@@ -95,7 +95,7 @@ func configSSH(filepath *string, remove *bool) func(c *cli.Context) error {
 
 		me, err := entClient.Me()
 		if err != nil {
-			return xerrors.Errorf("failed to fetch username: %w", err)
+			return xerrors.Errorf("fetch username: %w", err)
 		}
 
 		envs, err := getEnvs(entClient)
@@ -107,7 +107,7 @@ func configSSH(filepath *string, remove *bool) func(c *cli.Context) error {
 		}
 		newConfig, err := makeNewConfigs(me.Username, envs, startToken, startMessage, endToken)
 		if err != nil {
-			return xerrors.Errorf("failed to make new ssh configurations: %w", err)
+			return xerrors.Errorf("make new ssh configurations: %w", err)
 		}
 
 		// if we find the old config, remove those chars from the string
@@ -117,11 +117,11 @@ func configSSH(filepath *string, remove *bool) func(c *cli.Context) error {
 
 		err = writeStr(*filepath, currentConfig+newConfig)
 		if err != nil {
-			return xerrors.Errorf("failed to write new configurations to ssh config file %q: %w", filepath, err)
+			return xerrors.Errorf("write new configurations to ssh config file %q: %w", filepath, err)
 		}
 		err = writeSSHKey(ctx, entClient)
 		if err != nil {
-			return xerrors.Errorf("failed to fetch and write ssh key: %w", err)
+			return xerrors.Errorf("fetch and write ssh key: %w", err)
 		}
 
 		fmt.Printf("An auto-generated ssh config was written to %q\n", *filepath)
