@@ -5,6 +5,7 @@ go 1.14
 require (
 	cdr.dev/slog v1.3.0
 	cdr.dev/wsep v0.0.0-20200728013649-82316a09813f
+	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/gorilla/websocket v1.4.1
 	github.com/kirsle/configdir v0.0.0-20170128060238-e45d2f54772f
@@ -14,7 +15,7 @@ require (
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 	github.com/rjeczalik/notify v0.9.2
 	github.com/stretchr/testify v1.6.1 // indirect
-	github.com/urfave/cli v1.22.4
+	github.com/urfave/cli/v2 v2.2.0
 	go.coder.com/flog v0.0.0-20190906214207-47dd47ea0512
 	golang.org/x/crypto v0.0.0-20200422194213-44a606286825
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a

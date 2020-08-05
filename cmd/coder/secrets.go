@@ -8,19 +8,19 @@ import (
 	"cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/manifoldco/promptui"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
 
-func makeSecretsCmd() cli.Command {
-	return cli.Command{
+func makeSecretsCmd() *cli.Command {
+	return &cli.Command{
 		Name:        "secrets",
 		Usage:       "Interact with Coder Secrets",
 		Description: "Interact with secrets objects owned by the active user.",
 		Action:      exitHelp,
-		Subcommands: []cli.Command{
+		Subcommands: []*cli.Command{
 			{
 				Name:   "ls",
 				Usage:  "List all secrets owned by the active user",
@@ -43,7 +43,7 @@ func makeSecretsCmd() cli.Command {
 	}
 }
 
-func makeCreateSecret() cli.Command {
+func makeCreateSecret() *cli.Command {
 	var (
 		fromFile    string
 		fromLiteral string
@@ -51,7 +51,7 @@ func makeCreateSecret() cli.Command {
 		description string
 	)
 
-	return cli.Command{
+	return &cli.Command{
 		Name:        "create",
 		Usage:       "Create a new secret",
 		Description: "Create a new secret object to store application secrets and access them securely from within your environments.",
@@ -114,23 +114,23 @@ func makeCreateSecret() cli.Command {
 			return nil
 		},
 		Flags: []cli.Flag{
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:        "from-file",
 				Usage:       "a file from which to read the value of the secret",
 				TakesFile:   true,
 				Destination: &fromFile,
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:        "from-literal",
 				Usage:       "the value of the secret",
 				Destination: &fromLiteral,
 			},
-			cli.BoolFlag{
+			&cli.BoolFlag{
 				Name:        "from-prompt",
 				Usage:       "enter the secret value through a terminal prompt",
 				Destination: &fromPrompt,
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:        "description",
 				Usage:       "a description of the secret",
 				Destination: &description,
@@ -197,10 +197,10 @@ func removeSecrets(c *cli.Context) error {
 	for _, n := range names {
 		err := client.DeleteSecretByName(n)
 		if err != nil {
-			flog.Error("Failed to delete secret: %v", err)
+			flog.Error("failed to delete secret %q: %v", n, err)
 			errorSeen = true
 		} else {
-			flog.Info("Successfully deleted secret %q", n)
+			flog.Success("successfully deleted secret %q", n)
 		}
 	}
 	if errorSeen {

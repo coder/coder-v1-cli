@@ -9,7 +9,7 @@ import (
 	"runtime"
 
 	"cdr.dev/coder-cli/internal/x/xterminal"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"go.coder.com/flog"
 )
@@ -35,14 +35,12 @@ func main() {
 	app.Name = "coder"
 	app.Usage = "coder provides a CLI for working with an existing Coder Enterprise installation"
 	app.Version = fmt.Sprintf("%s %s %s/%s", version, runtime.Version(), runtime.GOOS, runtime.GOARCH)
-	app.Author = "Coder Technologies Inc."
 	app.CommandNotFound = func(c *cli.Context, s string) {
 		flog.Fatal("command %q not found", s)
 	}
-	app.Email = "support@coder.com"
 	app.Action = exitHelp
 
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		makeLoginCmd(),
 		makeLogoutCmd(),
 		makeShellCmd(),
@@ -59,6 +57,7 @@ func main() {
 	}
 }
 
-func exitHelp(c *cli.Context) {
+func exitHelp(c *cli.Context) error {
 	cli.ShowCommandHelpAndExit(c, c.Command.FullName(), 1)
+	return nil
 }

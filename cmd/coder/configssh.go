@@ -13,30 +13,30 @@ import (
 
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/entclient"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 )
 
-func makeConfigSSHCmd() cli.Command {
+func makeConfigSSHCmd() *cli.Command {
 	var (
 		configpath string
 		remove     = false
 	)
 
-	return cli.Command{
+	return &cli.Command{
 		Name:        "config-ssh",
 		Usage:       "Configure SSH to access Coder environments",
 		Description: "Inject the proper OpenSSH configuration into your local SSH config file.",
 		Action:      configSSH(&configpath, &remove),
 		Flags: []cli.Flag{
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:        "filepath",
 				Usage:       "overide the default path of your ssh config file",
 				Value:       filepath.Join(os.Getenv("HOME"), ".ssh", "config"),
 				TakesFile:   true,
 				Destination: &configpath,
 			},
-			cli.BoolFlag{
+			&cli.BoolFlag{
 				Name:        "remove",
 				Usage:       "remove the auto-generated Coder Enterprise ssh config",
 				Destination: &remove,

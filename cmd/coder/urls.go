@@ -10,19 +10,19 @@ import (
 	"strings"
 
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
 
-func makeURLCmd() cli.Command {
+func makeURLCmd() *cli.Command {
 	var outputFmt string
-	return cli.Command{
+	return &cli.Command{
 		Name:   "urls",
 		Usage:  "Interact with environment DevURLs",
 		Action: exitHelp,
-		Subcommands: []cli.Command{
+		Subcommands: []*cli.Command{
 			makeCreateDevURL(),
 			{
 				Name:      "ls",
@@ -39,8 +39,9 @@ func makeURLCmd() cli.Command {
 				},
 				Action: makeListDevURLs(&outputFmt),
 				Flags: []cli.Flag{
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:        "output",
+						Aliases:     []string{"o"},
 						Usage:       "human | json",
 						Value:       "human",
 						Destination: &outputFmt,
@@ -137,12 +138,12 @@ func makeListDevURLs(outputFmt *string) func(c *cli.Context) error {
 	}
 }
 
-func makeCreateDevURL() cli.Command {
+func makeCreateDevURL() *cli.Command {
 	var (
 		access  string
 		urlname string
 	)
-	return cli.Command{
+	return &cli.Command{
 		Name:      "create",
 		Usage:     "Create a new devurl for an environment",
 		ArgsUsage: "[env_name] [port] [--access <level>] [--name <name>]",
@@ -154,13 +155,13 @@ func makeCreateDevURL() cli.Command {
 			return nil
 		},
 		Flags: []cli.Flag{
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:        "access",
 				Usage:       "Set DevURL access to [private | org | authed | public]",
 				Value:       "private",
 				Destination: &access,
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:        "name",
 				Usage:       "DevURL name",
 				Required:    true,

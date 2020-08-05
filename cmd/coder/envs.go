@@ -5,18 +5,18 @@ import (
 	"os"
 
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 )
 
-func makeEnvsCommand() cli.Command {
+func makeEnvsCommand() *cli.Command {
 	var outputFmt string
-	return cli.Command{
+	return &cli.Command{
 		Name:        "envs",
 		Usage:       "Interact with Coder environments",
 		Description: "Perform operations on the Coder environments owned by the active user.",
 		Action:      exitHelp,
-		Subcommands: []cli.Command{
+		Subcommands: []*cli.Command{
 			{
 				Name:        "ls",
 				Usage:       "list all environments owned by the active user",
@@ -48,8 +48,9 @@ func makeEnvsCommand() cli.Command {
 					return nil
 				},
 				Flags: []cli.Flag{
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:        "output",
+						Aliases:     []string{"o"},
 						Usage:       "json | human",
 						Value:       "human",
 						Destination: &outputFmt,

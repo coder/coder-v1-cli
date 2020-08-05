@@ -10,14 +10,14 @@ import (
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/loginsrv"
 	"github.com/pkg/browser"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
 
-func makeLoginCmd() cli.Command {
-	return cli.Command{
+func makeLoginCmd() *cli.Command {
+	return &cli.Command{
 		Name:      "login",
 		Usage:     "Authenticate this client for future operations",
 		ArgsUsage: "[Coder Enterprise URL eg. http://my.coder.domain/]",

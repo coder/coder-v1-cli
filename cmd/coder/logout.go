@@ -4,14 +4,14 @@ import (
 	"os"
 
 	"cdr.dev/coder-cli/internal/config"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
 
-func makeLogoutCmd() cli.Command {
-	return cli.Command{
+func makeLogoutCmd() *cli.Command {
+	return &cli.Command{
 		Name:   "logout",
 		Usage:  "Remove local authentication credentials if any exist",
 		Action: logout,

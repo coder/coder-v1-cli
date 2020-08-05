@@ -5,24 +5,25 @@ import (
 	"os"
 
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 )
 
-func makeUsersCmd() cli.Command {
+func makeUsersCmd() *cli.Command {
 	var output string
-	return cli.Command{
+	return &cli.Command{
 		Name:   "users",
 		Usage:  "Interact with Coder user accounts",
 		Action: exitHelp,
-		Subcommands: []cli.Command{
+		Subcommands: []*cli.Command{
 			{
 				Name:   "ls",
 				Usage:  "list all user accounts",
 				Action: listUsers(&output),
 				Flags: []cli.Flag{
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:        "output",
+						Aliases:     []string{"o"},
 						Usage:       "json | human",
 						Value:       "human",
 						Destination: &output,

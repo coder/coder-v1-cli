@@ -10,7 +10,7 @@ import (
 	"cdr.dev/coder-cli/internal/activity"
 	"cdr.dev/coder-cli/internal/x/xterminal"
 	"cdr.dev/wsep"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/time/rate"
 	"golang.org/x/xerrors"
@@ -19,14 +19,13 @@ import (
 	"go.coder.com/flog"
 )
 
-func makeShellCmd() cli.Command {
-	return cli.Command{
+func makeShellCmd() *cli.Command {
+	return &cli.Command{
 		Name:            "sh",
 		Usage:           "Open a shell and execute commands in a Coder environment",
 		Description:     "Execute a remote command on the environment\\nIf no command is specified, the default shell is opened.",
 		ArgsUsage:       "[env_name] [<command [args...]>]",
 		SkipFlagParsing: true,
-		SkipArgReorder:  true,
 		Before: func(c *cli.Context) error {
 			if c.Args().First() == "" {
 				return xerrors.New("argument [env_name] is required")

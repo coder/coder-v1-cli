@@ -9,15 +9,15 @@ import (
 	"strings"
 
 	"cdr.dev/coder-cli/internal/sync"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
 
-func makeSyncCmd() cli.Command {
+func makeSyncCmd() *cli.Command {
 	var init bool
-	return cli.Command{
+	return &cli.Command{
 		Name:      "sync",
 		Usage:     "Establish a one way directory sync to a Coder environment",
 		ArgsUsage: "[local directory] [<env name>:<remote directory>]",
@@ -29,7 +29,7 @@ func makeSyncCmd() cli.Command {
 		},
 		Action: makeRunSync(&init),
 		Flags: []cli.Flag{
-			cli.BoolFlag{
+			&cli.BoolFlag{
 				Name:        "init",
 				Usage:       "do initial transfer and exit",
 				Destination: &init,

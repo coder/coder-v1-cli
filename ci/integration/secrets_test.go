@@ -39,7 +39,7 @@ func TestSecrets(t *testing.T) {
 	)
 
 	// this tests the "Value:" prompt fallback
-	c.Run(ctx, fmt.Sprintf("echo %s | coder secrets create %s --from-prompt", value, name)).Assert(t,
+	c.Run(ctx, fmt.Sprintf("echo %s | coder secrets create --from-prompt %s", value, name)).Assert(t,
 		tcli.Success(),
 		tcli.StderrEmpty(),
 	)
@@ -70,7 +70,7 @@ func TestSecrets(t *testing.T) {
 
 	name, value = randString(8), randString(8)
 
-	c.Run(ctx, fmt.Sprintf("coder secrets create %s --from-literal %s", name, value)).Assert(t,
+	c.Run(ctx, fmt.Sprintf("coder secrets create --from-literal %s %s", value, name)).Assert(t,
 		tcli.Success(),
 		tcli.StderrEmpty(),
 	)
@@ -84,10 +84,7 @@ func TestSecrets(t *testing.T) {
 	c.Run(ctx, fmt.Sprintf("echo %s > ~/secret.json", value)).Assert(t,
 		tcli.Success(),
 	)
-	c.Run(ctx, fmt.Sprintf("coder secrets create %s --from-literal %s --from-file ~/secret.json", name, value)).Assert(t,
-		tcli.Error(),
-	)
-	c.Run(ctx, fmt.Sprintf("coder secrets create %s --from-file ~/secret.json", name)).Assert(t,
+	c.Run(ctx, fmt.Sprintf("coder secrets create --from-file ~/secret.json %s", name)).Assert(t,
 		tcli.Success(),
 	)
 	//
