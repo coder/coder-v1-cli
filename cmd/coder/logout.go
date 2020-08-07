@@ -4,21 +4,21 @@ import (
 	"os"
 
 	"cdr.dev/coder-cli/internal/config"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
 
-func makeLogoutCmd() *cli.Command {
-	return &cli.Command{
-		Name:   "logout",
-		Usage:  "Remove local authentication credentials if any exist",
-		Action: logout,
+func makeLogoutCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "logout",
+		Short: "Remove local authentication credentials if any exist",
+		RunE:  logout,
 	}
 }
 
-func logout(_ *cli.Context) error {
+func logout(_ *cobra.Command, _ []string) error {
 	err := config.Session.Delete()
 	if err != nil {
 		if os.IsNotExist(err) {

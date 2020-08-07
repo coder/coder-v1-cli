@@ -5,37 +5,30 @@ import (
 	"os"
 
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
 
-func makeUsersCmd() *cli.Command {
-	var output string
-	return &cli.Command{
-		Name:   "users",
-		Usage:  "Interact with Coder user accounts",
-		Action: exitHelp,
-		Subcommands: []*cli.Command{
-			{
-				Name:   "ls",
-				Usage:  "list all user accounts",
-				Action: listUsers(&output),
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:        "output",
-						Aliases:     []string{"o"},
-						Usage:       "json | human",
-						Value:       "human",
-						Destination: &output,
-					},
-				},
-			},
-		},
+func makeUsersCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "users",
+		Short: "Interact with Coder user accounts",
 	}
+
+	var outputFmt string
+	lsCmd := &cobra.Command{
+		Use:   "ls",
+		Short: "list all user accounts",
+		RunE:  listUsers(&outputFmt),
+	}
+	lsCmd.Flags().StringVarP(&outputFmt, "output", "0", "human", "human | json")
+
+	cmd.AddCommand(lsCmd)
+	return cmd
 }
 
-func listUsers(outputFmt *string) func(c *cli.Context) error {
-	return func(c *cli.Context) error {
+func listUsers(outputFmt *string) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
 		entClient := requireAuth()
 
 		users, err := entClient.Users()

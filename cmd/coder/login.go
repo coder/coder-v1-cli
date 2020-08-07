@@ -10,23 +10,24 @@ import (
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/loginsrv"
 	"github.com/pkg/browser"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
 
-func makeLoginCmd() *cli.Command {
-	return &cli.Command{
-		Name:      "login",
-		Usage:     "Authenticate this client for future operations",
-		ArgsUsage: "[Coder Enterprise URL eg. http://my.coder.domain/]",
-		Action:    login,
+func makeLoginCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "login [Coder Enterprise URL eg. http://my.coder.domain/]",
+		Short: "Authenticate this client for future operations",
+		Args:  cobra.ExactArgs(1),
+		RunE:  login,
 	}
+	return cmd
 }
 
-func login(c *cli.Context) error {
-	rawURL := c.Args().First()
+func login(cmd *cobra.Command, args []string) error {
+	rawURL := args[0]
 	if rawURL == "" || !strings.HasPrefix(rawURL, "http") {
 		return xerrors.Errorf("invalid URL")
 	}

@@ -8,42 +8,42 @@ import (
 	"cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/manifoldco/promptui"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
 
-func makeSecretsCmd() *cli.Command {
-	return &cli.Command{
-		Name:        "secrets",
-		Usage:       "Interact with Coder Secrets",
-		Description: "Interact with secrets objects owned by the active user.",
-		Action:      exitHelp,
-		Subcommands: []*cli.Command{
-			{
-				Name:   "ls",
-				Usage:  "List all secrets owned by the active user",
-				Action: listSecrets,
-			},
-			makeCreateSecret(),
-			{
-				Name:      "rm",
-				Usage:     "Remove one or more secrets by name",
-				ArgsUsage: "[...secret_name]",
-				Action:    removeSecrets,
-			},
-			{
-				Name:      "view",
-				Usage:     "View a secret by name",
-				ArgsUsage: "[secret_name]",
-				Action:    viewSecret,
-			},
-		},
+func makeSecretsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "secrets",
+		Short: "Interact with Coder Secrets",
+		Long:  "Interact with secrets objects owned by the active user.",
 	}
+	cmd.AddCommand(
+		&cobra.Command{
+			Use:   "ls",
+			Short: "List all secrets owned by the active user",
+			RunE:  listSecrets,
+		},
+		makeCreateSecret(),
+		&cobra.Command{
+			Use:   "rm [...secret_name]",
+			Short: "Remove one or more secrets by name",
+			Args:  cobra.MinimumNArgs(1),
+			RunE:  removeSecrets,
+		},
+		&cobra.Command{
+			Use:   "view [secret_name]",
+			Short: "View a secret by name",
+			Args:  cobra.ExactArgs(1),
+			RunE:  viewSecret,
+		},
+	)
+	return cmd
 }
 
-func makeCreateSecret() *cli.Command {
+func makeCreateSecret() *cobra.Command {
 	var (
 		fromFile    string
 		fromLiteral string
@@ -51,13 +51,12 @@ func makeCreateSecret() *cli.Command {
 		description string
 	)
 
-	return &cli.Command{
-		Name:        "create",
-		Usage:       "Create a new secret",
-		Description: "Create a new secret object to store application secrets and access them securely from within your environments.",
-		ArgsUsage:   "[secret_name]",
-		Before: func(c *cli.Context) error {
-			if c.Args().First() == "" {
+	cmd := &cobra.Command{
+		Use:   "create [secret_name]",
+		Short: "Create a new secret",
+		Long:  "Create a new secret object to store application secrets and access them securely from within your environments.",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) < 1 {
 				return xerrors.Errorf("[secret_name] is a required argument")
 			}
 			if fromPrompt && (fromLiteral != "" || fromFile != "") {
@@ -71,10 +70,10 @@ func makeCreateSecret() *cli.Command {
 			}
 			return nil
 		},
-		Action: func(c *cli.Context) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			var (
 				client = requireAuth()
-				name   = c.Args().First()
+				name   = args[0]
 				value  string
 				err    error
 			)
@@ -113,33 +112,17 @@ func makeCreateSecret() *cli.Command {
 			}
 			return nil
 		},
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:        "from-file",
-				Usage:       "a file from which to read the value of the secret",
-				TakesFile:   true,
-				Destination: &fromFile,
-			},
-			&cli.StringFlag{
-				Name:        "from-literal",
-				Usage:       "the value of the secret",
-				Destination: &fromLiteral,
-			},
-			&cli.BoolFlag{
-				Name:        "from-prompt",
-				Usage:       "enter the secret value through a terminal prompt",
-				Destination: &fromPrompt,
-			},
-			&cli.StringFlag{
-				Name:        "description",
-				Usage:       "a description of the secret",
-				Destination: &description,
-			},
-		},
 	}
+
+	cmd.Flags().StringVar(&fromFile, "from-file", "", "a file from which to read the value of the secret")
+	cmd.Flags().StringVar(&fromLiteral, "from-literal", "", "the value of the secret")
+	cmd.Flags().BoolVar(&fromPrompt, "from-prompt", false, "enter the secret value through a terminal prompt")
+	cmd.Flags().StringVar(&description, "description", "", "a description of the secret")
+
+	return cmd
 }
 
-func listSecrets(_ *cli.Context) error {
+func listSecrets(cmd *cobra.Command, _ []string) error {
 	client := requireAuth()
 
 	secrets, err := client.Secrets()
@@ -163,10 +146,10 @@ func listSecrets(_ *cli.Context) error {
 	return nil
 }
 
-func viewSecret(c *cli.Context) error {
+func viewSecret(_ *cobra.Command, args []string) error {
 	var (
 		client = requireAuth()
-		name   = c.Args().First()
+		name   = args[0]
 	)
 	if name == "" {
 		return xerrors.New("[name] is a required argument")
@@ -184,17 +167,16 @@ func viewSecret(c *cli.Context) error {
 	return nil
 }
 
-func removeSecrets(c *cli.Context) error {
+func removeSecrets(_ *cobra.Command, args []string) error {
 	var (
 		client = requireAuth()
-		names  = append([]string{c.Args().First()}, c.Args().Tail()...)
 	)
-	if len(names) < 1 || names[0] == "" {
+	if len(args) < 1 {
 		return xerrors.New("[...secret_name] is a required argument")
 	}
 
 	errorSeen := false
-	for _, n := range names {
+	for _, n := range args {
 		err := client.DeleteSecretByName(n)
 		if err != nil {
 			flog.Error("failed to delete secret %q: %v", n, err)

@@ -9,36 +9,25 @@ import (
 	"strings"
 
 	"cdr.dev/coder-cli/internal/sync"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
 
-func makeSyncCmd() *cli.Command {
+func makeSyncCmd() *cobra.Command {
 	var init bool
-	return &cli.Command{
-		Name:      "sync",
-		Usage:     "Establish a one way directory sync to a Coder environment",
-		ArgsUsage: "[local directory] [<env name>:<remote directory>]",
-		Before: func(c *cli.Context) error {
-			if c.Args().Get(0) == "" || c.Args().Get(1) == "" {
-				return xerrors.Errorf("[local] and [remote] arguments are required")
-			}
-			return nil
-		},
-		Action: makeRunSync(&init),
-		Flags: []cli.Flag{
-			&cli.BoolFlag{
-				Name:        "init",
-				Usage:       "do initial transfer and exit",
-				Destination: &init,
-			},
-		},
+	cmd := &cobra.Command{
+		Use:   "sync [local directory] [<env name>:<remote directory>]",
+		Short: "Establish a one way directory sync to a Coder environment",
+		Args:  cobra.ExactArgs(2),
+		RunE:  makeRunSync(&init),
 	}
+	cmd.Flags().BoolVar(&init, "init", false, "do initial transfer and exit")
+	return cmd
 }
 
-// version returns local rsync protocol version as a string.
+// rsyncVersion returns local rsync protocol version as a string.
 func rsyncVersion() string {
 	cmd := exec.Command("rsync", "--version")
 	out, err := cmd.CombinedOutput()
@@ -55,11 +44,11 @@ func rsyncVersion() string {
 	return versionString[1]
 }
 
-func makeRunSync(init *bool) func(c *cli.Context) error {
-	return func(c *cli.Context) error {
+func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
 		var (
-			local  = c.Args().Get(0)
-			remote = c.Args().Get(1)
+			local  = args[0]
+			remote = args[1]
 		)
 
 		entClient := requireAuth()

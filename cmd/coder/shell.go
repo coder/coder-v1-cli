@@ -10,7 +10,7 @@ import (
 	"cdr.dev/coder-cli/internal/activity"
 	"cdr.dev/coder-cli/internal/x/xterminal"
 	"cdr.dev/wsep"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/time/rate"
 	"golang.org/x/xerrors"
@@ -19,33 +19,27 @@ import (
 	"go.coder.com/flog"
 )
 
-func makeShellCmd() *cli.Command {
-	return &cli.Command{
-		Name:            "sh",
-		Usage:           "Open a shell and execute commands in a Coder environment",
-		Description:     "Execute a remote command on the environment\\nIf no command is specified, the default shell is opened.",
-		ArgsUsage:       "[env_name] [<command [args...]>]",
-		SkipFlagParsing: true,
-		Before: func(c *cli.Context) error {
-			if c.Args().First() == "" {
-				return xerrors.New("argument [env_name] is required")
-			}
-			return nil
-		},
-		Action: shell,
+func makeShellCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:                "sh [environment_name] [<command [args...]>]",
+		Short:              "Open a shell and execute commands in a Coder environment",
+		Long:               "Execute a remote command on the environment\\nIf no command is specified, the default shell is opened.",
+		Args:               cobra.MinimumNArgs(1),
+		DisableFlagParsing: true,
+		RunE:               shell,
 	}
 }
 
-func shell(c *cli.Context) error {
+func shell(cmd *cobra.Command, cmdArgs []string) error {
 	var (
-		envName = c.Args().First()
+		envName = cmdArgs[0]
 		ctx     = context.Background()
 	)
 
 	command := "sh"
 	args := []string{"-c"}
-	if len(c.Args().Tail()) > 0 {
-		args = append(args, strings.Join(c.Args().Tail(), " "))
+	if len(cmdArgs) > 1 {
+		args = append(args, strings.Join(cmdArgs[1:], " "))
 	} else {
 		// Bring user into shell if no command is specified.
 		args = append(args, "exec $(getent passwd $(whoami) | awk -F: '{ print $7 }')")

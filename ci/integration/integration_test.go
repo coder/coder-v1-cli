@@ -39,14 +39,13 @@ func TestCoderCLI(t *testing.T) {
 
 	c.Run(ctx, "coder --help").Assert(t,
 		tcli.Success(),
-		tcli.StdoutMatches("COMMANDS:"),
-		tcli.StdoutMatches("USAGE:"),
+		tcli.StdoutMatches("Available Commands"),
 	)
 
 	headlessLogin(ctx, t, c)
 
 	c.Run(ctx, "coder envs").Assert(t,
-		tcli.Error(),
+		tcli.Success(),
 	)
 
 	c.Run(ctx, "coder envs ls").Assert(t,
@@ -54,7 +53,7 @@ func TestCoderCLI(t *testing.T) {
 	)
 
 	c.Run(ctx, "coder urls").Assert(t,
-		tcli.Error(),
+		tcli.Success(),
 	)
 
 	c.Run(ctx, "coder sync").Assert(t,

@@ -10,62 +10,40 @@ import (
 	"strings"
 
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
 
-func makeURLCmd() *cli.Command {
+func makeURLCmd() *cobra.Command {
 	var outputFmt string
-	return &cli.Command{
-		Name:   "urls",
-		Usage:  "Interact with environment DevURLs",
-		Action: exitHelp,
-		Subcommands: []*cli.Command{
-			makeCreateDevURL(),
-			{
-				Name:      "ls",
-				Usage:     "List all DevURLs for an environment",
-				ArgsUsage: "[env_name]",
-				Before: func(c *cli.Context) error {
-					if !(outputFmt == "json" || outputFmt == "human") {
-						return xerrors.Errorf("unknown --output value %q")
-					}
-					if c.Args().First() == "" {
-						return xerrors.New("argument [env_name] is required")
-					}
-					return nil
-				},
-				Action: makeListDevURLs(&outputFmt),
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:        "output",
-						Aliases:     []string{"o"},
-						Usage:       "human | json",
-						Value:       "human",
-						Destination: &outputFmt,
-					},
-				},
-			},
-			{
-				Name:      "rm",
-				Usage:     "Remove a dev url",
-				ArgsUsage: "[env_name] [port]",
-				Before: func(c *cli.Context) error {
-					var (
-						envName = c.Args().First()
-						port    = c.Args().Get(1)
-					)
-					if envName == "" || port == "" {
-						return xerrors.Errorf("[env_name] and [port] are required arguments")
-					}
-					return nil
-				},
-				Action: removeDevURL,
-			},
-		},
+	cmd := &cobra.Command{
+		Use:   "urls",
+		Short: "Interact with environment DevURLs",
 	}
+	lsCmd := &cobra.Command{
+		Use:   "ls [env_name]",
+		Short: "List all DevURLs for an environment",
+		Args:  cobra.ExactArgs(1),
+		RunE:  makeListDevURLs(&outputFmt),
+	}
+	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human|json")
+
+	rmCmd := &cobra.Command{
+		Use:   "rm [environment_name] [port]",
+		Args:  cobra.ExactArgs(2),
+		Short: "Remove a dev url",
+		RunE:  removeDevURL,
+	}
+
+	cmd.AddCommand(
+		lsCmd,
+		rmCmd,
+		makeCreateDevURL(),
+	)
+
+	return cmd
 }
 
 // DevURL is the parsed json response record for a devURL from cemanager
@@ -110,9 +88,9 @@ func accessLevelIsValid(level string) bool {
 
 // Run gets the list of active devURLs from the cemanager for the
 // specified environment and outputs info to stdout.
-func makeListDevURLs(outputFmt *string) func(c *cli.Context) error {
-	return func(c *cli.Context) error {
-		envName := c.Args().First()
+func makeListDevURLs(outputFmt *string) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		envName := args[0]
 		devURLs, err := urlList(envName)
 		if err != nil {
 			return err
@@ -138,55 +116,31 @@ func makeListDevURLs(outputFmt *string) func(c *cli.Context) error {
 	}
 }
 
-func makeCreateDevURL() *cli.Command {
+func makeCreateDevURL() *cobra.Command {
 	var (
 		access  string
 		urlname string
 	)
-	return &cli.Command{
-		Name:      "create",
-		Usage:     "Create a new devurl for an environment",
-		ArgsUsage: "[env_name] [port] [--access <level>] [--name <name>]",
-		Aliases:   []string{"edit"},
-		Before: func(c *cli.Context) error {
-			if c.Args().First() == "" || c.Args().Get(1) == "" {
-				return xerrors.Errorf("[env_name] and [port] are required arguments")
-			}
-			return nil
-		},
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:        "access",
-				Usage:       "Set DevURL access to [private | org | authed | public]",
-				Value:       "private",
-				Destination: &access,
-			},
-			&cli.StringFlag{
-				Name:        "name",
-				Usage:       "DevURL name",
-				Required:    true,
-				Destination: &urlname,
-			},
-		},
+	cmd := &cobra.Command{
+		Use:     "create [env_name] [port] [--access <level>] [--name <name>]",
+		Short:   "Create a new devurl for an environment",
+		Aliases: []string{"edit"},
+		Args:    cobra.ExactArgs(2),
 		// Run creates or updates a devURL
-		Action: func(c *cli.Context) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			var (
-				envName = c.Args().First()
-				port    = c.Args().Get(1)
+				envName = args[0]
+				port    = args[1]
 			)
-
-			if envName == "" {
-				cli.ShowCommandHelpAndExit(c, c.Command.FullName(), 1)
-			}
 
 			portNum, err := validatePort(port)
 			if err != nil {
-				cli.ShowCommandHelpAndExit(c, c.Command.FullName(), 1)
+				return err
 			}
 
 			access = strings.ToUpper(access)
 			if !accessLevelIsValid(access) {
-				cli.ShowCommandHelpAndExit(c, c.Command.FullName(), 1)
+				return xerrors.Errorf("invalid access level %q", access)
 			}
 
 			if urlname != "" && !devURLNameValidRx.MatchString(urlname) {
@@ -221,6 +175,12 @@ func makeCreateDevURL() *cli.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVar(&access, "access", "private", "Set DevURL access to [private | org | authed | public]")
+	cmd.Flags().StringVar(&urlname, "name", "", "DevURL name")
+	_ = cmd.MarkFlagRequired("name")
+
+	return cmd
 }
 
 // devURLNameValidRx is the regex used to validate devurl names specified
@@ -241,10 +201,10 @@ func devURLID(port int, urls []DevURL) (string, bool) {
 }
 
 // Run deletes a devURL, specified by env ID and port, from the cemanager.
-func removeDevURL(c *cli.Context) error {
+func removeDevURL(cmd *cobra.Command, args []string) error {
 	var (
-		envName = c.Args().First()
-		port    = c.Args().Get(1)
+		envName = args[0]
+		port    = args[1]
 	)
 
 	portNum, err := validatePort(port)
