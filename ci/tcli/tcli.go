@@ -3,6 +3,7 @@ package tcli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os/exec"
@@ -327,5 +328,23 @@ func DurationGreaterThan(dur time.Duration) Assertion {
 				slog.F("actual", r.Duration.String()),
 			)
 		}
+	}
+}
+
+// StdoutJSONUnmarshal attempts to unmarshal stdout into the given target
+func StdoutJSONUnmarshal(target interface{}) Assertion {
+	return func(t *testing.T, r *CommandResult) {
+		slog.Helper()
+		err := json.Unmarshal(r.Stdout, target)
+		assert.Success(t, "stdout json unmarshals", err)
+	}
+}
+
+// StderrJSONUnmarshal attempts to unmarshal stderr into the given target
+func StderrJSONUnmarshal(target interface{}) Assertion {
+	return func(t *testing.T, r *CommandResult) {
+		slog.Helper()
+		err := json.Unmarshal(r.Stdout, target)
+		assert.Success(t, "stderr json unmarshals", err)
 	}
 }

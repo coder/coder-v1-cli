@@ -36,7 +36,7 @@ func TestUsers(t *testing.T) {
 	var user entclient.User
 	c.Run(ctx, `coder users ls --output json | jq -c '.[] | select( .username == "charlie")'`).Assert(t,
 		tcli.Success(),
-		stdoutUnmarshalsJSON(&user),
+		tcli.StdoutJSONUnmarshal(&user),
 	)
 	assert.Equal(t, "user email is as expected", "charlie@coder.com", user.Email)
 	assert.Equal(t, "username is as expected", "Charlie", user.Name)

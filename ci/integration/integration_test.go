@@ -2,13 +2,11 @@ package integration
 
 import (
 	"context"
-	"encoding/json"
 	"math/rand"
 	"testing"
 	"time"
 
 	"cdr.dev/coder-cli/ci/tcli"
-	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/slogtest/assert"
 )
 
@@ -74,14 +72,6 @@ func TestCoderCLI(t *testing.T) {
 	c.Run(ctx, "coder envs ls").Assert(t,
 		tcli.Error(),
 	)
-}
-
-func stdoutUnmarshalsJSON(target interface{}) tcli.Assertion {
-	return func(t *testing.T, r *tcli.CommandResult) {
-		slog.Helper()
-		err := json.Unmarshal(r.Stdout, target)
-		assert.Success(t, "json unmarshals", err)
-	}
 }
 
 var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
