@@ -23,10 +23,11 @@ func makeURLCmd() *cobra.Command {
 		Short: "Interact with environment DevURLs",
 	}
 	lsCmd := &cobra.Command{
-		Use:   "ls [env_name]",
-		Short: "List all DevURLs for an environment",
-		Args:  cobra.ExactArgs(1),
-		RunE:  makeListDevURLs(&outputFmt),
+		Use:       "ls [environment_name]",
+		Short:     "List all DevURLs for an environment",
+		Args:      cobra.ExactArgs(1),
+		ValidArgs: getEnvsForCompletion(),
+		RunE:      makeListDevURLs(&outputFmt),
 	}
 	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human|json")
 

@@ -19,9 +19,11 @@ func makeUsersCmd() *cobra.Command {
 	lsCmd := &cobra.Command{
 		Use:   "ls",
 		Short: "list all user accounts",
-		RunE:  listUsers(&outputFmt),
+		Example: `coder users ls -o json
+coder users ls -o json | jq .[] | jq -r .email`,
+		RunE: listUsers(&outputFmt),
 	}
-	lsCmd.Flags().StringVarP(&outputFmt, "output", "0", "human", "human | json")
+	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human | json")
 
 	cmd.AddCommand(lsCmd)
 	return cmd

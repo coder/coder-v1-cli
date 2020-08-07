@@ -13,6 +13,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
+// binpath is populated during package initialization with a path to the coder binary
 var binpath string
 
 // initialize integration tests by building the coder-cli binary

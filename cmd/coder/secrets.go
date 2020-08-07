@@ -28,16 +28,18 @@ func makeSecretsCmd() *cobra.Command {
 		},
 		makeCreateSecret(),
 		&cobra.Command{
-			Use:   "rm [...secret_name]",
-			Short: "Remove one or more secrets by name",
-			Args:  cobra.MinimumNArgs(1),
-			RunE:  removeSecrets,
+			Use:     "rm [...secret_name]",
+			Short:   "Remove one or more secrets by name",
+			Args:    cobra.MinimumNArgs(1),
+			RunE:    removeSecrets,
+			Example: "coder secrets rm mysql-password mysql-user",
 		},
 		&cobra.Command{
-			Use:   "view [secret_name]",
-			Short: "View a secret by name",
-			Args:  cobra.ExactArgs(1),
-			RunE:  viewSecret,
+			Use:     "view [secret_name]",
+			Short:   "View a secret by name",
+			Args:    cobra.ExactArgs(1),
+			RunE:    viewSecret,
+			Example: "coder secrets view mysql-password",
 		},
 	)
 	return cmd
@@ -55,6 +57,9 @@ func makeCreateSecret() *cobra.Command {
 		Use:   "create [secret_name]",
 		Short: "Create a new secret",
 		Long:  "Create a new secret object to store application secrets and access them securely from within your environments.",
+		Example: `coder secrets create mysql-password --from-literal 123password
+coder secrets create mysql-password --from-prompt
+coder secrets create aws-credentials --from-file ./credentials.json`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
 				return xerrors.Errorf("[secret_name] is a required argument")

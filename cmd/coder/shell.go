@@ -19,6 +19,25 @@ import (
 	"go.coder.com/flog"
 )
 
+func getEnvsForCompletion() []string {
+	// TODO(@cmoog): Enable this if speed issue can be resolved. Otherwise, all commands will take > 1 second.
+	return nil
+
+	var envNames []string
+	client, err := newClient()
+	if err != nil {
+		return envNames
+	}
+	envs, err := getEnvs(client)
+	if err != nil {
+		return envNames
+	}
+	for _, e := range envs {
+		envNames = append(envNames, e.Name)
+	}
+	return envNames
+}
+
 func makeShellCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:                "sh [environment_name] [<command [args...]>]",
@@ -26,11 +45,13 @@ func makeShellCmd() *cobra.Command {
 		Long:               "Execute a remote command on the environment\\nIf no command is specified, the default shell is opened.",
 		Args:               cobra.MinimumNArgs(1),
 		DisableFlagParsing: true,
+		ValidArgs:          getEnvsForCompletion(),
 		RunE:               shell,
+		Example:            "coder sh backend-env",
 	}
 }
 
-func shell(cmd *cobra.Command, cmdArgs []string) error {
+func shell(_ *cobra.Command, cmdArgs []string) error {
 	var (
 		envName = cmdArgs[0]
 		ctx     = context.Background()
