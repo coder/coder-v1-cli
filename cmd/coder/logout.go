@@ -3,32 +3,30 @@ package main
 import (
 	"os"
 
-	"github.com/spf13/pflag"
-
-	"go.coder.com/cli"
-	"go.coder.com/flog"
-
 	"cdr.dev/coder-cli/internal/config"
+	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
+
+	"go.coder.com/flog"
 )
 
-type logoutCmd struct {
-}
-
-func (cmd logoutCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name: "logout",
-		Desc: "remove local authentication credentials (if any)",
+func makeLogoutCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "logout",
+		Short: "Remove local authentication credentials if any exist",
+		RunE:  logout,
 	}
 }
 
-func (cmd logoutCmd) Run(_ *pflag.FlagSet) {
+func logout(_ *cobra.Command, _ []string) error {
 	err := config.Session.Delete()
 	if err != nil {
 		if os.IsNotExist(err) {
 			flog.Info("no active session")
-			return
+			return nil
 		}
-		flog.Fatal("delete session: %v", err)
+		return xerrors.Errorf("delete session: %w", err)
 	}
 	flog.Success("logged out")
+	return nil
 }

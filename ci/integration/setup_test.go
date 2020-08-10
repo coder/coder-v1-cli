@@ -13,6 +13,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
+// binpath is populated during package initialization with a path to the coder binary
 var binpath string
 
 // initialize integration tests by building the coder-cli binary
@@ -39,7 +40,7 @@ func build(path string) error {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return xerrors.Errorf("failed to build coder-cli (%v): %w", string(out), err)
+		return xerrors.Errorf("build coder-cli (%v): %w", string(out), err)
 	}
 	return nil
 }

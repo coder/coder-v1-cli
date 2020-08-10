@@ -7,40 +7,39 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pkg/browser"
-	"github.com/spf13/pflag"
-
-	"go.coder.com/cli"
-	"go.coder.com/flog"
-
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/loginsrv"
+	"github.com/pkg/browser"
+	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
+
+	"go.coder.com/flog"
 )
 
-type loginCmd struct {
+func makeLoginCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "login [Coder Enterprise URL eg. http://my.coder.domain/]",
+		Short: "Authenticate this client for future operations",
+		Args:  cobra.ExactArgs(1),
+		RunE:  login,
+	}
+	return cmd
 }
 
-func (cmd loginCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "login",
-		Usage: "[Coder Enterprise URL eg. http://my.coder.domain/ ]",
-		Desc:  "authenticate this client for future operations",
-	}
-}
-func (cmd loginCmd) Run(fl *pflag.FlagSet) {
-	rawURL := fl.Arg(0)
+func login(cmd *cobra.Command, args []string) error {
+	rawURL := args[0]
 	if rawURL == "" || !strings.HasPrefix(rawURL, "http") {
-		exitUsage(fl)
+		return xerrors.Errorf("invalid URL")
 	}
 
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		flog.Fatal("parse url: %v", err)
+		return xerrors.Errorf("parse url: %v", err)
 	}
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		flog.Fatal("create login server: %+v", err)
+		return xerrors.Errorf("create login server: %+v", err)
 	}
 	defer listener.Close()
 
@@ -57,7 +56,7 @@ func (cmd loginCmd) Run(fl *pflag.FlagSet) {
 		(&url.URL{Scheme: u.Scheme, Host: u.Host}).String(),
 	)
 	if err != nil {
-		flog.Fatal("write url: %v", err)
+		return xerrors.Errorf("write url: %v", err)
 	}
 
 	authURL := url.URL{
@@ -77,7 +76,8 @@ func (cmd loginCmd) Run(fl *pflag.FlagSet) {
 	err = config.Session.Write(srv.Token)
 	srv.TokenCond.L.Unlock()
 	if err != nil {
-		flog.Fatal("set session: %v", err)
+		return xerrors.Errorf("set session: %v", err)
 	}
 	flog.Success("logged in")
+	return nil
 }

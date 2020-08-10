@@ -3,6 +3,7 @@ package tcli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os/exec"
@@ -76,7 +77,7 @@ func NewContainerRunner(ctx context.Context, config *ContainerConfig) (*Containe
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, xerrors.Errorf(
-			"failed to start testing container %q, (%s): %w",
+			"start testing container %q, (%s): %w",
 			config.Name, string(out), err)
 	}
 
@@ -97,7 +98,7 @@ func (r *ContainerRunner) Close() error {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return xerrors.Errorf(
-			"failed to stop testing container %q, (%s): %w",
+			"stop testing container %q, (%s): %w",
 			r.name, string(out), err)
 	}
 	return nil
@@ -290,7 +291,7 @@ func matches(t *testing.T, name, pattern string, target []byte) {
 
 	ok, err := regexp.Match(pattern, target)
 	if err != nil {
-		slogtest.Fatal(t, "failed to attempt regexp match", append(fields, slog.Error(err))...)
+		slogtest.Fatal(t, "attempt regexp match", append(fields, slog.Error(err))...)
 	}
 	if !ok {
 		slogtest.Fatal(t, "expected to find pattern, no match found", fields...)
@@ -327,5 +328,23 @@ func DurationGreaterThan(dur time.Duration) Assertion {
 				slog.F("actual", r.Duration.String()),
 			)
 		}
+	}
+}
+
+// StdoutJSONUnmarshal attempts to unmarshal stdout into the given target
+func StdoutJSONUnmarshal(target interface{}) Assertion {
+	return func(t *testing.T, r *CommandResult) {
+		slog.Helper()
+		err := json.Unmarshal(r.Stdout, target)
+		assert.Success(t, "stdout json unmarshals", err)
+	}
+}
+
+// StderrJSONUnmarshal attempts to unmarshal stderr into the given target
+func StderrJSONUnmarshal(target interface{}) Assertion {
+	return func(t *testing.T, r *CommandResult) {
+		slog.Helper()
+		err := json.Unmarshal(r.Stdout, target)
+		assert.Success(t, "stderr json unmarshals", err)
 	}
 }

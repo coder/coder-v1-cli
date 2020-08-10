@@ -7,48 +7,60 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/pflag"
+	"cdr.dev/coder-cli/internal/activity"
+	"cdr.dev/coder-cli/internal/x/xterminal"
+	"cdr.dev/wsep"
+	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/time/rate"
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 
-	"go.coder.com/cli"
 	"go.coder.com/flog"
-
-	"cdr.dev/coder-cli/internal/activity"
-	"cdr.dev/coder-cli/internal/x/xterminal"
-	"cdr.dev/wsep"
 )
 
-type shellCmd struct{}
+func getEnvsForCompletion() []string {
+	// TODO(@cmoog): Enable this if speed issue can be resolved. Otherwise, all commands will take > 1 second.
+	return nil
 
-func (cmd *shellCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:    "sh",
-		Usage:   "<env name> [<command [args...]>]",
-		Desc:    "execute a remote command on the environment\nIf no command is specified, the default shell is opened.",
-		RawArgs: true,
+	var envNames []string
+	client, err := newClient()
+	if err != nil {
+		return envNames
+	}
+	envs, err := getEnvs(client)
+	if err != nil {
+		return envNames
+	}
+	for _, e := range envs {
+		envNames = append(envNames, e.Name)
+	}
+	return envNames
+}
+
+func makeShellCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:                "sh [environment_name] [<command [args...]>]",
+		Short:              "Open a shell and execute commands in a Coder environment",
+		Long:               "Execute a remote command on the environment\\nIf no command is specified, the default shell is opened.",
+		Args:               cobra.MinimumNArgs(1),
+		DisableFlagParsing: true,
+		ValidArgs:          getEnvsForCompletion(),
+		RunE:               shell,
+		Example:            "coder sh backend-env",
 	}
 }
 
-type resizeEvent struct {
-	height, width uint16
-}
-
-func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
-	if len(fl.Args()) < 1 {
-		exitUsage(fl)
-	}
+func shell(_ *cobra.Command, cmdArgs []string) error {
 	var (
-		envName = fl.Arg(0)
+		envName = cmdArgs[0]
 		ctx     = context.Background()
 	)
 
 	command := "sh"
 	args := []string{"-c"}
-	if len(fl.Args()) > 1 {
-		args = append(args, strings.Join(fl.Args()[1:], " "))
+	if len(cmdArgs) > 1 {
+		args = append(args, strings.Join(cmdArgs[1:], " "))
 	} else {
 		// Bring user into shell if no command is specified.
 		args = append(args, "exec $(getent passwd $(whoami) | awk -F: '{ print $7 }')")
@@ -59,8 +71,9 @@ func (cmd *shellCmd) Run(fl *pflag.FlagSet) {
 		os.Exit(exitErr.Code)
 	}
 	if err != nil {
-		flog.Fatal("run command: %v", err)
+		return xerrors.Errorf("run command: %w", err)
 	}
+	return nil
 }
 
 func sendResizeEvents(ctx context.Context, termfd uintptr, process wsep.Process) {
@@ -85,8 +98,11 @@ func sendResizeEvents(ctx context.Context, termfd uintptr, process wsep.Process)
 func runCommand(ctx context.Context, envName string, command string, args []string) error {
 	var (
 		entClient = requireAuth()
-		env       = findEnv(entClient, envName)
 	)
+	env, err := findEnv(entClient, envName)
+	if err != nil {
+		return err
+	}
 
 	termfd := os.Stdout.Fd()
 
@@ -102,7 +118,7 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	conn, err := entClient.DialWsep(ctx, env)
+	conn, err := entClient.DialWsep(ctx, *env)
 	if err != nil {
 		return err
 	}
@@ -182,7 +198,7 @@ func heartbeat(ctx context.Context, c *websocket.Conn, interval time.Duration) {
 		case <-ticker.C:
 			err := c.Ping(ctx)
 			if err != nil {
-				flog.Error("failed to ping websocket: %v", err)
+				flog.Fatal("\nFailed to ping websocket: %v, exiting...", err)
 			}
 		}
 	}

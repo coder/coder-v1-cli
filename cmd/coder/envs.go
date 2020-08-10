@@ -1,29 +1,54 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
+	"os"
 
-	"github.com/spf13/pflag"
-
-	"go.coder.com/cli"
+	"cdr.dev/coder-cli/internal/x/xtabwriter"
+	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
 )
 
-type envsCmd struct {
-}
-
-func (cmd envsCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name: "envs",
-		Desc: "get a list of environments owned by the authenticated user",
+func makeEnvsCommand() *cobra.Command {
+	var outputFmt string
+	cmd := &cobra.Command{
+		Use:   "envs",
+		Short: "Interact with Coder environments",
+		Long:  "Perform operations on the Coder environments owned by the active user.",
 	}
-}
 
-func (cmd envsCmd) Run(fl *pflag.FlagSet) {
-	entClient := requireAuth()
+	lsCmd := &cobra.Command{
+		Use:   "ls",
+		Short: "list all environments owned by the active user",
+		Long:  "List all Coder environments owned by the active user.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			entClient := requireAuth()
+			envs, err := getEnvs(entClient)
+			if err != nil {
+				return err
+			}
 
-	envs := getEnvs(entClient)
-
-	for _, env := range envs {
-		fmt.Println(env.Name)
+			switch outputFmt {
+			case "human":
+				err := xtabwriter.WriteTable(len(envs), func(i int) interface{} {
+					return envs[i]
+				})
+				if err != nil {
+					return xerrors.Errorf("write table: %w", err)
+				}
+			case "json":
+				err := json.NewEncoder(os.Stdout).Encode(envs)
+				if err != nil {
+					return xerrors.Errorf("write environments as JSON: %w", err)
+				}
+			default:
+				return xerrors.Errorf("unknown --output value %q", outputFmt)
+			}
+			return nil
+		},
 	}
+	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human | json")
+	cmd.AddCommand(lsCmd)
+
+	return cmd
 }

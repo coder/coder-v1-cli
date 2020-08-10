@@ -36,7 +36,6 @@ func TestSecrets(t *testing.T) {
 
 	c.Run(ctx, "coder secrets create").Assert(t,
 		tcli.Error(),
-		tcli.StdoutEmpty(),
 	)
 
 	// this tests the "Value:" prompt fallback
@@ -84,9 +83,6 @@ func TestSecrets(t *testing.T) {
 	name, value = randString(8), randString(8)
 	c.Run(ctx, fmt.Sprintf("echo %s > ~/secret.json", value)).Assert(t,
 		tcli.Success(),
-	)
-	c.Run(ctx, fmt.Sprintf("coder secrets create %s --from-literal %s --from-file ~/secret.json", name, value)).Assert(t,
-		tcli.Error(),
 	)
 	c.Run(ctx, fmt.Sprintf("coder secrets create %s --from-file ~/secret.json", name)).Assert(t,
 		tcli.Success(),

@@ -7,208 +7,191 @@ import (
 
 	"cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
-	"cdr.dev/coder-cli/internal/x/xvalidate"
 	"github.com/manifoldco/promptui"
-	"github.com/spf13/pflag"
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
-
-	"go.coder.com/cli"
 )
 
-var (
-	_ cli.FlaggedCommand = secretsCmd{}
-	_ cli.ParentCommand  = secretsCmd{}
-
-	_ cli.FlaggedCommand = &listSecretsCmd{}
-	_ cli.FlaggedCommand = &createSecretCmd{}
-)
-
-type secretsCmd struct {
-}
-
-func (cmd secretsCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "secrets",
-		Usage: "[subcommand]",
-		Desc:  "interact with secrets",
+func makeSecretsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "secrets",
+		Short: "Interact with Coder Secrets",
+		Long:  "Interact with secrets objects owned by the active user.",
 	}
+	cmd.AddCommand(
+		&cobra.Command{
+			Use:   "ls",
+			Short: "List all secrets owned by the active user",
+			RunE:  listSecrets,
+		},
+		makeCreateSecret(),
+		&cobra.Command{
+			Use:     "rm [...secret_name]",
+			Short:   "Remove one or more secrets by name",
+			Args:    cobra.MinimumNArgs(1),
+			RunE:    removeSecrets,
+			Example: "coder secrets rm mysql-password mysql-user",
+		},
+		&cobra.Command{
+			Use:     "view [secret_name]",
+			Short:   "View a secret by name",
+			Args:    cobra.ExactArgs(1),
+			RunE:    viewSecret,
+			Example: "coder secrets view mysql-password",
+		},
+	)
+	return cmd
 }
 
-func (cmd secretsCmd) Run(fl *pflag.FlagSet) {
-	exitUsage(fl)
-}
+func makeCreateSecret() *cobra.Command {
+	var (
+		fromFile    string
+		fromLiteral string
+		fromPrompt  bool
+		description string
+	)
 
-func (cmd secretsCmd) RegisterFlags(fl *pflag.FlagSet) {}
+	cmd := &cobra.Command{
+		Use:   "create [secret_name]",
+		Short: "Create a new secret",
+		Long:  "Create a new secret object to store application secrets and access them securely from within your environments.",
+		Example: `coder secrets create mysql-password --from-literal 123password
+coder secrets create mysql-password --from-prompt
+coder secrets create aws-credentials --from-file ./credentials.json`,
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) < 1 {
+				return xerrors.Errorf("[secret_name] is a required argument")
+			}
+			if fromPrompt && (fromLiteral != "" || fromFile != "") {
+				return xerrors.Errorf("--from-prompt cannot be set along with --from-file or --from-literal")
+			}
+			if fromLiteral != "" && fromFile != "" {
+				return xerrors.Errorf("--from-literal and --from-file cannot both be set")
+			}
+			if !fromPrompt && fromFile == "" && fromLiteral == "" {
+				return xerrors.Errorf("one of [--from-literal, --from-file, --from-prompt] is required")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var (
+				client = requireAuth()
+				name   = args[0]
+				value  string
+				err    error
+			)
+			if fromLiteral != "" {
+				value = fromLiteral
+			} else if fromFile != "" {
+				contents, err := ioutil.ReadFile(fromFile)
+				if err != nil {
+					return xerrors.Errorf("read file: %w", err)
+				}
+				value = string(contents)
+			} else {
+				prompt := promptui.Prompt{
+					Label: "value",
+					Mask:  '*',
+					Validate: func(s string) error {
+						if len(s) < 1 {
+							return xerrors.Errorf("a length > 0 is required")
+						}
+						return nil
+					},
+				}
+				value, err = prompt.Run()
+				if err != nil {
+					return xerrors.Errorf("prompt for value: %w", err)
+				}
+			}
 
-func (cmd secretsCmd) Subcommands() []cli.Command {
-	return []cli.Command{
-		&listSecretsCmd{},
-		&viewSecretsCmd{},
-		&createSecretCmd{},
-		&deleteSecretsCmd{},
+			err = client.InsertSecret(entclient.InsertSecretReq{
+				Name:        name,
+				Value:       value,
+				Description: description,
+			})
+			if err != nil {
+				return xerrors.Errorf("insert secret: %w", err)
+			}
+			return nil
+		},
 	}
+
+	cmd.Flags().StringVar(&fromFile, "from-file", "", "a file from which to read the value of the secret")
+	cmd.Flags().StringVar(&fromLiteral, "from-literal", "", "the value of the secret")
+	cmd.Flags().BoolVar(&fromPrompt, "from-prompt", false, "enter the secret value through a terminal prompt")
+	cmd.Flags().StringVar(&description, "description", "", "a description of the secret")
+
+	return cmd
 }
 
-type listSecretsCmd struct{}
-
-func (cmd *listSecretsCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name: "ls",
-		Desc: "list all secrets",
-	}
-}
-
-func (cmd *listSecretsCmd) Run(fl *pflag.FlagSet) {
+func listSecrets(cmd *cobra.Command, _ []string) error {
 	client := requireAuth()
 
 	secrets, err := client.Secrets()
-	requireSuccess(err, "failed to get secrets: %v", err)
+	if err != nil {
+		return xerrors.Errorf("get secrets: %w", err)
+	}
 
 	if len(secrets) < 1 {
 		flog.Info("No secrets found")
-		return
+		return nil
 	}
 
-	w := xtabwriter.NewWriter()
-	_, err = fmt.Fprintln(w, xtabwriter.StructFieldNames(secrets[0]))
-	requireSuccess(err, "failed to write: %v", err)
-	for _, s := range secrets {
+	err = xtabwriter.WriteTable(len(secrets), func(i int) interface{} {
+		s := secrets[i]
 		s.Value = "******" // value is omitted from bulk responses
-
-		_, err = fmt.Fprintln(w, xtabwriter.StructValues(s))
-		requireSuccess(err, "failed to write: %v", err)
+		return s
+	})
+	if err != nil {
+		return xerrors.Errorf("write table of secrets: %w", err)
 	}
-	err = w.Flush()
-	requireSuccess(err, "failed to flush writer: %v", err)
+	return nil
 }
 
-func (cmd *listSecretsCmd) RegisterFlags(fl *pflag.FlagSet) {}
-
-type viewSecretsCmd struct{}
-
-func (cmd viewSecretsCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "view",
-		Usage: "[secret_name]",
-		Desc:  "view a secret",
-	}
-}
-
-func (cmd viewSecretsCmd) Run(fl *pflag.FlagSet) {
+func viewSecret(_ *cobra.Command, args []string) error {
 	var (
 		client = requireAuth()
-		name   = fl.Arg(0)
+		name   = args[0]
 	)
 	if name == "" {
-		exitUsage(fl)
+		return xerrors.New("[name] is a required argument")
 	}
 
 	secret, err := client.SecretByName(name)
-	requireSuccess(err, "failed to get secret by name: %v", err)
+	if err != nil {
+		return xerrors.Errorf("get secret by name: %w", err)
+	}
 
 	_, err = fmt.Fprintln(os.Stdout, secret.Value)
-	requireSuccess(err, "failed to write: %v", err)
+	if err != nil {
+		return xerrors.Errorf("write secret value: %w", err)
+	}
+	return nil
 }
 
-type createSecretCmd struct {
-	description string
-	fromFile    string
-	fromLiteral string
-	fromPrompt  bool
-}
-
-func (cmd *createSecretCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "create",
-		Usage: `[secret_name] [...flags]`,
-		Desc:  "create a new secret",
-	}
-}
-
-func (cmd *createSecretCmd) Validate(fl *pflag.FlagSet) (e []error) {
-	if cmd.fromPrompt && (cmd.fromLiteral != "" || cmd.fromFile != "") {
-		e = append(e, xerrors.Errorf("--from-prompt cannot be set along with --from-file or --from-literal"))
-	}
-	if cmd.fromLiteral != "" && cmd.fromFile != "" {
-		e = append(e, xerrors.Errorf("--from-literal and --from-file cannot both be set"))
-	}
-	if !cmd.fromPrompt && cmd.fromFile == "" && cmd.fromLiteral == "" {
-		e = append(e, xerrors.Errorf("one of [--from-literal, --from-file, --from-prompt] is required"))
-	}
-	return e
-}
-
-func (cmd *createSecretCmd) Run(fl *pflag.FlagSet) {
+func removeSecrets(_ *cobra.Command, args []string) error {
 	var (
 		client = requireAuth()
-		name   = fl.Arg(0)
-		value  string
-		err    error
 	)
-	if name == "" {
-		exitUsage(fl)
+	if len(args) < 1 {
+		return xerrors.New("[...secret_name] is a required argument")
 	}
-	xvalidate.Validate(fl, cmd)
 
-	if cmd.fromLiteral != "" {
-		value = cmd.fromLiteral
-	} else if cmd.fromFile != "" {
-		contents, err := ioutil.ReadFile(cmd.fromFile)
-		requireSuccess(err, "failed to read file: %v", err)
-		value = string(contents)
-	} else {
-		prompt := promptui.Prompt{
-			Label: "value",
-			Mask:  '*',
-			Validate: func(s string) error {
-				if len(s) < 1 {
-					return xerrors.Errorf("a length > 0 is required")
-				}
-				return nil
-			},
+	errorSeen := false
+	for _, n := range args {
+		err := client.DeleteSecretByName(n)
+		if err != nil {
+			flog.Error("failed to delete secret %q: %v", n, err)
+			errorSeen = true
+		} else {
+			flog.Success("successfully deleted secret %q", n)
 		}
-		value, err = prompt.Run()
-		requireSuccess(err, "failed to prompt for value: %v", err)
 	}
-
-	err = client.InsertSecret(entclient.InsertSecretReq{
-		Name:        name,
-		Value:       value,
-		Description: cmd.description,
-	})
-	requireSuccess(err, "failed to insert secret: %v", err)
-}
-
-func (cmd *createSecretCmd) RegisterFlags(fl *pflag.FlagSet) {
-	fl.StringVar(&cmd.fromFile, "from-file", "", "specify a file from which to read the value of the secret")
-	fl.StringVar(&cmd.fromLiteral, "from-literal", "", "specify the value of the secret")
-	fl.BoolVar(&cmd.fromPrompt, "from-prompt", false, "specify the value of the secret through a prompt")
-	fl.StringVar(&cmd.description, "description", "", "specify a description of the secret")
-}
-
-type deleteSecretsCmd struct{}
-
-func (cmd *deleteSecretsCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "rm",
-		Usage: "[secret_name]",
-		Desc:  "remove a secret",
+	if errorSeen {
+		os.Exit(1)
 	}
-}
-
-func (cmd *deleteSecretsCmd) Run(fl *pflag.FlagSet) {
-	var (
-		client = requireAuth()
-		name   = fl.Arg(0)
-	)
-	if name == "" {
-		exitUsage(fl)
-	}
-
-	err := client.DeleteSecretByName(name)
-	requireSuccess(err, "failed to delete secret: %v", err)
-
-	flog.Info("Successfully deleted secret %q", name)
+	return nil
 }

@@ -8,43 +8,52 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 
-	"github.com/spf13/pflag"
+	"cdr.dev/coder-cli/internal/x/xtabwriter"
+	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
 
-	"go.coder.com/cli"
 	"go.coder.com/flog"
 )
 
-type urlsCmd struct{}
-
-func (cmd *urlsCmd) Subcommands() []cli.Command {
-	return []cli.Command{
-		&listSubCmd{},
-		&createSubCmd{},
-		&delSubCmd{},
+func makeURLCmd() *cobra.Command {
+	var outputFmt string
+	cmd := &cobra.Command{
+		Use:   "urls",
+		Short: "Interact with environment DevURLs",
 	}
-}
-
-func (cmd urlsCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "urls",
-		Usage: "[subcommand] <flags>",
-		Desc:  "interact with environment devurls",
+	lsCmd := &cobra.Command{
+		Use:       "ls [environment_name]",
+		Short:     "List all DevURLs for an environment",
+		Args:      cobra.ExactArgs(1),
+		ValidArgs: getEnvsForCompletion(),
+		RunE:      makeListDevURLs(&outputFmt),
 	}
-}
+	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human|json")
 
-func (cmd urlsCmd) Run(fl *pflag.FlagSet) {
-	exitUsage(fl)
+	rmCmd := &cobra.Command{
+		Use:   "rm [environment_name] [port]",
+		Args:  cobra.ExactArgs(2),
+		Short: "Remove a dev url",
+		RunE:  removeDevURL,
+	}
+
+	cmd.AddCommand(
+		lsCmd,
+		rmCmd,
+		makeCreateDevURL(),
+	)
+
+	return cmd
 }
 
 // DevURL is the parsed json response record for a devURL from cemanager
 type DevURL struct {
-	ID     string `json:"id"`
+	ID     string `json:"id" tab:"-"`
 	URL    string `json:"url"`
 	Port   int    `json:"port"`
+	Name   string `json:"name" tab:"-"`
 	Access string `json:"access"`
-	Name   string `json:"name"`
 }
 
 var urlAccessLevel = map[string]string{
@@ -78,125 +87,107 @@ func accessLevelIsValid(level string) bool {
 	return ok
 }
 
-type listSubCmd struct {
-	outputFmt string
-}
-
 // Run gets the list of active devURLs from the cemanager for the
 // specified environment and outputs info to stdout.
-func (sub listSubCmd) Run(fl *pflag.FlagSet) {
-	envName := fl.Arg(0)
-	devURLs := urlList(envName)
-
-	if len(devURLs) == 0 {
-		return
-	}
-
-	switch sub.outputFmt {
-	case "human":
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.TabIndent)
-		for _, devURL := range devURLs {
-			fmt.Fprintf(w, "%s\t%d\t%s\n", devURL.URL, devURL.Port, devURL.Access)
+func makeListDevURLs(outputFmt *string) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		envName := args[0]
+		devURLs, err := urlList(envName)
+		if err != nil {
+			return err
 		}
-		err := w.Flush()
-		requireSuccess(err, "failed to flush writer: %v", err)
-	case "json":
-		err := json.NewEncoder(os.Stdout).Encode(devURLs)
-		requireSuccess(err, "failed to encode devurls to json: %v", err)
-	default:
-		exitUsage(fl)
+
+		switch *outputFmt {
+		case "human":
+			err := xtabwriter.WriteTable(len(devURLs), func(i int) interface{} {
+				return devURLs[i]
+			})
+			if err != nil {
+				return xerrors.Errorf("write table: %w", err)
+			}
+		case "json":
+			err := json.NewEncoder(os.Stdout).Encode(devURLs)
+			if err != nil {
+				return xerrors.Errorf("encode DevURLs as json: %w", err)
+			}
+		default:
+			return xerrors.Errorf("unknown --output value %q", *outputFmt)
+		}
+		return nil
 	}
 }
 
-func (sub *listSubCmd) RegisterFlags(fl *pflag.FlagSet) {
-	fl.StringVarP(&sub.outputFmt, "output", "o", "human", "output format (human | json)")
-}
-
-func (sub *listSubCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "ls",
-		Usage: "<env> <flags>",
-		Desc:  "list all devurls for a given environment",
-	}
-}
-
-type createSubCmd struct {
-	access  string
-	urlname string
-}
-
-func (sub *createSubCmd) RegisterFlags(fl *pflag.FlagSet) {
-	fl.StringVarP(&sub.access, "access", "a", "private", "[private | org | authed | public] set devurl access")
-	fl.StringVarP(&sub.urlname, "name", "n", "", "devurl name")
-}
-
-func (sub createSubCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:    "create",
-		Usage:   "<env name> <port> [--access <level>] [--name <name>]",
+func makeCreateDevURL() *cobra.Command {
+	var (
+		access  string
+		urlname string
+	)
+	cmd := &cobra.Command{
+		Use:     "create [env_name] [port] [--access <level>] [--name <name>]",
+		Short:   "Create a new devurl for an environment",
 		Aliases: []string{"edit"},
-		Desc:    "create or update a devurl for external access",
+		Args:    cobra.ExactArgs(2),
+		// Run creates or updates a devURL
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var (
+				envName = args[0]
+				port    = args[1]
+			)
+
+			portNum, err := validatePort(port)
+			if err != nil {
+				return err
+			}
+
+			access = strings.ToUpper(access)
+			if !accessLevelIsValid(access) {
+				return xerrors.Errorf("invalid access level %q", access)
+			}
+
+			if urlname != "" && !devURLNameValidRx.MatchString(urlname) {
+				return xerrors.New("update devurl: name must be < 64 chars in length, begin with a letter and only contain letters or digits.")
+			}
+			entClient := requireAuth()
+
+			env, err := findEnv(entClient, envName)
+			if err != nil {
+				return err
+			}
+
+			urls, err := urlList(envName)
+			if err != nil {
+				return err
+			}
+
+			urlID, found := devURLID(portNum, urls)
+			if found {
+				flog.Info("Updating devurl for port %v", port)
+				err := entClient.UpdateDevURL(env.ID, urlID, portNum, urlname, access)
+				if err != nil {
+					return xerrors.Errorf("update DevURL: %w", err)
+				}
+			} else {
+				flog.Info("Adding devurl for port %v", port)
+				err := entClient.InsertDevURL(env.ID, portNum, urlname, access)
+				if err != nil {
+					return xerrors.Errorf("insert DevURL: %w", err)
+				}
+			}
+			return nil
+		},
 	}
+
+	cmd.Flags().StringVar(&access, "access", "private", "Set DevURL access to [private | org | authed | public]")
+	cmd.Flags().StringVar(&urlname, "name", "", "DevURL name")
+	_ = cmd.MarkFlagRequired("name")
+
+	return cmd
 }
 
 // devURLNameValidRx is the regex used to validate devurl names specified
 // via the --name subcommand. Named devurls must begin with a letter, and
 // consist solely of letters and digits, with a max length of 64 chars.
 var devURLNameValidRx = regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9]{0,63}$")
-
-// Run creates or updates a devURL, specified by env ID and port
-// (fl.Arg(0) and fl.Arg(1)), with access level (fl.Arg(2)) on
-// the cemanager.
-func (sub createSubCmd) Run(fl *pflag.FlagSet) {
-	envName := fl.Arg(0)
-	port := fl.Arg(1)
-	name := fl.Arg(2)
-	access := fl.Arg(3)
-
-	if envName == "" {
-		exitUsage(fl)
-	}
-
-	portNum, err := validatePort(port)
-	if err != nil {
-		exitUsage(fl)
-	}
-
-	access = strings.ToUpper(sub.access)
-	if !accessLevelIsValid(access) {
-		exitUsage(fl)
-	}
-
-	name = sub.urlname
-	if name != "" && !devURLNameValidRx.MatchString(name) {
-		flog.Fatal("update devurl: name must be < 64 chars in length, begin with a letter and only contain letters or digits.")
-		return
-	}
-	entClient := requireAuth()
-
-	env := findEnv(entClient, envName)
-
-	urlID, found := devURLID(portNum, urlList(envName))
-	if found {
-		flog.Info("Updating devurl for port %v", port)
-		err := entClient.UpdateDevURL(env.ID, urlID, portNum, name, access)
-		requireSuccess(err, "update devurl: %s", err)
-	} else {
-		flog.Info("Adding devurl for port %v", port)
-		err := entClient.InsertDevURL(env.ID, portNum, name, access)
-		requireSuccess(err, "insert devurl: %s", err)
-	}
-}
-
-type delSubCmd struct{}
-
-func (sub delSubCmd) Spec() cli.CommandSpec {
-	return cli.CommandSpec{
-		Name:  "rm",
-		Usage: "<env name> <port>",
-		Desc:  "remove a devurl",
-	}
-}
 
 // devURLID returns the ID of a devURL, given the env name and port
 // from a list of DevURL records.
@@ -211,54 +202,70 @@ func devURLID(port int, urls []DevURL) (string, bool) {
 }
 
 // Run deletes a devURL, specified by env ID and port, from the cemanager.
-func (sub delSubCmd) Run(fl *pflag.FlagSet) {
-	envName := fl.Arg(0)
-	port := fl.Arg(1)
-
-	if envName == "" {
-		exitUsage(fl)
-	}
+func removeDevURL(cmd *cobra.Command, args []string) error {
+	var (
+		envName = args[0]
+		port    = args[1]
+	)
 
 	portNum, err := validatePort(port)
 	if err != nil {
-		exitUsage(fl)
+		return xerrors.Errorf("validate port: %w", err)
 	}
 
 	entClient := requireAuth()
-	env := findEnv(entClient, envName)
+	env, err := findEnv(entClient, envName)
+	if err != nil {
+		return err
+	}
 
-	urlID, found := devURLID(portNum, urlList(envName))
+	urls, err := urlList(envName)
+	if err != nil {
+		return err
+	}
+
+	urlID, found := devURLID(portNum, urls)
 	if found {
 		flog.Info("Deleting devurl for port %v", port)
 	} else {
-		flog.Fatal("No devurl found for port %v", port)
+		return xerrors.Errorf("No devurl found for port %v", port)
 	}
 
 	err = entClient.DelDevURL(env.ID, urlID)
-	requireSuccess(err, "delete devurl: %s", err)
+	if err != nil {
+		return xerrors.Errorf("delete DevURL: %w", err)
+	}
+	return nil
 }
 
 // urlList returns the list of active devURLs from the cemanager.
-func urlList(envName string) []DevURL {
+func urlList(envName string) ([]DevURL, error) {
 	entClient := requireAuth()
-	env := findEnv(entClient, envName)
+	env, err := findEnv(entClient, envName)
+	if err != nil {
+		return nil, err
+	}
 
 	reqString := "%s/api/environments/%s/devurls?session_token=%s"
 	reqURL := fmt.Sprintf(reqString, entClient.BaseURL, env.ID, entClient.Token)
 
 	resp, err := http.Get(reqURL)
-	requireSuccess(err, "%v", err)
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		flog.Fatal("non-success status code: %d", resp.StatusCode)
+		return nil, xerrors.Errorf("non-success status code: %d", resp.StatusCode)
 	}
 
 	dec := json.NewDecoder(resp.Body)
 
 	devURLs := make([]DevURL, 0)
 	err = dec.Decode(&devURLs)
-	requireSuccess(err, "%v", err)
+	if err != nil {
+		return nil, err
+	}
 
-	return devURLs
+	return devURLs, nil
 }
