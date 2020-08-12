@@ -4,18 +4,23 @@ import (
 	"encoding/json"
 	"os"
 
+	"cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
+
+	"go.coder.com/flog"
 )
 
 func makeEnvsCommand() *cobra.Command {
 	var outputFmt string
+	var user string
 	cmd := &cobra.Command{
 		Use:   "envs",
 		Short: "Interact with Coder environments",
 		Long:  "Perform operations on the Coder environments owned by the active user.",
 	}
+	cmd.PersistentFlags().StringVar(&user, "user", entclient.Me, "Specify the user whose resources to target")
 
 	lsCmd := &cobra.Command{
 		Use:   "ls",
@@ -23,9 +28,13 @@ func makeEnvsCommand() *cobra.Command {
 		Long:  "List all Coder environments owned by the active user.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			entClient := requireAuth()
-			envs, err := getEnvs(entClient)
+			envs, err := getEnvs(cmd.Context(), entClient, user)
 			if err != nil {
 				return err
+			}
+			if len(envs) < 1 {
+				flog.Info("no environments found")
+				return nil
 			}
 
 			switch outputFmt {

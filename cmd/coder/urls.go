@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -23,11 +25,11 @@ func makeURLCmd() *cobra.Command {
 		Short: "Interact with environment DevURLs",
 	}
 	lsCmd := &cobra.Command{
-		Use:       "ls [environment_name]",
-		Short:     "List all DevURLs for an environment",
-		Args:      cobra.ExactArgs(1),
-		ValidArgs: getEnvsForCompletion(),
-		RunE:      makeListDevURLs(&outputFmt),
+		Use:               "ls [environment_name]",
+		Short:             "List all DevURLs for an environment",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: getEnvsForCompletion(entclient.Me),
+		RunE:              makeListDevURLs(&outputFmt),
 	}
 	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human|json")
 
@@ -92,13 +94,17 @@ func accessLevelIsValid(level string) bool {
 func makeListDevURLs(outputFmt *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		envName := args[0]
-		devURLs, err := urlList(envName)
+		devURLs, err := urlList(cmd.Context(), envName)
 		if err != nil {
 			return err
 		}
 
 		switch *outputFmt {
 		case "human":
+			if len(devURLs) < 1 {
+				flog.Info("No devURLs found for environment %q", envName)
+				return nil
+			}
 			err := xtabwriter.WriteTable(len(devURLs), func(i int) interface{} {
 				return devURLs[i]
 			})
@@ -149,12 +155,12 @@ func makeCreateDevURL() *cobra.Command {
 			}
 			entClient := requireAuth()
 
-			env, err := findEnv(entClient, envName)
+			env, err := findEnv(cmd.Context(), entClient, envName, entclient.Me)
 			if err != nil {
 				return err
 			}
 
-			urls, err := urlList(envName)
+			urls, err := urlList(cmd.Context(), envName)
 			if err != nil {
 				return err
 			}
@@ -162,13 +168,13 @@ func makeCreateDevURL() *cobra.Command {
 			urlID, found := devURLID(portNum, urls)
 			if found {
 				flog.Info("Updating devurl for port %v", port)
-				err := entClient.UpdateDevURL(env.ID, urlID, portNum, urlname, access)
+				err := entClient.UpdateDevURL(cmd.Context(), env.ID, urlID, portNum, urlname, access)
 				if err != nil {
 					return xerrors.Errorf("update DevURL: %w", err)
 				}
 			} else {
 				flog.Info("Adding devurl for port %v", port)
-				err := entClient.InsertDevURL(env.ID, portNum, urlname, access)
+				err := entClient.InsertDevURL(cmd.Context(), env.ID, portNum, urlname, access)
 				if err != nil {
 					return xerrors.Errorf("insert DevURL: %w", err)
 				}
@@ -214,12 +220,12 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 	}
 
 	entClient := requireAuth()
-	env, err := findEnv(entClient, envName)
+	env, err := findEnv(cmd.Context(), entClient, envName, entclient.Me)
 	if err != nil {
 		return err
 	}
 
-	urls, err := urlList(envName)
+	urls, err := urlList(cmd.Context(), envName)
 	if err != nil {
 		return err
 	}
@@ -231,7 +237,7 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 		return xerrors.Errorf("No devurl found for port %v", port)
 	}
 
-	err = entClient.DelDevURL(env.ID, urlID)
+	err = entClient.DelDevURL(cmd.Context(), env.ID, urlID)
 	if err != nil {
 		return xerrors.Errorf("delete DevURL: %w", err)
 	}
@@ -239,9 +245,9 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 }
 
 // urlList returns the list of active devURLs from the cemanager.
-func urlList(envName string) ([]DevURL, error) {
+func urlList(ctx context.Context, envName string) ([]DevURL, error) {
 	entClient := requireAuth()
-	env, err := findEnv(entClient, envName)
+	env, err := findEnv(ctx, entClient, envName, entclient.Me)
 	if err != nil {
 		return nil, err
 	}

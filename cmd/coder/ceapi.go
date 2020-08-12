@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
@@ -27,23 +29,23 @@ outer:
 }
 
 // getEnvs returns all environments for the user.
-func getEnvs(client *entclient.Client) ([]entclient.Environment, error) {
-	me, err := client.Me()
+func getEnvs(ctx context.Context, client *entclient.Client, email string) ([]entclient.Environment, error) {
+	user, err := client.UserByEmail(ctx, email)
 	if err != nil {
-		return nil, xerrors.Errorf("get self: %+v", err)
+		return nil, xerrors.Errorf("get user: %+v", err)
 	}
 
-	orgs, err := client.Orgs()
+	orgs, err := client.Orgs(ctx)
 	if err != nil {
 		return nil, xerrors.Errorf("get orgs: %+v", err)
 	}
 
-	orgs = userOrgs(me, orgs)
+	orgs = userOrgs(user, orgs)
 
 	var allEnvs []entclient.Environment
 
 	for _, org := range orgs {
-		envs, err := client.Envs(me, org)
+		envs, err := client.Envs(ctx, user, org)
 		if err != nil {
 			return nil, xerrors.Errorf("get envs for %v: %+v", org.Name, err)
 		}
@@ -56,8 +58,8 @@ func getEnvs(client *entclient.Client) ([]entclient.Environment, error) {
 }
 
 // findEnv returns a single environment by name (if it exists.)
-func findEnv(client *entclient.Client, name string) (*entclient.Environment, error) {
-	envs, err := getEnvs(client)
+func findEnv(ctx context.Context, client *entclient.Client, envName, userEmail string) (*entclient.Environment, error) {
+	envs, err := getEnvs(ctx, client, userEmail)
 	if err != nil {
 		return nil, xerrors.Errorf("get environments: %w", err)
 	}
@@ -66,11 +68,11 @@ func findEnv(client *entclient.Client, name string) (*entclient.Environment, err
 
 	for _, env := range envs {
 		found = append(found, env.Name)
-		if env.Name == name {
+		if env.Name == envName {
 			return &env, nil
 		}
 	}
 	flog.Error("found %q", found)
-	flog.Error("%q not found", name)
+	flog.Error("%q not found", envName)
 	return nil, xerrors.New("environment not found")
 }

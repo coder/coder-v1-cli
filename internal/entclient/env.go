@@ -34,9 +34,10 @@ type Environment struct {
 }
 
 // Envs gets the list of environments owned by the authenticated user
-func (c Client) Envs(user *User, org Org) ([]Environment, error) {
+func (c Client) Envs(ctx context.Context, user *User, org Org) ([]Environment, error) {
 	var envs []Environment
 	err := c.requestBody(
+		ctx,
 		"GET", "/api/orgs/"+org.ID+"/members/"+user.ID+"/environments",
 		nil,
 		&envs,

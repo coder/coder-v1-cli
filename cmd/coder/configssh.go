@@ -83,19 +83,19 @@ func configSSH(filepath *string, remove *bool) func(cmd *cobra.Command, _ []stri
 			return xerrors.New("SSH is disabled or not available for your Coder Enterprise deployment.")
 		}
 
-		me, err := entClient.Me()
+		user, err := entClient.Me(cmd.Context())
 		if err != nil {
 			return xerrors.Errorf("fetch username: %w", err)
 		}
 
-		envs, err := getEnvs(entClient)
+		envs, err := getEnvs(cmd.Context(), entClient, entclient.Me)
 		if err != nil {
 			return err
 		}
 		if len(envs) < 1 {
 			return xerrors.New("no environments found")
 		}
-		newConfig, err := makeNewConfigs(me.Username, envs, startToken, startMessage, endToken)
+		newConfig, err := makeNewConfigs(user.Username, envs, startToken, startMessage, endToken)
 		if err != nil {
 			return xerrors.Errorf("make new ssh configurations: %w", err)
 		}
@@ -127,7 +127,7 @@ var (
 )
 
 func writeSSHKey(ctx context.Context, client *entclient.Client) error {
-	key, err := client.SSHKey()
+	key, err := client.SSHKey(ctx)
 	if err != nil {
 		return err
 	}

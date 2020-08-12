@@ -35,8 +35,10 @@ func newClient() (*entclient.Client, error) {
 		return nil, xerrors.Errorf("url misformatted: %v (try runing coder login)", err)
 	}
 
-	return &entclient.Client{
+	client := &entclient.Client{
 		BaseURL: u,
 		Token:   sessionToken,
-	}, nil
+	}
+
+	return client, nil
 }

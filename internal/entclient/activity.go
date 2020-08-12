@@ -1,12 +1,13 @@
 package entclient
 
 import (
+	"context"
 	"net/http"
 )
 
 // PushActivity pushes CLI activity to Coder
-func (c Client) PushActivity(source string, envID string) error {
-	res, err := c.request("POST", "/api/metrics/usage/push", map[string]string{
+func (c Client) PushActivity(ctx context.Context, source string, envID string) error {
+	res, err := c.request(ctx, "POST", "/api/metrics/usage/push", map[string]string{
 		"source":         source,
 		"environment_id": envID,
 	})

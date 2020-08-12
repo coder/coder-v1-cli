@@ -2,6 +2,7 @@ package entclient
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -9,6 +10,7 @@ import (
 )
 
 func (c Client) request(
+	ctx context.Context,
 	method string, path string,
 	request interface{},
 ) (*http.Response, error) {
@@ -23,7 +25,7 @@ func (c Client) request(
 	if err != nil {
 		return nil, xerrors.Errorf("marshal request: %w", err)
 	}
-	req, err := http.NewRequest(method, c.BaseURL.String()+path, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL.String()+path, bytes.NewReader(body))
 	if err != nil {
 		return nil, xerrors.Errorf("create request: %w", err)
 	}
@@ -31,9 +33,10 @@ func (c Client) request(
 }
 
 func (c Client) requestBody(
+	ctx context.Context,
 	method string, path string, request interface{}, response interface{},
 ) error {
-	resp, err := c.request(method, path, request)
+	resp, err := c.request(ctx, method, path, request)
 	if err != nil {
 		return err
 	}
