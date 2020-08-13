@@ -21,4 +21,3 @@ coder config-ssh [flags]
 ### SEE ALSO
 
 * [coder](coder.md)	 - coder provides a CLI for working with an existing Coder Enterprise installation
-

@@ -31,4 +31,3 @@ coder secrets view mysql-password
 ### SEE ALSO
 
 * [coder secrets](coder_secrets.md)	 - Interact with Coder Secrets
-

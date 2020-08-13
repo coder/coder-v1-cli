@@ -25,4 +25,3 @@ coder secrets ls [flags]
 ### SEE ALSO
 
 * [coder secrets](coder_secrets.md)	 - Interact with Coder Secrets
-

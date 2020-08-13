@@ -31,4 +31,3 @@ coder secrets rm mysql-password mysql-user
 ### SEE ALSO
 
 * [coder secrets](coder_secrets.md)	 - Interact with Coder Secrets
-

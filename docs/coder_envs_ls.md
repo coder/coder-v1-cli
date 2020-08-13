@@ -26,4 +26,3 @@ coder envs ls [flags]
 ### SEE ALSO
 
 * [coder envs](coder_envs.md)	 - Interact with Coder environments
-

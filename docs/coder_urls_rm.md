@@ -19,4 +19,3 @@ coder urls rm [environment_name] [port] [flags]
 ### SEE ALSO
 
 * [coder urls](coder_urls.md)	 - Interact with environment DevURLs
-

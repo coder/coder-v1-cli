@@ -27,4 +27,3 @@ coder users ls -o json | jq .[] | jq -r .email
 ### SEE ALSO
 
 * [coder users](coder_users.md)	 - Interact with Coder user accounts
-

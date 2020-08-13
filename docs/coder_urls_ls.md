@@ -20,4 +20,3 @@ coder urls ls [environment_name] [flags]
 ### SEE ALSO
 
 * [coder urls](coder_urls.md)	 - Interact with environment DevURLs
-
