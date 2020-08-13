@@ -3,36 +3,23 @@ package integration
 import (
 	"context"
 	"testing"
-	"time"
 
 	"cdr.dev/coder-cli/ci/tcli"
-	"cdr.dev/slog/sloggers/slogtest/assert"
 )
 
 func TestDevURLCLI(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
-	defer cancel()
+	run(t, "coder-cli-devurl-tests", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
+		c.Run(ctx, "which coder").Assert(t,
+			tcli.Success(),
+			tcli.StdoutMatches("/usr/sbin/coder"),
+			tcli.StderrEmpty(),
+		)
 
-	c, err := tcli.NewContainerRunner(ctx, &tcli.ContainerConfig{
-		Image: "codercom/enterprise-dev",
-		Name:  "coder-cli-devurl-tests",
-		BindMounts: map[string]string{
-			binpath: "/bin/coder",
-		},
+		c.Run(ctx, "coder urls ls").Assert(t,
+			tcli.Error(),
+		)
 	})
-	assert.Success(t, "new run container", err)
-	defer c.Close()
-
-	c.Run(ctx, "which coder").Assert(t,
-		tcli.Success(),
-		tcli.StdoutMatches("/usr/sbin/coder"),
-		tcli.StderrEmpty(),
-	)
-
-	c.Run(ctx, "coder urls ls").Assert(t,
-		tcli.Error(),
-	)
 
 	// The following cannot be enabled nor verified until either the
 	// integration testing dogfood target has environments created, or

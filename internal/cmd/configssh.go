@@ -114,6 +114,10 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			currentConfig = currentConfig[:startIndex-1] + currentConfig[endIndex+len(endToken)+1:]
 		}
 
+		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
+		if err != nil {
+			return xerrors.Errorf("make configuration directory: %w", err)
+		}
 		err = writeStr(*configpath, currentConfig+newConfig)
 		if err != nil {
 			return xerrors.Errorf("write new configurations to ssh config file %q: %w", *configpath, err)
