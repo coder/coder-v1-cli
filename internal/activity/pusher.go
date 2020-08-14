@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"cdr.dev/coder-cli/internal/entclient"
+	"cdr.dev/coder-cli/coder-sdk"
 	"golang.org/x/time/rate"
 
 	"go.coder.com/flog"
@@ -18,12 +18,12 @@ type Pusher struct {
 	envID  string
 	source string
 
-	client *entclient.Client
+	client *coder.Client
 	rate   *rate.Limiter
 }
 
 // NewPusher instantiates a new instance of Pusher
-func NewPusher(c *entclient.Client, envID, source string) *Pusher {
+func NewPusher(c *coder.Client, envID, source string) *Pusher {
 	return &Pusher{
 		envID:  envID,
 		source: source,

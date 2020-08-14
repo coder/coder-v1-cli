@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"cdr.dev/coder-cli/ci/tcli"
-	"cdr.dev/coder-cli/internal/entclient"
+	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/slog/sloggers/slogtest/assert"
 )
 
@@ -20,7 +20,7 @@ func TestUsers(t *testing.T) {
 
 		headlessLogin(ctx, t, c)
 
-		var user entclient.User
+		var user coder.User
 		c.Run(ctx, `coder users ls --output json | jq -c '.[] | select( .username == "charlie")'`).Assert(t,
 			tcli.Success(),
 			tcli.StdoutJSONUnmarshal(&user),

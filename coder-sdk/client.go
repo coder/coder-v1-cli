@@ -1,4 +1,4 @@
-package entclient
+package coder
 
 import (
 	"net/http"

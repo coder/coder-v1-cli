@@ -1,4 +1,4 @@
-package entclient
+package coder
 
 import (
 	"context"
@@ -34,12 +34,12 @@ type Environment struct {
 	AutoOffThreshold xjson.Duration `json:"auto_off_threshold" tab:"-"`
 }
 
-// EnvironmentsInOrganization gets the list of environments owned by the authenticated user
-func (c Client) EnvironmentsInOrganization(ctx context.Context, user *User, org *Org) ([]Environment, error) {
+// EnvironmentsByOrganization gets the list of environments owned by the given user.
+func (c Client) EnvironmentsByOrganization(ctx context.Context, userID, orgID string) ([]Environment, error) {
 	var envs []Environment
 	err := c.requestBody(
 		ctx,
-		http.MethodGet, "/api/orgs/"+org.ID+"/members/"+user.ID+"/environments",
+		http.MethodGet, "/api/orgs/"+orgID+"/members/"+userID+"/environments",
 		nil,
 		&envs,
 	)

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/activity"
-	"cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/coder-cli/internal/x/xterminal"
 	"cdr.dev/wsep"
 	"github.com/spf13/cobra"
@@ -45,7 +45,7 @@ func makeShellCmd() *cobra.Command {
 		Long:               "Execute a remote command on the environment\\nIf no command is specified, the default shell is opened.",
 		Args:               cobra.MinimumNArgs(1),
 		DisableFlagParsing: true,
-		ValidArgsFunction:  getEnvsForCompletion(entclient.Me),
+		ValidArgsFunction:  getEnvsForCompletion(coder.Me),
 		RunE:               shell,
 		Example:            "coder sh backend-env",
 	}
@@ -99,7 +99,7 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	var (
 		entClient = requireAuth()
 	)
-	env, err := findEnv(ctx, entClient, envName, entclient.Me)
+	env, err := findEnv(ctx, entClient, envName, coder.Me)
 	if err != nil {
 		return err
 	}

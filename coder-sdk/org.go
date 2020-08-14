@@ -1,6 +1,9 @@
-package entclient
+package coder
 
-import "context"
+import (
+	"context"
+	"net/http"
+)
 
 // Org describes an Organization in Coder
 type Org struct {
@@ -12,6 +15,6 @@ type Org struct {
 // Orgs gets all Organizations
 func (c Client) Orgs(ctx context.Context) ([]Org, error) {
 	var os []Org
-	err := c.requestBody(ctx, "GET", "/api/orgs", nil, &os)
+	err := c.requestBody(ctx, http.MethodGet, "/api/orgs", nil, &os)
 	return os, err
 }

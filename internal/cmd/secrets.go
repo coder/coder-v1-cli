@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"cdr.dev/coder-cli/internal/entclient"
+	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
@@ -21,7 +21,7 @@ func makeSecretsCmd() *cobra.Command {
 		Short: "Interact with Coder Secrets",
 		Long:  "Interact with secrets objects owned by the active user.",
 	}
-	cmd.PersistentFlags().StringVar(&user, "user", entclient.Me, "Specify the user whose resources to target")
+	cmd.PersistentFlags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	cmd.AddCommand(
 		&cobra.Command{
 			Use:   "ls",
@@ -113,7 +113,7 @@ coder secrets create aws-credentials --from-file ./credentials.json`,
 			if err != nil {
 				return xerrors.Errorf("get user %q by email: %w", *userEmail, err)
 			}
-			err = client.InsertSecret(cmd.Context(), user, entclient.InsertSecretReq{
+			err = client.InsertSecret(cmd.Context(), user, coder.InsertSecretReq{
 				Name:        name,
 				Value:       value,
 				Description: description,
@@ -141,7 +141,7 @@ func listSecrets(userEmail *string) func(cmd *cobra.Command, _ []string) error {
 			return xerrors.Errorf("get user %q by email: %w", *userEmail, err)
 		}
 
-		secrets, err := client.Secrets(cmd.Context(), user)
+		secrets, err := client.Secrets(cmd.Context(), user.ID)
 		if err != nil {
 			return xerrors.Errorf("get secrets: %w", err)
 		}
@@ -174,7 +174,7 @@ func makeViewSecret(userEmail *string) func(cmd *cobra.Command, args []string) e
 			return xerrors.Errorf("get user %q by email: %w", *userEmail, err)
 		}
 
-		secret, err := client.SecretByName(cmd.Context(), name, user)
+		secret, err := client.SecretWithValueByName(cmd.Context(), name, user.ID)
 		if err != nil {
 			return xerrors.Errorf("get secret by name: %w", err)
 		}
@@ -199,7 +199,7 @@ func makeRemoveSecrets(userEmail *string) func(c *cobra.Command, args []string) 
 
 		errorSeen := false
 		for _, n := range args {
-			err := client.DeleteSecretByName(cmd.Context(), n, user)
+			err := client.DeleteSecretByName(cmd.Context(), n, user.ID)
 			if err != nil {
 				flog.Error("failed to delete secret %q: %v", n, err)
 				errorSeen = true
