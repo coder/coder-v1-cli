@@ -16,47 +16,21 @@ type Secret struct {
 	UpdatedAt   time.Time `json:"updated_at" tab:"-"`
 }
 
-// ReqOptions define api request configuration options
-type ReqOptions struct {
-	// User defines the users whose resources should be targeted
-	User string
-}
-
-// DefaultReqOptions define reasonable defaults for an api request
-var DefaultReqOptions = &ReqOptions{
-	User: Me,
-}
-
-// Secrets gets all secrets owned by the authed user
-func (c *Client) Secrets(ctx context.Context, opts *ReqOptions) ([]Secret, error) {
-	if opts == nil {
-		opts = DefaultReqOptions
-	}
-	user, err := c.UserByEmail(ctx, opts.User)
-	if err != nil {
-		return nil, err
-	}
+// Secrets gets all secrets for the given user
+func (c *Client) Secrets(ctx context.Context, user *User) ([]Secret, error) {
 	var secrets []Secret
-	err = c.requestBody(ctx, http.MethodGet, "/api/users/"+user.ID+"/secrets", nil, &secrets)
+	err := c.requestBody(ctx, http.MethodGet, "/api/users/"+user.ID+"/secrets", nil, &secrets)
 	return secrets, err
 }
 
-func (c *Client) secretByID(ctx context.Context, id string, opts *ReqOptions) (*Secret, error) {
-	if opts == nil {
-		opts = DefaultReqOptions
-	}
-	user, err := c.UserByEmail(ctx, opts.User)
-	if err != nil {
-		return nil, err
-	}
-
+func (c *Client) secretByID(ctx context.Context, id string, user *User) (*Secret, error) {
 	var secret Secret
-	err = c.requestBody(ctx, http.MethodGet, "/api/users/"+user.ID+"/secrets/"+id, nil, &secret)
+	err := c.requestBody(ctx, http.MethodGet, "/api/users/"+user.ID+"/secrets/"+id, nil, &secret)
 	return &secret, err
 }
 
-func (c *Client) secretNameToID(ctx context.Context, name string, opts *ReqOptions) (id string, _ error) {
-	secrets, err := c.Secrets(ctx, opts)
+func (c *Client) secretNameToID(ctx context.Context, name string, user *User) (id string, _ error) {
+	secrets, err := c.Secrets(ctx, user)
 	if err != nil {
 		return "", err
 	}
@@ -69,12 +43,12 @@ func (c *Client) secretNameToID(ctx context.Context, name string, opts *ReqOptio
 }
 
 // SecretByName gets a secret object by name
-func (c *Client) SecretByName(ctx context.Context, name string, opts *ReqOptions) (*Secret, error) {
-	id, err := c.secretNameToID(ctx, name, opts)
+func (c *Client) SecretByName(ctx context.Context, name string, user *User) (*Secret, error) {
+	id, err := c.secretNameToID(ctx, name, user)
 	if err != nil {
 		return nil, err
 	}
-	return c.secretByID(ctx, id, opts)
+	return c.secretByID(ctx, id, user)
 }
 
 // InsertSecretReq describes the request body for creating a new secret
@@ -85,29 +59,14 @@ type InsertSecretReq struct {
 }
 
 // InsertSecret adds a new secret for the authed user
-func (c *Client) InsertSecret(ctx context.Context, req InsertSecretReq, opts *ReqOptions) error {
-	if opts == nil {
-		opts = DefaultReqOptions
-	}
-	user, err := c.UserByEmail(ctx, opts.User)
-	if err != nil {
-		return err
-	}
+func (c *Client) InsertSecret(ctx context.Context, user *User, req InsertSecretReq) error {
 	var resp interface{}
-	err = c.requestBody(ctx, http.MethodPost, "/api/users/"+user.ID+"/secrets", req, &resp)
-	return err
+	return c.requestBody(ctx, http.MethodPost, "/api/users/"+user.ID+"/secrets", req, &resp)
 }
 
 // DeleteSecretByName deletes the authenticated users secret with the given name
-func (c *Client) DeleteSecretByName(ctx context.Context, name string, opts *ReqOptions) error {
-	if opts == nil {
-		opts = DefaultReqOptions
-	}
-	user, err := c.UserByEmail(ctx, opts.User)
-	if err != nil {
-		return err
-	}
-	id, err := c.secretNameToID(ctx, name, opts)
+func (c *Client) DeleteSecretByName(ctx context.Context, name string, user *User) error {
+	id, err := c.secretNameToID(ctx, name, user)
 	if err != nil {
 		return err
 	}

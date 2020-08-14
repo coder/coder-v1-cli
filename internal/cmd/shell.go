@@ -118,7 +118,7 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	conn, err := entClient.DialWsep(ctx, *env)
+	conn, err := entClient.DialWsep(ctx, env)
 	if err != nil {
 		return err
 	}

@@ -89,7 +89,7 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 }
 
 func (s Sync) remoteCmd(ctx context.Context, prog string, args ...string) error {
-	conn, err := s.Client.DialWsep(ctx, s.Env)
+	conn, err := s.Client.DialWsep(ctx, &s.Env)
 	if err != nil {
 		return err
 	}
@@ -270,7 +270,7 @@ func (s Sync) Version() (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	conn, err := s.Client.DialWsep(ctx, s.Env)
+	conn, err := s.Client.DialWsep(ctx, &s.Env)
 	if err != nil {
 		return "", err
 	}

@@ -47,7 +47,7 @@ func makeSecretsCmd() *cobra.Command {
 	return cmd
 }
 
-func makeCreateSecret(user *string) *cobra.Command {
+func makeCreateSecret(userEmail *string) *cobra.Command {
 	var (
 		fromFile    string
 		fromLiteral string
@@ -109,12 +109,14 @@ coder secrets create aws-credentials --from-file ./credentials.json`,
 				}
 			}
 
-			err = client.InsertSecret(cmd.Context(), entclient.InsertSecretReq{
+			user, err := client.UserByEmail(cmd.Context(), *userEmail)
+			if err != nil {
+				return xerrors.Errorf("get user %q by email: %w", *userEmail, err)
+			}
+			err = client.InsertSecret(cmd.Context(), user, entclient.InsertSecretReq{
 				Name:        name,
 				Value:       value,
 				Description: description,
-			}, &entclient.ReqOptions{
-				User: *user,
 			})
 			if err != nil {
 				return xerrors.Errorf("insert secret: %w", err)
@@ -131,13 +133,15 @@ coder secrets create aws-credentials --from-file ./credentials.json`,
 	return cmd
 }
 
-func listSecrets(user *string) func(cmd *cobra.Command, _ []string) error {
+func listSecrets(userEmail *string) func(cmd *cobra.Command, _ []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
 		client := requireAuth()
+		user, err := client.UserByEmail(cmd.Context(), *userEmail)
+		if err != nil {
+			return xerrors.Errorf("get user %q by email: %w", *userEmail, err)
+		}
 
-		secrets, err := client.Secrets(cmd.Context(), &entclient.ReqOptions{
-			User: *user,
-		})
+		secrets, err := client.Secrets(cmd.Context(), user)
 		if err != nil {
 			return xerrors.Errorf("get secrets: %w", err)
 		}
@@ -159,19 +163,18 @@ func listSecrets(user *string) func(cmd *cobra.Command, _ []string) error {
 	}
 }
 
-func makeViewSecret(user *string) func(cmd *cobra.Command, args []string) error {
+func makeViewSecret(userEmail *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		var (
 			client = requireAuth()
 			name   = args[0]
 		)
-		if name == "" {
-			return xerrors.New("[name] is a required argument")
+		user, err := client.UserByEmail(cmd.Context(), *userEmail)
+		if err != nil {
+			return xerrors.Errorf("get user %q by email: %w", *userEmail, err)
 		}
 
-		secret, err := client.SecretByName(cmd.Context(), name, &entclient.ReqOptions{
-			User: *user,
-		})
+		secret, err := client.SecretByName(cmd.Context(), name, user)
 		if err != nil {
 			return xerrors.Errorf("get secret by name: %w", err)
 		}
@@ -184,20 +187,19 @@ func makeViewSecret(user *string) func(cmd *cobra.Command, args []string) error 
 	}
 }
 
-func makeRemoveSecrets(user *string) func(c *cobra.Command, args []string) error {
+func makeRemoveSecrets(userEmail *string) func(c *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		var (
 			client = requireAuth()
 		)
-		if len(args) < 1 {
-			return xerrors.New("[...secret_name] is a required argument")
+		user, err := client.UserByEmail(cmd.Context(), *userEmail)
+		if err != nil {
+			return xerrors.Errorf("get user %q by email: %w", *userEmail, err)
 		}
 
 		errorSeen := false
 		for _, n := range args {
-			err := client.DeleteSecretByName(cmd.Context(), n, &entclient.ReqOptions{
-				User: *user,
-			})
+			err := client.DeleteSecretByName(cmd.Context(), n, user)
 			if err != nil {
 				flog.Error("failed to delete secret %q: %v", n, err)
 				errorSeen = true
