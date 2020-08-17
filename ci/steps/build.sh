@@ -21,7 +21,8 @@ build(){
 		tar -czf "$tarname" coder
 	popd
 
-	cp "$tmpdir/$tarname" ../bin
+  mkdir -p ../bin
+	cp "$tmpdir/$tarname" ../bin/$tarname
 	rm -rf "$tmpdir"
 }
 
