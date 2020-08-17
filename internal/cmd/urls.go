@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"cdr.dev/coder-cli/internal/entclient"
+	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -28,7 +28,7 @@ func makeURLCmd() *cobra.Command {
 		Use:               "ls [environment_name]",
 		Short:             "List all DevURLs for an environment",
 		Args:              cobra.ExactArgs(1),
-		ValidArgsFunction: getEnvsForCompletion(entclient.Me),
+		ValidArgsFunction: getEnvsForCompletion(coder.Me),
 		RunE:              makeListDevURLs(&outputFmt),
 	}
 	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human|json")
@@ -155,7 +155,7 @@ func makeCreateDevURL() *cobra.Command {
 			}
 			entClient := requireAuth()
 
-			env, err := findEnv(cmd.Context(), entClient, envName, entclient.Me)
+			env, err := findEnv(cmd.Context(), entClient, envName, coder.Me)
 			if err != nil {
 				return err
 			}
@@ -220,7 +220,7 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 	}
 
 	entClient := requireAuth()
-	env, err := findEnv(cmd.Context(), entClient, envName, entclient.Me)
+	env, err := findEnv(cmd.Context(), entClient, envName, coder.Me)
 	if err != nil {
 		return err
 	}
@@ -247,7 +247,7 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 // urlList returns the list of active devURLs from the cemanager.
 func urlList(ctx context.Context, envName string) ([]DevURL, error) {
 	entClient := requireAuth()
-	env, err := findEnv(ctx, entClient, envName, entclient.Me)
+	env, err := findEnv(ctx, entClient, envName, coder.Me)
 	if err != nil {
 		return nil, err
 	}

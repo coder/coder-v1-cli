@@ -3,18 +3,17 @@ package cmd
 import (
 	"context"
 
+	"cdr.dev/coder-cli/coder-sdk"
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
-
-	"cdr.dev/coder-cli/internal/entclient"
 )
 
 // Helpers for working with the Coder Enterprise API.
 
 // userOrgs gets a list of orgs the user is apart of.
-func userOrgs(user *entclient.User, orgs []entclient.Org) []entclient.Org {
-	var uo []entclient.Org
+func userOrgs(user *coder.User, orgs []coder.Org) []coder.Org {
+	var uo []coder.Org
 outer:
 	for _, org := range orgs {
 		for _, member := range org.Members {
@@ -29,7 +28,7 @@ outer:
 }
 
 // getEnvs returns all environments for the user.
-func getEnvs(ctx context.Context, client *entclient.Client, email string) ([]entclient.Environment, error) {
+func getEnvs(ctx context.Context, client *coder.Client, email string) ([]coder.Environment, error) {
 	user, err := client.UserByEmail(ctx, email)
 	if err != nil {
 		return nil, xerrors.Errorf("get user: %+v", err)
@@ -42,10 +41,10 @@ func getEnvs(ctx context.Context, client *entclient.Client, email string) ([]ent
 
 	orgs = userOrgs(user, orgs)
 
-	var allEnvs []entclient.Environment
+	var allEnvs []coder.Environment
 
 	for _, org := range orgs {
-		envs, err := client.Envs(ctx, user, org)
+		envs, err := client.EnvironmentsByOrganization(ctx, user.ID, org.ID)
 		if err != nil {
 			return nil, xerrors.Errorf("get envs for %v: %+v", org.Name, err)
 		}
@@ -58,7 +57,7 @@ func getEnvs(ctx context.Context, client *entclient.Client, email string) ([]ent
 }
 
 // findEnv returns a single environment by name (if it exists.)
-func findEnv(ctx context.Context, client *entclient.Client, envName, userEmail string) (*entclient.Environment, error) {
+func findEnv(ctx context.Context, client *coder.Client, envName, userEmail string) (*coder.Environment, error) {
 	envs, err := getEnvs(ctx, client, userEmail)
 	if err != nil {
 		return nil, xerrors.Errorf("get environments: %w", err)

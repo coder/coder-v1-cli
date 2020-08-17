@@ -1,4 +1,4 @@
-package entclient
+package coder
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type delDevURLRequest struct {
 func (c Client) DelDevURL(ctx context.Context, envID, urlID string) error {
 	reqURL := fmt.Sprintf("/api/environments/%s/devurls/%s", envID, urlID)
 
-	res, err := c.request(ctx, "DELETE", reqURL, delDevURLRequest{
+	res, err := c.request(ctx, http.MethodDelete, reqURL, delDevURLRequest{
 		EnvID:    envID,
 		DevURLID: urlID,
 	})
@@ -51,7 +51,7 @@ type createDevURLRequest struct {
 func (c Client) InsertDevURL(ctx context.Context, envID string, port int, name, access string) error {
 	reqURL := fmt.Sprintf("/api/environments/%s/devurls", envID)
 
-	res, err := c.request(ctx, "POST", reqURL, createDevURLRequest{
+	res, err := c.request(ctx, http.MethodPost, reqURL, createDevURLRequest{
 		EnvID:  envID,
 		Port:   port,
 		Access: access,
@@ -75,7 +75,7 @@ type updateDevURLRequest createDevURLRequest
 func (c Client) UpdateDevURL(ctx context.Context, envID, urlID string, port int, name, access string) error {
 	reqURL := fmt.Sprintf("/api/environments/%s/devurls/%s", envID, urlID)
 
-	res, err := c.request(ctx, "PUT", reqURL, updateDevURLRequest{
+	res, err := c.request(ctx, http.MethodPut, reqURL, updateDevURLRequest{
 		EnvID:  envID,
 		Port:   port,
 		Access: access,

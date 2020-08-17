@@ -1,7 +1,8 @@
-package entclient
+package coder
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"cdr.dev/coder-cli/internal/x/xjson"
@@ -33,12 +34,12 @@ type Environment struct {
 	AutoOffThreshold xjson.Duration `json:"auto_off_threshold" tab:"-"`
 }
 
-// Envs gets the list of environments owned by the authenticated user
-func (c Client) Envs(ctx context.Context, user *User, org Org) ([]Environment, error) {
+// EnvironmentsByOrganization gets the list of environments owned by the given user.
+func (c Client) EnvironmentsByOrganization(ctx context.Context, userID, orgID string) ([]Environment, error) {
 	var envs []Environment
 	err := c.requestBody(
 		ctx,
-		"GET", "/api/orgs/"+org.ID+"/members/"+user.ID+"/environments",
+		http.MethodGet, "/api/orgs/"+orgID+"/members/"+userID+"/environments",
 		nil,
 		&envs,
 	)
@@ -47,7 +48,7 @@ func (c Client) Envs(ctx context.Context, user *User, org Org) ([]Environment, e
 
 // DialWsep dials an environments command execution interface
 // See github.com/cdr/wsep for details
-func (c Client) DialWsep(ctx context.Context, env Environment) (*websocket.Conn, error) {
+func (c Client) DialWsep(ctx context.Context, env *Environment) (*websocket.Conn, error) {
 	u := c.copyURL()
 	if c.BaseURL.Scheme == "https" {
 		u.Scheme = "wss"

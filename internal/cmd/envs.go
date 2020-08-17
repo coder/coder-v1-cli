@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"cdr.dev/coder-cli/internal/entclient"
+	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -20,7 +20,7 @@ func makeEnvsCommand() *cobra.Command {
 		Short: "Interact with Coder environments",
 		Long:  "Perform operations on the Coder environments owned by the active user.",
 	}
-	cmd.PersistentFlags().StringVar(&user, "user", entclient.Me, "Specify the user whose resources to target")
+	cmd.PersistentFlags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 
 	lsCmd := &cobra.Command{
 		Use:   "ls",

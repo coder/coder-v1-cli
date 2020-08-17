@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"cdr.dev/coder-cli/coder-sdk"
 	"github.com/gorilla/websocket"
 	"github.com/rjeczalik/notify"
 	"golang.org/x/sync/semaphore"
@@ -24,7 +25,6 @@ import (
 	"go.coder.com/flog"
 
 	"cdr.dev/coder-cli/internal/activity"
-	"cdr.dev/coder-cli/internal/entclient"
 	"cdr.dev/wsep"
 )
 
@@ -39,8 +39,8 @@ type Sync struct {
 	// DisableMetrics disables activity metric pushing.
 	DisableMetrics bool
 
-	Env    entclient.Environment
-	Client *entclient.Client
+	Env    coder.Environment
+	Client *coder.Client
 }
 
 // See https://lxadm.com/Rsync_exit_codes#List_of_standard_rsync_exit_codes.
@@ -89,7 +89,7 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 }
 
 func (s Sync) remoteCmd(ctx context.Context, prog string, args ...string) error {
-	conn, err := s.Client.DialWsep(ctx, s.Env)
+	conn, err := s.Client.DialWsep(ctx, &s.Env)
 	if err != nil {
 		return err
 	}
@@ -270,7 +270,7 @@ func (s Sync) Version() (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	conn, err := s.Client.DialWsep(ctx, s.Env)
+	conn, err := s.Client.DialWsep(ctx, &s.Env)
 	if err != nil {
 		return "", err
 	}

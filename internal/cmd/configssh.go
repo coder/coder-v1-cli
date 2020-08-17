@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/config"
-	"cdr.dev/coder-cli/internal/entclient"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
@@ -85,19 +85,19 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			return nil
 		}
 
-		entClient := requireAuth()
+		client := requireAuth()
 
 		sshAvailable := isSSHAvailable(ctx)
 		if !sshAvailable {
 			return xerrors.New("SSH is disabled or not available for your Coder Enterprise deployment.")
 		}
 
-		user, err := entClient.Me(cmd.Context())
+		user, err := client.Me(cmd.Context())
 		if err != nil {
 			return xerrors.Errorf("fetch username: %w", err)
 		}
 
-		envs, err := getEnvs(cmd.Context(), entClient, entclient.Me)
+		envs, err := getEnvs(cmd.Context(), client, coder.Me)
 		if err != nil {
 			return err
 		}
@@ -122,7 +122,7 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 		if err != nil {
 			return xerrors.Errorf("write new configurations to ssh config file %q: %w", *configpath, err)
 		}
-		err = writeSSHKey(ctx, entClient)
+		err = writeSSHKey(ctx, client)
 		if err != nil {
 			return xerrors.Errorf("fetch and write ssh key: %w", err)
 		}
@@ -139,7 +139,7 @@ var (
 	privateKeyFilepath = filepath.Join(os.Getenv("HOME"), ".ssh", "coder_enterprise")
 )
 
-func writeSSHKey(ctx context.Context, client *entclient.Client) error {
+func writeSSHKey(ctx context.Context, client *coder.Client) error {
 	key, err := client.SSHKey(ctx)
 	if err != nil {
 		return err
@@ -147,7 +147,7 @@ func writeSSHKey(ctx context.Context, client *entclient.Client) error {
 	return ioutil.WriteFile(privateKeyFilepath, []byte(key.PrivateKey), 0400)
 }
 
-func makeNewConfigs(userName string, envs []entclient.Environment, startToken, startMsg, endToken string) (string, error) {
+func makeNewConfigs(userName string, envs []coder.Environment, startToken, startMsg, endToken string) (string, error) {
 	hostname, err := configuredHostname()
 	if err != nil {
 		return "", nil

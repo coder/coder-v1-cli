@@ -3,15 +3,15 @@ package cmd
 import (
 	"net/url"
 
+	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/config"
-	"cdr.dev/coder-cli/internal/entclient"
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
 
 // requireAuth exits the process with a nonzero exit code if the user is not authenticated to make requests
-func requireAuth() *entclient.Client {
+func requireAuth() *coder.Client {
 	client, err := newClient()
 	if err != nil {
 		flog.Fatal("%v", err)
@@ -19,7 +19,7 @@ func requireAuth() *entclient.Client {
 	return client
 }
 
-func newClient() (*entclient.Client, error) {
+func newClient() (*coder.Client, error) {
 	sessionToken, err := config.Session.Read()
 	if err != nil {
 		return nil, xerrors.Errorf("read session: %v (did you run coder login?)", err)
@@ -35,7 +35,7 @@ func newClient() (*entclient.Client, error) {
 		return nil, xerrors.Errorf("url misformatted: %v (try runing coder login)", err)
 	}
 
-	client := &entclient.Client{
+	client := &coder.Client{
 		BaseURL: u,
 		Token:   sessionToken,
 	}

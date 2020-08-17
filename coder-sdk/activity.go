@@ -1,13 +1,13 @@
-package entclient
+package coder
 
 import (
 	"context"
 	"net/http"
 )
 
-// PushActivity pushes CLI activity to Coder
+// PushActivity pushes CLI activity to Coder.
 func (c Client) PushActivity(ctx context.Context, source string, envID string) error {
-	res, err := c.request(ctx, "POST", "/api/metrics/usage/push", map[string]string{
+	res, err := c.request(ctx, http.MethodPost, "/api/metrics/usage/push", map[string]string{
 		"source":         source,
 		"environment_id": envID,
 	})
@@ -18,6 +18,5 @@ func (c Client) PushActivity(ctx context.Context, source string, envID string) e
 	if res.StatusCode != http.StatusOK {
 		return bodyError(res)
 	}
-
 	return nil
 }
