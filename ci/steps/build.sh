@@ -29,8 +29,8 @@ build(){
 # Darwin builds do not work from Linux, so only try to build them from Darwin.
 # See: https://github.com/cdr/coder-cli/issues/20
 if [[ "$(uname)" == "Darwin" ]]; then
-	GOOS=linux build
 	CGO_ENABLED=1 GOOS=darwin build
+	GOOS=linux build
 	GOOS=windows GOARCH=386 build
 	exit 0
 fi
@@ -38,3 +38,4 @@ fi
 echo "Warning: Darwin builds don't work on Linux."
 echo "Please use an OSX machine to build Darwin tars."
 GOOS=linux build
+GOOS=windows GOARCH=386 build
