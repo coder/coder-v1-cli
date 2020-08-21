@@ -85,7 +85,7 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			return nil
 		}
 
-		client := requireAuth()
+		client := RequireAuth()
 
 		sshAvailable := isSSHAvailable(ctx)
 		if !sshAvailable {

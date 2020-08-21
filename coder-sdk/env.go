@@ -2,7 +2,9 @@ package coder
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"nhooyr.io/websocket/wsjson"
 	"time"
 
 	"cdr.dev/coder-cli/internal/x/xjson"
@@ -74,4 +76,123 @@ func (c Client) DialWsep(ctx context.Context, env *Environment) (*websocket.Conn
 		return nil, err
 	}
 	return conn, nil
+}
+
+type CreateEnvironmentRequest struct {
+	Name     string   `json:"name"`
+	ImageID  string   `json:"image_id"`
+	ImageTag string   `json:"image_tag"`
+	CPUCores float32  `json:"cpu_cores"`
+	MemoryGB int      `json:"memory_gb"`
+	DiskGB   int      `json:"disk_gb"`
+	GPUs     int      `json:"gpus"` // can be set to 0
+	Services []string `json:"services"`
+}
+
+func (c Client) CreateEnvironment(ctx context.Context, orgID string, req CreateEnvironmentRequest) (Environment, error) {
+	var env Environment
+	err := c.requestBody(
+		ctx,
+		http.MethodPost, "/api/orgs/"+orgID+"/environments",
+		req,
+		&env,
+	)
+	return env, err
+}
+
+type envUpdate struct {
+	Type string `json:"type"`
+}
+
+func (c Client) WaitForEnvironmentReady(ctx context.Context, envID string) error {
+	u := c.copyURL()
+	if c.BaseURL.Scheme == "https" {
+		u.Scheme = "wss"
+	} else {
+		u.Scheme = "ws"
+	}
+	u.Path = "/api/environments/" + envID + "/watch-update"
+
+	conn, resp, err := websocket.Dial(ctx, u.String(),
+		&websocket.DialOptions{
+			HTTPHeader: map[string][]string{
+				"Cookie": {"session_token=" + c.Token},
+			},
+		},
+	)
+	if err != nil {
+		if resp != nil {
+			return bodyError(resp)
+		}
+		return err
+	}
+
+	for {
+		m := envUpdate{}
+		err = wsjson.Read(ctx, conn, &m)
+		if err != nil {
+			return fmt.Errorf("read ws json msg: %w", err)
+		}
+		if m.Type == "done" {
+			break
+		}
+	}
+
+	return nil
+}
+
+type stats struct {
+	ContainerStatus string `json:"container_status"`
+	StatError       string `json:"stat_error"`
+	Time            string `json:"time"`
+}
+
+func (c Client) WatchEnvironmentStats(ctx context.Context, envID string, duration time.Duration) error {
+	u := c.copyURL()
+	if c.BaseURL.Scheme == "https" {
+		u.Scheme = "wss"
+	} else {
+		u.Scheme = "ws"
+	}
+	u.Path = "/api/environments/" + envID + "/watch-stats"
+
+	conn, resp, err := websocket.Dial(ctx, u.String(),
+		&websocket.DialOptions{
+			HTTPHeader: map[string][]string{
+				"Cookie": {"session_token=" + c.Token},
+			},
+		},
+	)
+	if err != nil {
+		if resp != nil {
+			return bodyError(resp)
+		}
+		return err
+	}
+
+	statsCtx, statsCancel := context.WithTimeout(ctx, duration)
+	defer statsCancel()
+
+	for {
+		select {
+		case <-statsCtx.Done():
+			return nil
+		default:
+			m := stats{}
+			err = wsjson.Read(ctx, conn, &m)
+			if err != nil {
+				return fmt.Errorf("read ws json msg: %w", err)
+			}
+		}
+	}
+}
+
+func (c Client) DeleteEnvironment(ctx context.Context, envID string) error {
+	err := c.requestBody(
+		ctx,
+		http.MethodDelete, "/api/environments/" + envID,
+		nil,
+		nil,
+	)
+	return err
 }

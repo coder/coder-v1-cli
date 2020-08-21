@@ -10,8 +10,8 @@ import (
 	"go.coder.com/flog"
 )
 
-// requireAuth exits the process with a nonzero exit code if the user is not authenticated to make requests
-func requireAuth() *coder.Client {
+// RequireAuth exits the process with a nonzero exit code if the user is not authenticated to make requests
+func RequireAuth() *coder.Client {
 	client, err := newClient()
 	if err != nil {
 		flog.Fatal("%v", err)

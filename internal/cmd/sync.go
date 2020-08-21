@@ -52,7 +52,7 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 			remote = args[1]
 		)
 
-		entClient := requireAuth()
+		entClient := RequireAuth()
 
 		info, err := os.Stat(local)
 		if err != nil {

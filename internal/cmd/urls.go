@@ -153,7 +153,7 @@ func makeCreateDevURL() *cobra.Command {
 			if urlname != "" && !devURLNameValidRx.MatchString(urlname) {
 				return xerrors.New("update devurl: name must be < 64 chars in length, begin with a letter and only contain letters or digits.")
 			}
-			entClient := requireAuth()
+			entClient := RequireAuth()
 
 			env, err := findEnv(cmd.Context(), entClient, envName, coder.Me)
 			if err != nil {
@@ -219,7 +219,7 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 		return xerrors.Errorf("validate port: %w", err)
 	}
 
-	entClient := requireAuth()
+	entClient := RequireAuth()
 	env, err := findEnv(cmd.Context(), entClient, envName, coder.Me)
 	if err != nil {
 		return err
@@ -246,7 +246,7 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 
 // urlList returns the list of active devURLs from the cemanager.
 func urlList(ctx context.Context, envName string) ([]DevURL, error) {
-	entClient := requireAuth()
+	entClient := RequireAuth()
 	env, err := findEnv(ctx, entClient, envName, coder.Me)
 	if err != nil {
 		return nil, err

@@ -73,3 +73,5 @@ func (c Client) UserByEmail(ctx context.Context, email string) (*User, error) {
 	}
 	return nil, ErrNotFound
 }
+
+

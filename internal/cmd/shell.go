@@ -97,7 +97,7 @@ func sendResizeEvents(ctx context.Context, termfd uintptr, process wsep.Process)
 
 func runCommand(ctx context.Context, envName string, command string, args []string) error {
 	var (
-		entClient = requireAuth()
+		entClient = RequireAuth()
 	)
 	env, err := findEnv(ctx, entClient, envName, coder.Me)
 	if err != nil {
