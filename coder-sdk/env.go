@@ -34,6 +34,30 @@ type Environment struct {
 	AutoOffThreshold xjson.Duration `json:"auto_off_threshold" tab:"-"`
 }
 
+// CreateEnvironmentRequest is used to configure a new environment
+type CreateEnvironmentRequest struct {
+	Name     string   `json:"name"`
+	ImageID  string   `json:"image_id"`
+	ImageTag string   `json:"image_tag"`
+	CPUCores float32  `json:"cpu_cores"`
+	MemoryGB int      `json:"memory_gb"`
+	DiskGB   int      `json:"disk_gb"`
+	GPUs     int      `json:"gpus"`
+	Services []string `json:"services"`
+}
+
+// CreateEnvironment sends a request to create an environment.
+func (c Client) CreateEnvironment(ctx context.Context, orgID string, req CreateEnvironmentRequest) (*Environment, error) {
+	var env *Environment
+	err := c.requestBody(
+		ctx,
+		http.MethodPost, "/api/orgs/"+orgID+"/environments",
+		req,
+		env,
+	)
+	return env, err
+}
+
 // EnvironmentsByOrganization gets the list of environments owned by the given user.
 func (c Client) EnvironmentsByOrganization(ctx context.Context, userID, orgID string) ([]Environment, error) {
 	var envs []Environment
@@ -46,32 +70,28 @@ func (c Client) EnvironmentsByOrganization(ctx context.Context, userID, orgID st
 	return envs, err
 }
 
+// DeleteEnvironment deletes the environment.
+func (c Client) DeleteEnvironment(ctx context.Context, envID string) error {
+	return c.requestBody(
+		ctx,
+		http.MethodDelete, "/api/environments/"+envID,
+		nil,
+		nil,
+	)
+}
+
 // DialWsep dials an environments command execution interface
 // See github.com/cdr/wsep for details
 func (c Client) DialWsep(ctx context.Context, env *Environment) (*websocket.Conn, error) {
-	u := c.copyURL()
-	if c.BaseURL.Scheme == "https" {
-		u.Scheme = "wss"
-	} else {
-		u.Scheme = "ws"
-	}
-	u.Path = "/proxy/environments/" + env.ID + "/wsep"
+	return c.dialWs(ctx, "/proxy/environments/"+env.ID+"/wsep")
+}
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second*15)
-	defer cancel()
+// DialEnvironmentBuildLog opens a websocket connection for the environment build log messages
+func (c Client) DialEnvironmentBuildLog(ctx context.Context, envID string) (*websocket.Conn, error) {
+	return c.dialWs(ctx, "/api/environments/"+envID+"/watch-update")
+}
 
-	conn, resp, err := websocket.Dial(ctx, u.String(),
-		&websocket.DialOptions{
-			HTTPHeader: map[string][]string{
-				"Cookie": {"session_token=" + c.Token},
-			},
-		},
-	)
-	if err != nil {
-		if resp != nil {
-			return nil, bodyError(resp)
-		}
-		return nil, err
-	}
-	return conn, nil
+// DialEnvironmentStats opens a websocket connection for environment stats
+func (c Client) DialEnvironmentStats(ctx context.Context, envID string) (*websocket.Conn, error) {
+	return c.dialWs(ctx, "/api/environments/"+envID+"/watch-stats")
 }
