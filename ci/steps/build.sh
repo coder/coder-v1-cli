@@ -10,8 +10,6 @@ cd "$(dirname "$0")"
 export GOARCH=amd64
 tag=$(git describe --tags)
 
-mkdir -p bin
-
 build(){
 	tmpdir=$(mktemp -d)
 	go build -ldflags "-X main.version=${tag}" -o "$tmpdir/coder" ../../cmd/coder
