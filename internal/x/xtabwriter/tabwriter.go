@@ -25,7 +25,7 @@ func StructValues(data interface{}) string {
 		if shouldHideField(v.Type().Field(i)) {
 			continue
 		}
-		s.WriteString(fmt.Sprintf("%v\t", v.Field(i).Interface()))
+		fmt.Fprintf(s, "%v\t", v.Field(i).Interface())
 	}
 	return s.String()
 }
@@ -41,7 +41,7 @@ func StructFieldNames(data interface{}) string {
 		if shouldHideField(field) {
 			continue
 		}
-		s.WriteString(fmt.Sprintf("%s\t", field.Name))
+		fmt.Fprintf(s, "%s\t", fieldName(field))
 	}
 	return s.String()
 }
@@ -70,6 +70,14 @@ func WriteTable(length int, each func(i int) interface{}) error {
 		}
 	}
 	return nil
+}
+
+func fieldName(f reflect.StructField) string {
+	custom, ok := f.Tag.Lookup(structFieldTagKey)
+	if ok {
+		return custom
+	}
+	return f.Name
 }
 
 func shouldHideField(f reflect.StructField) bool {
