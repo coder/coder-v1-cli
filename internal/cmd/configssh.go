@@ -127,8 +127,8 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			return xerrors.Errorf("fetch and write ssh key: %w", err)
 		}
 
-		fmt.Printf("An auto-generated ssh config was written to %q\n", *configpath)
-		fmt.Printf("Your private ssh key was written to %q\n", privateKeyFilepath)
+		fmt.Printf("An auto-generated ssh config was written to \"%s\"\n", *configpath)
+		fmt.Printf("Your private ssh key was written to \"%s\"\n", privateKeyFilepath)
 		fmt.Println("You should now be able to ssh into your environment")
 		fmt.Printf("For example, try running\n\n\t$ ssh coder.%s\n\n", envs[0].Name)
 		return nil
