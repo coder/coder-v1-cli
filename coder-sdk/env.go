@@ -11,18 +11,19 @@ import (
 
 // Environment describes a Coder environment
 type Environment struct {
-	ID              string    `json:"id" tab:"-"`
-	Name            string    `json:"name"`
-	ImageID         string    `json:"image_id" tab:"-"`
-	ImageTag        string    `json:"image_tag"`
-	OrganizationID  string    `json:"organization_id" tab:"-"`
-	UserID          string    `json:"user_id" tab:"-"`
-	LastBuiltAt     time.Time `json:"last_built_at" tab:"-"`
-	CPUCores        float32   `json:"cpu_cores"`
-	MemoryGB        int       `json:"memory_gb"`
-	DiskGB          int       `json:"disk_gb"`
-	GPUs            int       `json:"gpus"`
-	Updating        bool      `json:"updating"`
+	ID              string          `json:"id" tab:"-"`
+	Name            string          `json:"name"`
+	ImageID         string          `json:"image_id" tab:"-"`
+	ImageTag        string          `json:"image_tag"`
+	OrganizationID  string          `json:"organization_id" tab:"-"`
+	UserID          string          `json:"user_id" tab:"-"`
+	LastBuiltAt     time.Time       `json:"last_built_at" tab:"-"`
+	CPUCores        float32         `json:"cpu_cores"`
+	MemoryGB        int             `json:"memory_gb"`
+	DiskGB          int             `json:"disk_gb"`
+	GPUs            int             `json:"gpus"`
+	Updating        bool            `json:"updating"`
+	LatestStat      EnvironmentStat `json:"latest_stat" tab:"Status"`
 	RebuildMessages []struct {
 		Text     string `json:"text"`
 		Required bool   `json:"required"`
@@ -33,6 +34,35 @@ type Environment struct {
 	LastConnectionAt time.Time      `json:"last_connection_at" tab:"-"`
 	AutoOffThreshold xjson.Duration `json:"auto_off_threshold" tab:"-"`
 }
+
+// EnvironmentStat represents the state of an environment
+type EnvironmentStat struct {
+	Time            time.Time         `json:"time"`
+	LastOnline      time.Time         `json:"last_online"`
+	ContainerStatus EnvironmentStatus `json:"container_status"`
+	StatError       string            `json:"stat_error"`
+	CPUUsage        float32           `json:"cpu_usage"`
+	MemoryTotal     int64             `json:"memory_total"`
+	MemoryUsage     float32           `json:"memory_usage"`
+	DiskTotal       int64             `json:"disk_total"`
+	DiskUsed        int64             `json:"disk_used"`
+}
+
+func (e EnvironmentStat) String() string {
+	return string(e.ContainerStatus)
+}
+
+// EnvironmentStatus refers to the states of an environment.
+type EnvironmentStatus string
+
+// The following represent the possible environment container states
+const (
+	EnvironmentCreating EnvironmentStatus = "CREATING"
+	EnvironmentOff      EnvironmentStatus = "OFF"
+	EnvironmentOn       EnvironmentStatus = "ON"
+	EnvironmentFailed   EnvironmentStatus = "FAILED"
+	EnvironmentUnknown  EnvironmentStatus = "UNKNOWN"
+)
 
 // CreateEnvironmentRequest is used to configure a new environment
 type CreateEnvironmentRequest struct {
