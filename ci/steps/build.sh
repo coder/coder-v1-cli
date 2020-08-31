@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Make pushd and popd silent
-pushd () { builtin pushd "$@" > /dev/null ; }
-popd () { builtin popd > /dev/null ; }
+pushd() { builtin pushd "$@" >/dev/null; }
+popd() { builtin popd >/dev/null; }
 
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -10,17 +10,23 @@ cd "$(dirname "$0")"
 export GOARCH=amd64
 tag=$(git describe --tags)
 
-build(){
+build() {
 	tmpdir=$(mktemp -d)
 	go build -ldflags "-X main.version=${tag}" -o "$tmpdir/coder" ../../cmd/coder
 
 	pushd "$tmpdir"
-		tarname="coder-cli-$GOOS-$GOARCH.tar.gz"
-		tar -czf "$tarname" coder
+	if [[ "$GOOS" == "windows" ]]; then
+		artifact="coder-cli-$GOOS-$GOARCH.zip"
+		mv coder coder.exe
+		zip "$artifact" coder.exe
+	else
+		artifact="coder-cli-$GOOS-$GOARCH.tar.gz"
+		tar -czf "$artifact" coder
+	fi
 	popd
 
-  mkdir -p ../bin
-	cp "$tmpdir/$tarname" ../bin/$tarname
+	mkdir -p ../bin
+	cp "$tmpdir/$artifact" ../bin/$artifact
 	rm -rf "$tmpdir"
 }
 
