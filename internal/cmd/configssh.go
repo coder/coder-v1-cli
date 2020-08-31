@@ -52,11 +52,14 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
+		usr, err := user.Current()
+		if err != nil {
+			return xerrors.Errorf("get user home directory: %w", err)
+		}
+
+		privateKeyFilepath := filepath.Join(usr.HomeDir, ".ssh", "coder_enterprise")
+
 		if strings.HasPrefix(*configpath, "~") {
-			usr, err := user.Current()
-			if err != nil {
-				return xerrors.Errorf("get user home directory: %w", err)
-			}
 			*configpath = strings.Replace(*configpath, "~", usr.HomeDir, 1)
 		}
 
@@ -104,7 +107,7 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 		if len(envs) < 1 {
 			return xerrors.New("no environments found")
 		}
-		newConfig, err := makeNewConfigs(user.Username, envs, startToken, startMessage, endToken)
+		newConfig, err := makeNewConfigs(user.Username, envs, startToken, startMessage, endToken, privateKeyFilepath)
 		if err != nil {
 			return xerrors.Errorf("make new ssh configurations: %w", err)
 		}
@@ -122,7 +125,7 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 		if err != nil {
 			return xerrors.Errorf("write new configurations to ssh config file %q: %w", *configpath, err)
 		}
-		err = writeSSHKey(ctx, client)
+		err = writeSSHKey(ctx, client, privateKeyFilepath)
 		if err != nil {
 			return xerrors.Errorf("fetch and write ssh key: %w", err)
 		}
@@ -135,19 +138,15 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 	}
 }
 
-var (
-	privateKeyFilepath = filepath.Join(os.Getenv("HOME"), ".ssh", "coder_enterprise")
-)
-
-func writeSSHKey(ctx context.Context, client *coder.Client) error {
+func writeSSHKey(ctx context.Context, client *coder.Client, privateKeyPath string) error {
 	key, err := client.SSHKey(ctx)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(privateKeyFilepath, []byte(key.PrivateKey), 0400)
+	return ioutil.WriteFile(privateKeyPath, []byte(key.PrivateKey), 0400)
 }
 
-func makeNewConfigs(userName string, envs []coder.Environment, startToken, startMsg, endToken string) (string, error) {
+func makeNewConfigs(userName string, envs []coder.Environment, startToken, startMsg, endToken, privateKeyFilepath string) (string, error) {
 	hostname, err := configuredHostname()
 	if err != nil {
 		return "", nil
@@ -155,14 +154,14 @@ func makeNewConfigs(userName string, envs []coder.Environment, startToken, start
 
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", startToken, startMsg)
 	for _, env := range envs {
-		newConfig += makeSSHConfig(hostname, userName, env.Name)
+		newConfig += makeSSHConfig(hostname, userName, env.Name, privateKeyFilepath)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", endToken)
 
 	return newConfig, nil
 }
 
-func makeSSHConfig(host, userName, envName string) string {
+func makeSSHConfig(host, userName, envName, privateKeyFilepath string) string {
 	return fmt.Sprintf(
 		`Host coder.%s
    HostName %s
