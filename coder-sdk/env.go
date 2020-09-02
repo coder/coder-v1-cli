@@ -76,16 +76,28 @@ type CreateEnvironmentRequest struct {
 	Services []string `json:"services"`
 }
 
+// EnvironmentByName gets a single environment environment for the authenticted user by name.
+func (c Client) EnvironmentByName(ctx context.Context, name string) (*Environment, error) {
+	var env Environment
+	err := c.requestBody(
+		ctx,
+		http.MethodGet, "/api/environments/"+name,
+		nil,
+		&env,
+	)
+	return &env, err
+}
+
 // CreateEnvironment sends a request to create an environment.
 func (c Client) CreateEnvironment(ctx context.Context, orgID string, req CreateEnvironmentRequest) (*Environment, error) {
-	var env *Environment
+	var env Environment
 	err := c.requestBody(
 		ctx,
 		http.MethodPost, "/api/orgs/"+orgID+"/environments",
 		req,
-		env,
+		&env,
 	)
-	return env, err
+	return &env, err
 }
 
 // EnvironmentsByOrganization gets the list of environments owned by the given user.

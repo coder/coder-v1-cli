@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -142,11 +143,7 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 		Env:     cmdEnv,
 	})
 	if err != nil {
-		var closeErr websocket.CloseError
-		if xerrors.As(err, &closeErr) {
-			return xerrors.Errorf("network error, is %q online?", envName)
-		}
-		return err
+		return prettyShellExitError(ctx, err, entClient, env.Name)
 	}
 
 	if tty {
@@ -178,13 +175,34 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	}()
 	err = process.Wait()
 	if err != nil {
-		var closeErr websocket.CloseError
-		if xerrors.Is(err, ctx.Err()) || xerrors.As(err, &closeErr) {
-			return xerrors.Errorf("network error, is %q online?", envName)
-		}
-		return err
+		return prettyShellExitError(ctx, err, entClient, env.Name)
 	}
 	return nil
+}
+
+func prettyShellExitError(ctx context.Context, err error, client *coder.Client, envName string) error {
+	var closeErr websocket.CloseError
+	if xerrors.Is(err, ctx.Err()) || xerrors.As(err, &closeErr) {
+		if err != nil {
+			return xerrors.Errorf("network error, %s", envErrorMessage(ctx, client, envName))
+		}
+	}
+	return err
+}
+
+func envErrorMessage(ctx context.Context, client *coder.Client, envName string) string {
+	env, err := client.EnvironmentByName(ctx, envName)
+	if err != nil {
+		return fmt.Sprintf("failed to fetch environment status: %v", err)
+	}
+	if env.LatestStat.ContainerStatus == "" {
+		return "environment status not found"
+	}
+	if env.LatestStat.ContainerStatus == coder.EnvironmentOn {
+		return fmt.Sprintf(`environment status is "%s", please try again`, env.LatestStat.ContainerStatus)
+	}
+
+	return fmt.Sprintf(`environment "%s" has a status of "%s"`, envName, env.LatestStat.ContainerStatus)
 }
 
 func heartbeat(ctx context.Context, c *websocket.Conn, interval time.Duration) {
