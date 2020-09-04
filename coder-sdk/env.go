@@ -2,11 +2,11 @@ package coder
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
 	"cdr.dev/coder-cli/internal/x/xjson"
+	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
 )
@@ -138,25 +138,45 @@ func (c Client) DialResourceLoad(ctx context.Context, envID string) (*websocket.
 	return c.dialWs(ctx, "/api/environments/"+envID+"/watch-resource-load")
 }
 
+// BuildLogType describes the type of an event.
+type BuildLogType string
+
+const (
+	// BuildLogTypeStart signals that a new build log has begun.
+	BuildLogTypeStart BuildLogType = "start"
+	// BuildLogTypeStage is a stage-level event for an environment.
+	// It can be thought of as a major step in the environment's
+	// lifecycle.
+	BuildLogTypeStage BuildLogType = "stage"
+	// BuildLogTypeError describes an error that has occurred.
+	BuildLogTypeError BuildLogType = "error"
+	// BuildLogTypeSubstage describes a subevent that occurs as
+	// part of a stage. This can be the output from a user's
+	// personalization script, or a long running command.
+	BuildLogTypeSubstage BuildLogType = "substage"
+	// BuildLogTypeDone signals that the build has completed.
+	BuildLogTypeDone BuildLogType = "done"
+)
+
 type buildLogMsg struct {
-	Type string `json:"type"`
+	Type BuildLogType `json:"type"`
 }
 
 // WaitForEnvironmentReady will watch the build log and return when done
 func (c Client) WaitForEnvironmentReady(ctx context.Context, env *Environment) error {
 	conn, err := c.DialEnvironmentBuildLog(ctx, env.ID)
 	if err != nil {
-		return fmt.Errorf("%s: dial build log: %w", env.Name, err)
+		return xerrors.Errorf("%s: dial build log: %w", env.Name, err)
 	}
 
 	for {
 		msg := buildLogMsg{}
 		err := wsjson.Read(ctx, conn, &msg)
 		if err != nil {
-			return fmt.Errorf("%s: reading build log msg: %w", env.Name, err)
+			return xerrors.Errorf("%s: reading build log msg: %w", env.Name, err)
 		}
 
-		if msg.Type == "done" {
+		if msg.Type == BuildLogTypeDone {
 			return nil
 		}
 	}
