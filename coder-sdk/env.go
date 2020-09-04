@@ -2,11 +2,13 @@ package coder
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
 	"cdr.dev/coder-cli/internal/x/xjson"
 	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 )
 
 // Environment describes a Coder environment
@@ -134,4 +136,28 @@ func (c Client) DialEnvironmentStats(ctx context.Context, envID string) (*websoc
 // DialResourceLoad opens a websocket connection for cpu load metrics on the environment
 func (c Client) DialResourceLoad(ctx context.Context, envID string) (*websocket.Conn, error) {
 	return c.dialWs(ctx, "/api/environments/"+envID+"/watch-resource-load")
+}
+
+type buildLogMsg struct {
+	Type string `json:"type"`
+}
+
+// WaitForEnvironmentReady will watch the build log and return when done
+func (c Client) WaitForEnvironmentReady(ctx context.Context, env *Environment) error {
+	conn, err := c.DialEnvironmentBuildLog(ctx, env.ID)
+	if err != nil {
+		return fmt.Errorf("%s: dial build log: %w", env.Name, err)
+	}
+
+	for {
+		msg := buildLogMsg{}
+		err := wsjson.Read(ctx, conn, &msg)
+		if err != nil {
+			return fmt.Errorf("%s: reading build log msg: %w", env.Name, err)
+		}
+
+		if msg.Type == "done" {
+			return nil
+		}
+	}
 }
