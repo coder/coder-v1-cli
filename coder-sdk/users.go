@@ -8,11 +8,11 @@ import (
 
 // User describes a Coder user account.
 type User struct {
-	ID        string    `json:"id" tab:"-"`
-	Email     string    `json:"email"`
-	Username  string    `json:"username"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        string    `json:"id"         tab:"-"`
+	Email     string    `json:"email"      tab:"Email"`
+	Username  string    `json:"username"   tab:"Username"`
+	Name      string    `json:"name"       tab:"Name"`
+	CreatedAt time.Time `json:"created_at" tab:"CreatedAt"`
 	UpdatedAt time.Time `json:"updated_at" tab:"-"`
 }
 
