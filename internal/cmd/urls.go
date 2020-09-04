@@ -51,11 +51,11 @@ func makeURLCmd() *cobra.Command {
 
 // DevURL is the parsed json response record for a devURL from cemanager
 type DevURL struct {
-	ID     string `json:"id" tab:"-"`
-	URL    string `json:"url"`
-	Port   int    `json:"port"`
-	Name   string `json:"name" tab:"-"`
-	Access string `json:"access"`
+	ID     string `json:"id"     tab:"-"`
+	URL    string `json:"url"    tab:"URL"`
+	Port   int    `json:"port"   tab:"Port"`
+	Name   string `json:"name"   tab:"-"`
+	Access string `json:"access" tab:"Access"`
 }
 
 var urlAccessLevel = map[string]string{
