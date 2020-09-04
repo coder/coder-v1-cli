@@ -5,18 +5,23 @@ import (
 	"net/http"
 )
 
+type activityRequest struct {
+	Source        string `json:"source"`
+	EnvironmentID string `json:"environment_id"`
+}
+
 // PushActivity pushes CLI activity to Coder.
-func (c Client) PushActivity(ctx context.Context, source string, envID string) error {
-	res, err := c.request(ctx, http.MethodPost, "/api/metrics/usage/push", map[string]string{
-		"source":         source,
-		"environment_id": envID,
+func (c Client) PushActivity(ctx context.Context, source, envID string) error {
+	resp, err := c.request(ctx, http.MethodPost, "/api/metrics/usage/push", activityRequest{
+		Source:        source,
+		EnvironmentID: envID,
 	})
 	if err != nil {
 		return err
 	}
 
-	if res.StatusCode != http.StatusOK {
-		return bodyError(res)
+	if resp.StatusCode != http.StatusOK {
+		return bodyError(resp)
 	}
 	return nil
 }

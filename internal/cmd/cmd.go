@@ -31,7 +31,7 @@ func Make() *cobra.Command {
 }
 
 func genDocs(rootCmd *cobra.Command) *cobra.Command {
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:     "gen-docs [dir_path]",
 		Short:   "Generate a markdown documentation tree for the root command.",
 		Example: "coder gen-docs ./docs",
@@ -41,7 +41,6 @@ func genDocs(rootCmd *cobra.Command) *cobra.Command {
 			return doc.GenMarkdownTree(rootCmd, args[0])
 		},
 	}
-	return cmd
 }
 
 // reference: https://github.com/spf13/cobra/blob/master/shell_completions.md
@@ -92,13 +91,13 @@ $ coder completion fish > ~/.config/fish/completions/coder.fish
 	Run: func(cmd *cobra.Command, args []string) {
 		switch args[0] {
 		case "bash":
-			cmd.Root().GenBashCompletion(os.Stdout)
+			_ = cmd.Root().GenBashCompletion(os.Stdout) // Best effort.
 		case "zsh":
-			cmd.Root().GenZshCompletion(os.Stdout)
+			_ = cmd.Root().GenZshCompletion(os.Stdout) // Best effort.
 		case "fish":
-			cmd.Root().GenFishCompletion(os.Stdout, true)
+			_ = cmd.Root().GenFishCompletion(os.Stdout, true) // Best effort.
 		case "powershell":
-			cmd.Root().GenPowerShellCompletion(os.Stdout)
+			_ = cmd.Root().GenPowerShellCompletion(os.Stdout) // Best effort.
 		}
 	},
 }

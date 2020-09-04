@@ -10,10 +10,11 @@ import (
 	"strconv"
 	"strings"
 
-	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
+
+	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/x/xtabwriter"
 
 	"go.coder.com/flog"
 )
@@ -59,7 +60,7 @@ type DevURL struct {
 }
 
 var urlAccessLevel = map[string]string{
-	//Remote API endpoint requires these in uppercase
+	// Remote API endpoint requires these in uppercase.
 	"PRIVATE": "Only you can access",
 	"ORG":     "All members of your organization can access",
 	"AUTHED":  "Authenticated users can access",
@@ -73,10 +74,9 @@ func validatePort(port string) (int, error) {
 		return 0, err
 	}
 	if p < 1 {
-		// port 0 means 'any free port', which we don't support
-		err = strconv.ErrRange
+		// Port 0 means 'any free port', which we don't support.
 		flog.Error("Port must be > 0")
-		return 0, err
+		return 0, strconv.ErrRange
 	}
 	return int(p), nil
 }
@@ -112,8 +112,7 @@ func makeListDevURLs(outputFmt *string) func(cmd *cobra.Command, args []string) 
 				return xerrors.Errorf("write table: %w", err)
 			}
 		case "json":
-			err := json.NewEncoder(os.Stdout).Encode(devURLs)
-			if err != nil {
+			if err := json.NewEncoder(os.Stdout).Encode(devURLs); err != nil {
 				return xerrors.Errorf("encode DevURLs as json: %w", err)
 			}
 		default:
@@ -237,8 +236,7 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 		return xerrors.Errorf("No devurl found for port %v", port)
 	}
 
-	err = entClient.DelDevURL(cmd.Context(), env.ID, urlID)
-	if err != nil {
+	if err := entClient.DelDevURL(cmd.Context(), env.ID, urlID); err != nil {
 		return xerrors.Errorf("delete DevURL: %w", err)
 	}
 	return nil
@@ -259,17 +257,16 @@ func urlList(ctx context.Context, envName string) ([]DevURL, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }() // Best effort.
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, xerrors.Errorf("non-success status code: %d", resp.StatusCode)
 	}
 
 	dec := json.NewDecoder(resp.Body)
 
-	devURLs := make([]DevURL, 0)
-	err = dec.Decode(&devURLs)
-	if err != nil {
+	var devURLs []DevURL
+	if err := dec.Decode(&devURLs); err != nil {
 		return nil, err
 	}
 

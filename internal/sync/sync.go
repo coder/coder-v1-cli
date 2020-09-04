@@ -16,7 +16,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"github.com/gorilla/websocket"
 	"github.com/rjeczalik/notify"
 	"golang.org/x/sync/semaphore"
@@ -24,6 +23,7 @@ import (
 
 	"go.coder.com/flog"
 
+	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/activity"
 	"cdr.dev/wsep"
 )
@@ -72,8 +72,8 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = ioutil.Discard
 	cmd.Stdin = os.Stdin
-	err := cmd.Run()
-	if err != nil {
+
+	if err := cmd.Run(); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if exitError.ExitCode() == rsyncExitCodeIncompat {
 				return xerrors.Errorf("no compatible rsync on remote machine: rsync: %w", err)
@@ -91,9 +91,9 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 func (s Sync) remoteCmd(ctx context.Context, prog string, args ...string) error {
 	conn, err := s.Client.DialWsep(ctx, &s.Env)
 	if err != nil {
-		return err
+		return xerrors.Errorf("dial websocket: %w", err)
 	}
-	defer conn.Close(websocket.CloseNormalClosure, "")
+	defer func() { _ = conn.Close(websocket.CloseNormalClosure, "") }() // Best effort.
 
 	execer := wsep.RemoteExecer(conn)
 	process, err := execer.Start(ctx, wsep.Command{
@@ -101,34 +101,35 @@ func (s Sync) remoteCmd(ctx context.Context, prog string, args ...string) error 
 		Args:    args,
 	})
 	if err != nil {
-		return err
+		return xerrors.Errorf("exec remote process: %w", err)
 	}
-	go io.Copy(os.Stdout, process.Stderr())
-	go io.Copy(os.Stderr, process.Stdout())
+	// NOTE: If the copy routine fail, it will result in `process.Wait` to unblock and report an error.
+	go func() { _, _ = io.Copy(os.Stdout, process.Stdout()) }() // Best effort.
+	go func() { _, _ = io.Copy(os.Stderr, process.Stderr()) }() // Best effort.
 
-	err = process.Wait()
-	if code, ok := err.(wsep.ExitError); ok {
-		return fmt.Errorf("%s exit status: %v", prog, code)
-	}
-	if err != nil {
+	if err := process.Wait(); err != nil {
+		if code, ok := err.(wsep.ExitError); ok {
+			return xerrors.Errorf("%s exit status: %d", prog, code)
+		}
 		return xerrors.Errorf("execution failure: %w", err)
 	}
+
 	return nil
 }
 
 // initSync performs the initial synchronization of the directory.
 func (s Sync) initSync() error {
-	flog.Info("doing initial sync (%v -> %v)", s.LocalDir, s.RemoteDir)
+	flog.Info("doing initial sync (%s -> %s)", s.LocalDir, s.RemoteDir)
 
 	start := time.Now()
 	// Delete old files on initial sync (e.g git checkout).
 	// Add the "/." to the local directory so rsync doesn't try to place the directory
 	// into the remote dir.
-	err := s.syncPaths(true, s.LocalDir+"/.", s.RemoteDir)
-	if err == nil {
-		flog.Success("finished initial sync (%v)", time.Since(start).Truncate(time.Millisecond))
+	if err := s.syncPaths(true, s.LocalDir+"/.", s.RemoteDir); err != nil {
+		return err
 	}
-	return err
+	flog.Success("finished initial sync (%s)", time.Since(start).Truncate(time.Millisecond))
+	return nil
 }
 
 func (s Sync) convertPath(local string) string {
@@ -136,22 +137,17 @@ func (s Sync) convertPath(local string) string {
 	if err != nil {
 		panic(err)
 	}
-	return filepath.Join(
-		s.RemoteDir,
-		relLocalPath,
-	)
+	return filepath.Join(s.RemoteDir, relLocalPath)
 }
 
 func (s Sync) handleCreate(localPath string) error {
 	target := s.convertPath(localPath)
-	err := s.syncPaths(false, localPath, target)
-	if err != nil {
-		_, statErr := os.Stat(localPath)
+
+	if err := s.syncPaths(false, localPath, target); err != nil {
 		// File was quickly deleted.
-		if os.IsNotExist(statErr) {
+		if _, e1 := os.Stat(localPath); os.IsNotExist(e1) { // NOTE: Discard any other stat error and just expose the syncPath one.
 			return nil
 		}
-
 		return err
 	}
 	return nil
@@ -197,14 +193,14 @@ func (s Sync) work(ev timedEvent) {
 	case notify.Remove:
 		err = s.handleDelete(localPath)
 	default:
-		flog.Info("unhandled event %v %+v", ev.Event(), ev.Path())
+		flog.Info("unhandled event %+v %s", ev.Event(), ev.Path())
 	}
 
-	log := fmt.Sprintf("%v %v (%v)",
+	log := fmt.Sprintf("%v %s (%s)",
 		ev.Event(), filepath.Base(localPath), time.Since(ev.CreatedAt).Truncate(time.Millisecond*10),
 	)
 	if err != nil {
-		flog.Error(log+": %v", err)
+		flog.Error(log+": %s", err)
 	} else {
 		flog.Success(log)
 	}
@@ -215,7 +211,7 @@ var ErrRestartSync = errors.New("the sync exited because it was overloaded, rest
 
 // workEventGroup converges a group of events to prevent duplicate work.
 func (s Sync) workEventGroup(evs []timedEvent) {
-	cache := make(eventCache)
+	cache := eventCache{}
 	for _, ev := range evs {
 		cache.Add(ev)
 	}
@@ -238,8 +234,10 @@ func (s Sync) workEventGroup(evs []timedEvent) {
 		setConsoleTitle(fmtUpdateTitle(ev.Path()))
 
 		wg.Add(1)
-		sem.Acquire(context.Background(), 1)
-		ev := ev
+		// TODO: Document why this error is discarded. See https://github.com/cdr/coder-cli/issues/122 for reference.
+		_ = sem.Acquire(context.Background(), 1)
+
+		ev := ev // Copy the event in the scope to make sure the go routine use the proper value.
 		go func() {
 			defer sem.Release(1)
 			defer wg.Done()
@@ -256,25 +254,25 @@ const (
 	// or node_modules) is impossible to do performantly with individual
 	// rsyncs.
 	maxInflightInotify = 8
-	maxEventDelay      = time.Second * 7
+	maxEventDelay      = 7 * time.Second
 	// maxAcceptableDispatch is the maximum amount of time before an event
 	// should begin its journey to the server. This sets a lower bound for
 	// perceivable latency, but the higher it is, the better the
 	// optimization.
-	maxAcceptableDispatch = time.Millisecond * 50
+	maxAcceptableDispatch = 50 * time.Millisecond
 )
 
 // Version returns remote protocol version as a string.
 // Or, an error if one exists.
 func (s Sync) Version() (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	conn, err := s.Client.DialWsep(ctx, &s.Env)
 	if err != nil {
 		return "", err
 	}
-	defer conn.Close(websocket.CloseNormalClosure, "")
+	defer func() { _ = conn.Close(websocket.CloseNormalClosure, "") }() // Best effort.
 
 	execer := wsep.RemoteExecer(conn)
 	process, err := execer.Start(ctx, wsep.Command{
@@ -285,10 +283,9 @@ func (s Sync) Version() (string, error) {
 		return "", err
 	}
 	buf := &bytes.Buffer{}
-	io.Copy(buf, process.Stdout())
+	_, _ = io.Copy(buf, process.Stdout()) // Ignore error, if any, it would be handled by the process.Wait return.
 
-	err = process.Wait()
-	if err != nil {
+	if err := process.Wait(); err != nil {
 		return "", err
 	}
 
@@ -310,8 +307,7 @@ func (s Sync) Run() error {
 	// Set up a recursive watch.
 	// We do this before the initial sync so we can capture any changes
 	// that may have happened during sync.
-	err := notify.Watch(path.Join(s.LocalDir, "..."), events, notify.All)
-	if err != nil {
+	if err := notify.Watch(path.Join(s.LocalDir, "..."), events, notify.All); err != nil {
 		return xerrors.Errorf("create watch: %w", err)
 	}
 	defer notify.Stop(events)
@@ -319,14 +315,15 @@ func (s Sync) Run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	s.remoteCmd(ctx, "mkdir", "-p", s.RemoteDir)
+	if err := s.remoteCmd(ctx, "mkdir", "-p", s.RemoteDir); err != nil {
+		return xerrors.Errorf("create remote directory: %w", err)
+	}
 
 	ap := activity.NewPusher(s.Client, s.Env.ID, activityName)
 	ap.Push(ctx)
 
 	setConsoleTitle("⏳ syncing project")
-	err = s.initSync()
-	if err != nil {
+	if err := s.initSync(); err != nil {
 		return err
 	}
 
@@ -356,10 +353,9 @@ func (s Sync) Run() error {
 		}
 	}()
 
-	var (
-		eventGroup         []timedEvent
-		dispatchEventGroup = time.NewTicker(maxAcceptableDispatch)
-	)
+	var eventGroup []timedEvent
+
+	dispatchEventGroup := time.NewTicker(maxAcceptableDispatch)
 	defer dispatchEventGroup.Stop()
 	for {
 		const watchingFilesystemTitle = "🛰 watching filesystem"
@@ -370,7 +366,6 @@ func (s Sync) Run() error {
 			if atomic.LoadUint64(&droppedEvents) > 0 {
 				return ErrRestartSync
 			}
-
 			eventGroup = append(eventGroup, ev)
 		case <-dispatchEventGroup.C:
 			if len(eventGroup) == 0 {

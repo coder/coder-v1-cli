@@ -2,26 +2,23 @@ package coder
 
 import (
 	"context"
+	"net/http"
 
 	"nhooyr.io/websocket"
 )
 
-func (c Client) dialWs(ctx context.Context, path string) (*websocket.Conn, error) {
-	u := c.copyURL()
-	if c.BaseURL.Scheme == "https" {
-		u.Scheme = "wss"
+// dialWebsocket establish the websocket connection while setting the authentication header.
+func (c Client) dialWebsocket(ctx context.Context, path string) (*websocket.Conn, error) {
+	// Make a copy of the url so we can update the scheme to ws(s) without mutating the state.
+	url := *c.BaseURL
+	if url.Scheme == "https" {
+		url.Scheme = "wss"
 	} else {
-		u.Scheme = "ws"
+		url.Scheme = "ws"
 	}
-	u.Path = path
+	url.Path = path
 
-	conn, resp, err := websocket.Dial(ctx, u.String(),
-		&websocket.DialOptions{
-			HTTPHeader: map[string][]string{
-				"Session-Token": {c.Token},
-			},
-		},
-	)
+	conn, resp, err := websocket.Dial(ctx, url.String(), &websocket.DialOptions{HTTPHeader: http.Header{"Session-Token": {c.Token}}})
 	if err != nil {
 		if resp != nil {
 			return nil, bodyError(resp)

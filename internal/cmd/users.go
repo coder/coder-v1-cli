@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"os"
 
-	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
+
+	"cdr.dev/coder-cli/internal/x/xtabwriter"
 )
 
 func makeUsersCmd() *cobra.Command {
@@ -40,15 +41,13 @@ func listUsers(outputFmt *string) func(cmd *cobra.Command, args []string) error 
 
 		switch *outputFmt {
 		case "human":
-			err := xtabwriter.WriteTable(len(users), func(i int) interface{} {
-				return users[i]
-			})
-			if err != nil {
+			// For each element, return the user.
+			each := func(i int) interface{} { return users[i] }
+			if err := xtabwriter.WriteTable(len(users), each); err != nil {
 				return xerrors.Errorf("write table: %w", err)
 			}
 		case "json":
-			err = json.NewEncoder(os.Stdout).Encode(users)
-			if err != nil {
+			if err := json.NewEncoder(os.Stdout).Encode(users); err != nil {
 				return xerrors.Errorf("encode users as json: %w", err)
 			}
 		default:

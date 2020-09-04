@@ -11,7 +11,7 @@ type Image struct {
 	OrganizationID  string  `json:"organization_id"`
 	Repository      string  `json:"repository"`
 	Description     string  `json:"description"`
-	URL             string  `json:"url"` // user-supplied URL for image
+	URL             string  `json:"url"` // User-supplied URL for image.
 	DefaultCPUCores float32 `json:"default_cpu_cores"`
 	DefaultMemoryGB int     `json:"default_memory_gb"`
 	DefaultDiskGB   int     `json:"default_disk_gb"`
@@ -28,28 +28,22 @@ type NewRegistryRequest struct {
 
 // ImportImageRequest is used to import new images and registries into Coder
 type ImportImageRequest struct {
-	// RegistryID is used to import images to existing registries.
-	RegistryID *string `json:"registry_id"`
-	// NewRegistry is used when adding a new registry.
-	NewRegistry *NewRegistryRequest `json:"new_registry"`
-	// Repository refers to the image. For example: "codercom/ubuntu".
-	Repository      string  `json:"repository"`
-	Tag             string  `json:"tag"`
-	DefaultCPUCores float32 `json:"default_cpu_cores"`
-	DefaultMemoryGB int     `json:"default_memory_gb"`
-	DefaultDiskGB   int     `json:"default_disk_gb"`
-	Description     string  `json:"description"`
-	URL             string  `json:"url"`
+	RegistryID      *string             `json:"registry_id"`  // Used to import images to existing registries.
+	NewRegistry     *NewRegistryRequest `json:"new_registry"` // Used when adding a new registry.
+	Repository      string              `json:"repository"`   // Refers to the image. Ex: "codercom/ubuntu".
+	Tag             string              `json:"tag"`
+	DefaultCPUCores float32             `json:"default_cpu_cores"`
+	DefaultMemoryGB int                 `json:"default_memory_gb"`
+	DefaultDiskGB   int                 `json:"default_disk_gb"`
+	Description     string              `json:"description"`
+	URL             string              `json:"url"`
 }
 
 // ImportImage creates a new image and optionally a new registry
 func (c Client) ImportImage(ctx context.Context, orgID string, req ImportImageRequest) (*Image, error) {
-	var img *Image
-	err := c.requestBody(
-		ctx,
-		http.MethodPost, "/api/orgs/"+orgID+"/images",
-		req,
-		img,
-	)
-	return img, err
+	var img Image
+	if err := c.requestBody(ctx, http.MethodPost, "/api/orgs/"+orgID+"/images", req, &img); err != nil {
+		return nil, err
+	}
+	return &img, nil
 }

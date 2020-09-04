@@ -14,7 +14,9 @@ type Org struct {
 
 // Orgs gets all Organizations
 func (c Client) Orgs(ctx context.Context) ([]Org, error) {
-	var os []Org
-	err := c.requestBody(ctx, http.MethodGet, "/api/orgs", nil, &os)
-	return os, err
+	var orgs []Org
+	if err := c.requestBody(ctx, http.MethodGet, "/api/orgs", nil, &orgs); err != nil {
+		return nil, err
+	}
+	return orgs, nil
 }

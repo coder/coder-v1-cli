@@ -11,47 +11,48 @@ import (
 
 // Helpers for working with the Coder Enterprise API.
 
-// userOrgs gets a list of orgs the user is apart of.
-func userOrgs(user *coder.User, orgs []coder.Org) []coder.Org {
-	var uo []coder.Org
-outer:
+// lookupUserOrgs gets a list of orgs the user is apart of.
+func lookupUserOrgs(user *coder.User, orgs []coder.Org) []coder.Org {
+	// NOTE: We don't know in advance how many orgs the user is in so we can't pre-alloc.
+	var userOrgs []coder.Org
+
 	for _, org := range orgs {
 		for _, member := range org.Members {
 			if member.ID != user.ID {
 				continue
 			}
-			uo = append(uo, org)
-			continue outer
+			// If we found the user in the org, add it to the list and skip to the next org.
+			userOrgs = append(userOrgs, org)
+			break
 		}
 	}
-	return uo
+	return userOrgs
 }
 
 // getEnvs returns all environments for the user.
 func getEnvs(ctx context.Context, client *coder.Client, email string) ([]coder.Environment, error) {
 	user, err := client.UserByEmail(ctx, email)
 	if err != nil {
-		return nil, xerrors.Errorf("get user: %+v", err)
+		return nil, xerrors.Errorf("get user: %w", err)
 	}
 
 	orgs, err := client.Orgs(ctx)
 	if err != nil {
-		return nil, xerrors.Errorf("get orgs: %+v", err)
+		return nil, xerrors.Errorf("get orgs: %w", err)
 	}
 
-	orgs = userOrgs(user, orgs)
+	orgs = lookupUserOrgs(user, orgs)
 
+	// NOTE: We don't know in advance how many envs we have so we can't pre-alloc.
 	var allEnvs []coder.Environment
 
 	for _, org := range orgs {
 		envs, err := client.EnvironmentsByOrganization(ctx, user.ID, org.ID)
 		if err != nil {
-			return nil, xerrors.Errorf("get envs for %v: %+v", org.Name, err)
+			return nil, xerrors.Errorf("get envs for %s: %w", org.Name, err)
 		}
 
-		for _, env := range envs {
-			allEnvs = append(allEnvs, env)
-		}
+		allEnvs = append(allEnvs, envs...)
 	}
 	return allEnvs, nil
 }
@@ -63,15 +64,16 @@ func findEnv(ctx context.Context, client *coder.Client, envName, userEmail strin
 		return nil, xerrors.Errorf("get environments: %w", err)
 	}
 
+	// NOTE: We don't know in advance where we will find the env, so we can't pre-alloc.
 	var found []string
-
 	for _, env := range envs {
-		found = append(found, env.Name)
 		if env.Name == envName {
 			return &env, nil
 		}
+		// Keep track of what we found for the logs.
+		found = append(found, env.Name)
 	}
 	flog.Error("found %q", found)
 	flog.Error("%q not found", envName)
-	return nil, xerrors.New("environment not found")
+	return nil, coder.ErrNotFound
 }

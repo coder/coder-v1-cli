@@ -55,17 +55,15 @@ func WriteTable(length int, each func(i int) interface{}) error {
 		return nil
 	}
 	w := NewWriter()
-	defer w.Flush()
+	defer func() { _ = w.Flush() }() // Best effort.
 	for ix := 0; ix < length; ix++ {
 		item := each(ix)
 		if ix == 0 {
-			_, err := fmt.Fprintln(w, StructFieldNames(item))
-			if err != nil {
+			if _, err := fmt.Fprintln(w, StructFieldNames(item)); err != nil {
 				return err
 			}
 		}
-		_, err := fmt.Fprintln(w, StructValues(item))
-		if err != nil {
+		if _, err := fmt.Fprintln(w, StructValues(item)); err != nil {
 			return err
 		}
 	}
