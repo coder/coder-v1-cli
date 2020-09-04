@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"cdr.dev/coder-cli/internal/x/xjson"
+	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 )
 
 // Environment describes a Coder environment
@@ -81,14 +83,14 @@ type CreateEnvironmentRequest struct {
 
 // CreateEnvironment sends a request to create an environment.
 func (c Client) CreateEnvironment(ctx context.Context, orgID string, req CreateEnvironmentRequest) (*Environment, error) {
-	var env *Environment
+	var env Environment
 	err := c.requestBody(
 		ctx,
 		http.MethodPost, "/api/orgs/"+orgID+"/environments",
 		req,
-		env,
+		&env,
 	)
-	return env, err
+	return &env, err
 }
 
 // EnvironmentsByOrganization gets the list of environments owned by the given user.
@@ -119,6 +121,11 @@ func (c Client) DialWsep(ctx context.Context, env *Environment) (*websocket.Conn
 	return c.dialWs(ctx, "/proxy/environments/"+env.ID+"/wsep")
 }
 
+// DialIDEStatus opens a websocket connection for cpu load metrics on the environment
+func (c Client) DialIDEStatus(ctx context.Context, envID string) (*websocket.Conn, error) {
+	return c.dialWs(ctx, "/proxy/environments/"+envID+"/ide/api/status")
+}
+
 // DialEnvironmentBuildLog opens a websocket connection for the environment build log messages
 func (c Client) DialEnvironmentBuildLog(ctx context.Context, envID string) (*websocket.Conn, error) {
 	return c.dialWs(ctx, "/api/environments/"+envID+"/watch-update")
@@ -127,4 +134,53 @@ func (c Client) DialEnvironmentBuildLog(ctx context.Context, envID string) (*web
 // DialEnvironmentStats opens a websocket connection for environment stats
 func (c Client) DialEnvironmentStats(ctx context.Context, envID string) (*websocket.Conn, error) {
 	return c.dialWs(ctx, "/api/environments/"+envID+"/watch-stats")
+}
+
+// DialResourceLoad opens a websocket connection for cpu load metrics on the environment
+func (c Client) DialResourceLoad(ctx context.Context, envID string) (*websocket.Conn, error) {
+	return c.dialWs(ctx, "/api/environments/"+envID+"/watch-resource-load")
+}
+
+// BuildLogType describes the type of an event.
+type BuildLogType string
+
+const (
+	// BuildLogTypeStart signals that a new build log has begun.
+	BuildLogTypeStart BuildLogType = "start"
+	// BuildLogTypeStage is a stage-level event for an environment.
+	// It can be thought of as a major step in the environment's
+	// lifecycle.
+	BuildLogTypeStage BuildLogType = "stage"
+	// BuildLogTypeError describes an error that has occurred.
+	BuildLogTypeError BuildLogType = "error"
+	// BuildLogTypeSubstage describes a subevent that occurs as
+	// part of a stage. This can be the output from a user's
+	// personalization script, or a long running command.
+	BuildLogTypeSubstage BuildLogType = "substage"
+	// BuildLogTypeDone signals that the build has completed.
+	BuildLogTypeDone BuildLogType = "done"
+)
+
+type buildLogMsg struct {
+	Type BuildLogType `json:"type"`
+}
+
+// WaitForEnvironmentReady will watch the build log and return when done
+func (c Client) WaitForEnvironmentReady(ctx context.Context, env *Environment) error {
+	conn, err := c.DialEnvironmentBuildLog(ctx, env.ID)
+	if err != nil {
+		return xerrors.Errorf("%s: dial build log: %w", env.Name, err)
+	}
+
+	for {
+		msg := buildLogMsg{}
+		err := wsjson.Read(ctx, conn, &msg)
+		if err != nil {
+			return xerrors.Errorf("%s: reading build log msg: %w", env.Name, err)
+		}
+
+		if msg.Type == BuildLogTypeDone {
+			return nil
+		}
+	}
 }
