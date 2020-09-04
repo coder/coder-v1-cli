@@ -78,14 +78,14 @@ type CreateEnvironmentRequest struct {
 
 // CreateEnvironment sends a request to create an environment.
 func (c Client) CreateEnvironment(ctx context.Context, orgID string, req CreateEnvironmentRequest) (*Environment, error) {
-	var env *Environment
+	var env Environment
 	err := c.requestBody(
 		ctx,
 		http.MethodPost, "/api/orgs/"+orgID+"/environments",
 		req,
-		env,
+		&env,
 	)
-	return env, err
+	return &env, err
 }
 
 // EnvironmentsByOrganization gets the list of environments owned by the given user.
@@ -116,6 +116,11 @@ func (c Client) DialWsep(ctx context.Context, env *Environment) (*websocket.Conn
 	return c.dialWs(ctx, "/proxy/environments/"+env.ID+"/wsep")
 }
 
+// DialIDEStatus opens a websocket connection for cpu load metrics on the environment
+func (c Client) DialIDEStatus(ctx context.Context, envID string) (*websocket.Conn, error) {
+	return c.dialWs(ctx, "/proxy/environments/"+envID+"/ide/api/status")
+}
+
 // DialEnvironmentBuildLog opens a websocket connection for the environment build log messages
 func (c Client) DialEnvironmentBuildLog(ctx context.Context, envID string) (*websocket.Conn, error) {
 	return c.dialWs(ctx, "/api/environments/"+envID+"/watch-update")
@@ -124,4 +129,9 @@ func (c Client) DialEnvironmentBuildLog(ctx context.Context, envID string) (*web
 // DialEnvironmentStats opens a websocket connection for environment stats
 func (c Client) DialEnvironmentStats(ctx context.Context, envID string) (*websocket.Conn, error) {
 	return c.dialWs(ctx, "/api/environments/"+envID+"/watch-stats")
+}
+
+// DialResourceLoad opens a websocket connection for cpu load metrics on the environment
+func (c Client) DialResourceLoad(ctx context.Context, envID string) (*websocket.Conn, error) {
+	return c.dialWs(ctx, "/api/environments/"+envID+"/watch-resource-load")
 }
