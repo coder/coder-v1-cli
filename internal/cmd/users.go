@@ -32,9 +32,12 @@ coder users ls -o json | jq .[] | jq -r .email`,
 
 func listUsers(outputFmt *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		entClient := requireAuth()
+		client, err := newClient()
+		if err != nil {
+			return err
+		}
 
-		users, err := entClient.Users(cmd.Context())
+		users, err := client.Users(cmd.Context())
 		if err != nil {
 			return xerrors.Errorf("get users: %w", err)
 		}

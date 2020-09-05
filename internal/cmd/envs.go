@@ -27,8 +27,11 @@ func makeEnvsCommand() *cobra.Command {
 		Short: "list all environments owned by the active user",
 		Long:  "List all Coder environments owned by the active user.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			entClient := requireAuth()
-			envs, err := getEnvs(cmd.Context(), entClient, user)
+			client, err := newClient()
+			if err != nil {
+				return err
+			}
+			envs, err := getEnvs(cmd.Context(), client, user)
 			if err != nil {
 				return err
 			}

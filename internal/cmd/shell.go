@@ -97,9 +97,11 @@ func sendResizeEvents(ctx context.Context, termFD uintptr, process wsep.Process)
 }
 
 func runCommand(ctx context.Context, envName, command string, args []string) error {
-	entClient := requireAuth()
-
-	env, err := findEnv(ctx, entClient, envName, coder.Me)
+	client, err := newClient()
+	if err != nil {
+		return err
+	}
+	env, err := findEnv(ctx, client, envName, coder.Me)
 	if err != nil {
 		return xerrors.Errorf("find environment: %w", err)
 	}
@@ -125,7 +127,7 @@ func runCommand(ctx context.Context, envName, command string, args []string) err
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	conn, err := entClient.DialWsep(ctx, env)
+	conn, err := client.DialWsep(ctx, env)
 	if err != nil {
 		return xerrors.Errorf("dial websocket: %w", err)
 	}
@@ -165,7 +167,7 @@ func runCommand(ctx context.Context, envName, command string, args []string) err
 		stdin := process.Stdin()
 		defer func() { _ = stdin.Close() }() // Best effort.
 
-		ap := activity.NewPusher(entClient, env.ID, sshActivityName)
+		ap := activity.NewPusher(client, env.ID, sshActivityName)
 		wr := ap.Writer(stdin)
 		if _, err := io.Copy(wr, os.Stdin); err != nil {
 			cancel()
