@@ -3,28 +3,28 @@ package loginsrv
 import (
 	"fmt"
 	"net/http"
-	"sync"
 )
 
-// Server waits for the login callback to send session token
+// Server waits for the login callback to send the session token.
 type Server struct {
-	TokenCond *sync.Cond
-	Token     string
+	TokenChan chan<- string
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("session_token")
+func (srv *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+
+	token := req.URL.Query().Get("session_token")
 	if token == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "No session_token found")
+		_, _ = fmt.Fprintf(w, "No session_token found.\n") // Best effort.
 		return
 	}
 
-	s.TokenCond.L.Lock()
-	s.Token = token
-	s.TokenCond.L.Unlock()
-	s.TokenCond.Broadcast()
-
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "You may close this window now")
+	select {
+	case <-ctx.Done():
+		// Client disconnect. Nothing to do.
+	case srv.TokenChan <- token:
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprintf(w, "You may close this window now.\n") // Best effort.
+	}
 }

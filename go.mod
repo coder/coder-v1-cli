@@ -14,7 +14,7 @@ require (
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 	github.com/rjeczalik/notify v0.9.2
 	github.com/spf13/cobra v1.0.0
-	github.com/stretchr/testify v1.6.1 // indirect
+	github.com/stretchr/testify v1.6.1
 	go.coder.com/flog v0.0.0-20190906214207-47dd47ea0512
 	golang.org/x/crypto v0.0.0-20200422194213-44a606286825
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
