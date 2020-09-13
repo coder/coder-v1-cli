@@ -13,7 +13,7 @@ var ErrNotFound = xerrors.Errorf("resource not found")
 
 type apiError struct {
 	Err struct {
-		Msg string `json:"msg,required"`
+		Msg string `json:"msg"`
 	} `json:"error"`
 }
 
