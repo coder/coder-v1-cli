@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-// DevURL is the parsed json response record for a devURL from cemanager
+// DevURL is the parsed json response record for a devURL from cemanager.
 type DevURL struct {
 	ID     string `json:"id"     tab:"ID"`
 	URL    string `json:"url"    tab:"URL"`
@@ -20,21 +20,21 @@ type delDevURLRequest struct {
 	DevURLID string `json:"url_id"`
 }
 
-// DelDevURL deletes the specified devurl
+// DelDevURL deletes the specified devurl.
 func (c Client) DelDevURL(ctx context.Context, envID, urlID string) error {
 	reqURL := fmt.Sprintf("/api/environments/%s/devurls/%s", envID, urlID)
 
-	res, err := c.request(ctx, http.MethodDelete, reqURL, delDevURLRequest{
+	resp, err := c.request(ctx, http.MethodDelete, reqURL, delDevURLRequest{
 		EnvID:    envID,
 		DevURLID: urlID,
 	})
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer func() { _ = resp.Body.Close() }() // Best effort. Likely connection drop.
 
-	if res.StatusCode != http.StatusOK {
-		return bodyError(res)
+	if resp.StatusCode != http.StatusOK {
+		return bodyError(resp)
 	}
 
 	return nil
@@ -47,11 +47,11 @@ type createDevURLRequest struct {
 	Name   string `json:"name"`
 }
 
-// InsertDevURL inserts a new devurl for the authenticated user
+// InsertDevURL inserts a new devurl for the authenticated user.
 func (c Client) InsertDevURL(ctx context.Context, envID string, port int, name, access string) error {
 	reqURL := fmt.Sprintf("/api/environments/%s/devurls", envID)
 
-	res, err := c.request(ctx, http.MethodPost, reqURL, createDevURLRequest{
+	resp, err := c.request(ctx, http.MethodPost, reqURL, createDevURLRequest{
 		EnvID:  envID,
 		Port:   port,
 		Access: access,
@@ -60,10 +60,10 @@ func (c Client) InsertDevURL(ctx context.Context, envID string, port int, name, 
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer func() { _ = resp.Body.Close() }() // Best effort. Likely connection drop.
 
-	if res.StatusCode != http.StatusOK {
-		return bodyError(res)
+	if resp.StatusCode != http.StatusOK {
+		return bodyError(resp)
 	}
 
 	return nil
@@ -71,11 +71,11 @@ func (c Client) InsertDevURL(ctx context.Context, envID string, port int, name, 
 
 type updateDevURLRequest createDevURLRequest
 
-// UpdateDevURL updates an existing devurl for the authenticated user
+// UpdateDevURL updates an existing devurl for the authenticated user.
 func (c Client) UpdateDevURL(ctx context.Context, envID, urlID string, port int, name, access string) error {
 	reqURL := fmt.Sprintf("/api/environments/%s/devurls/%s", envID, urlID)
 
-	res, err := c.request(ctx, http.MethodPut, reqURL, updateDevURLRequest{
+	resp, err := c.request(ctx, http.MethodPut, reqURL, updateDevURLRequest{
 		EnvID:  envID,
 		Port:   port,
 		Access: access,
@@ -84,10 +84,10 @@ func (c Client) UpdateDevURL(ctx context.Context, envID, urlID string, port int,
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer func() { _ = resp.Body.Close() }() // Best effort. Likefly connection drop.
 
-	if res.StatusCode != http.StatusOK {
-		return bodyError(res)
+	if resp.StatusCode != http.StatusOK {
+		return bodyError(resp)
 	}
 
 	return nil

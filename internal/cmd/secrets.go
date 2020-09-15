@@ -5,11 +5,12 @@ import (
 	"io/ioutil"
 	"os"
 
-	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
+
+	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/x/xtabwriter"
 
 	"go.coder.com/flog"
 )

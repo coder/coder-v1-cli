@@ -68,7 +68,7 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			// SSH configs are not always already there.
 			currentConfig = ""
 		} else if err != nil {
-			return xerrors.Errorf("read ssh config file %q: %w", configpath, err)
+			return xerrors.Errorf("read ssh config file %q: %w", *configpath, err)
 		}
 
 		startIndex := strings.Index(currentConfig, startToken)
@@ -82,7 +82,7 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 
 			err = writeStr(*configpath, currentConfig)
 			if err != nil {
-				return xerrors.Errorf("write to ssh config file %q: %v", *configpath, err)
+				return xerrors.Errorf("write to ssh config file %q: %s", *configpath, err)
 			}
 
 			return nil

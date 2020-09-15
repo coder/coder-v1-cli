@@ -24,14 +24,13 @@ func (c Client) Me(ctx context.Context) (*User, error) {
 // UserByID get the details of a user by their id.
 func (c Client) UserByID(ctx context.Context, id string) (*User, error) {
 	var u User
-	err := c.requestBody(ctx, http.MethodGet, "/api/users/"+id, nil, &u)
-	if err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/users/"+id, nil, &u); err != nil {
 		return nil, err
 	}
 	return &u, nil
 }
 
-// SSHKey describes an SSH keypair
+// SSHKey describes an SSH keypair.
 type SSHKey struct {
 	PublicKey  string `json:"public_key"`
 	PrivateKey string `json:"private_key"`
@@ -40,8 +39,7 @@ type SSHKey struct {
 // SSHKey gets the current SSH kepair of the authenticated user.
 func (c Client) SSHKey(ctx context.Context) (*SSHKey, error) {
 	var key SSHKey
-	err := c.requestBody(ctx, http.MethodGet, "/api/users/me/sshkey", nil, &key)
-	if err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/users/me/sshkey", nil, &key); err != nil {
 		return nil, err
 	}
 	return &key, nil
@@ -50,8 +48,7 @@ func (c Client) SSHKey(ctx context.Context) (*SSHKey, error) {
 // Users gets the list of user accounts.
 func (c Client) Users(ctx context.Context) ([]User, error) {
 	var u []User
-	err := c.requestBody(ctx, http.MethodGet, "/api/users", nil, &u)
-	if err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/users", nil, &u); err != nil {
 		return nil, err
 	}
 	return u, nil

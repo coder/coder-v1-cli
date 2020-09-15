@@ -32,7 +32,7 @@ func init() {
 
 // build the coder-cli binary and move to the integration testing bin directory
 func build(path string) error {
-	tar := fmt.Sprintf("coder-cli-linux-amd64.tar.gz")
+	tar := "coder-cli-linux-amd64.tar.gz"
 	dir := filepath.Dir(path)
 	cmd := exec.Command(
 		"sh", "-c",

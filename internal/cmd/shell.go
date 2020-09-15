@@ -7,30 +7,32 @@ import (
 	"strings"
 	"time"
 
-	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/activity"
-	"cdr.dev/coder-cli/internal/x/xterminal"
-	"cdr.dev/wsep"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/time/rate"
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 
+	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/activity"
+	"cdr.dev/coder-cli/internal/x/xterminal"
+	"cdr.dev/wsep"
+
 	"go.coder.com/flog"
 )
 
 func getEnvsForCompletion(user string) func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		var envNames []string
 		client, err := newClient()
 		if err != nil {
-			return envNames, cobra.ShellCompDirectiveDefault
+			return nil, cobra.ShellCompDirectiveDefault
 		}
 		envs, err := getEnvs(context.TODO(), client, user)
 		if err != nil {
-			return envNames, cobra.ShellCompDirectiveDefault
+			return nil, cobra.ShellCompDirectiveDefault
 		}
+
+		envNames := make([]string, 0, len(envs))
 		for _, e := range envs {
 			envNames = append(envNames, e.Name)
 		}
@@ -52,10 +54,7 @@ func makeShellCmd() *cobra.Command {
 }
 
 func shell(_ *cobra.Command, cmdArgs []string) error {
-	var (
-		envName = cmdArgs[0]
-		ctx     = context.Background()
-	)
+	ctx := context.Background()
 
 	command := "sh"
 	args := []string{"-c"}
@@ -66,26 +65,28 @@ func shell(_ *cobra.Command, cmdArgs []string) error {
 		args = append(args, "exec $(getent passwd $(whoami) | awk -F: '{ print $7 }')")
 	}
 
-	err := runCommand(ctx, envName, command, args)
-	if exitErr, ok := err.(wsep.ExitError); ok {
-		os.Exit(exitErr.Code)
-	}
-	if err != nil {
+	envName := cmdArgs[0]
+
+	if err := runCommand(ctx, envName, command, args); err != nil {
+		if exitErr, ok := err.(wsep.ExitError); ok {
+			os.Exit(exitErr.Code)
+		}
 		return xerrors.Errorf("run command: %w", err)
 	}
 	return nil
 }
 
-func sendResizeEvents(ctx context.Context, termfd uintptr, process wsep.Process) {
-	events := xterminal.ResizeEvents(ctx, termfd)
+// sendResizeEvents starts watching for the client's terminal resize signals
+// and sends the event to the server so the remote tty can match the client.
+func sendResizeEvents(ctx context.Context, termFD uintptr, process wsep.Process) {
+	events := xterminal.ResizeEvents(ctx, termFD)
 
 	// Limit the frequency of resizes to prevent a stuttering effect.
-	resizeLimiter := rate.NewLimiter(rate.Every(time.Millisecond*100), 1)
+	resizeLimiter := rate.NewLimiter(rate.Every(100*time.Millisecond), 1)
 	for {
 		select {
 		case newsize := <-events:
-			err := process.Resize(ctx, newsize.Height, newsize.Width)
-			if err != nil {
+			if err := process.Resize(ctx, newsize.Height, newsize.Width); err != nil {
 				return
 			}
 			_ = resizeLimiter.Wait(ctx)
@@ -95,24 +96,30 @@ func sendResizeEvents(ctx context.Context, termfd uintptr, process wsep.Process)
 	}
 }
 
-func runCommand(ctx context.Context, envName string, command string, args []string) error {
-	var (
-		entClient = requireAuth()
-	)
+func runCommand(ctx context.Context, envName, command string, args []string) error {
+	entClient := requireAuth()
+
 	env, err := findEnv(ctx, entClient, envName, coder.Me)
 	if err != nil {
-		return err
+		return xerrors.Errorf("find environment: %w", err)
 	}
 
-	termfd := os.Stdout.Fd()
+	termFD := os.Stdout.Fd()
 
-	tty := terminal.IsTerminal(int(termfd))
-	if tty {
+	isInteractive := terminal.IsTerminal(int(termFD))
+	if isInteractive {
+		// If the client has a tty, take over it by setting the raw mode.
+		// This allows for all input to be directly forwarded to the remote process,
+		// otherwise, the local terminal would buffer input, interpret special keys, etc.
 		stdinState, err := xterminal.MakeRaw(os.Stdin.Fd())
 		if err != nil {
 			return err
 		}
-		defer xterminal.Restore(os.Stdin.Fd(), stdinState)
+		defer func() {
+			// Best effort. If this fails it will result in a broken terminal,
+			// but there is nothing we can do about it.
+			_ = xterminal.Restore(os.Stdin.Fd(), stdinState)
+		}()
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -120,12 +127,12 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 
 	conn, err := entClient.DialWsep(ctx, env)
 	if err != nil {
-		return err
+		return xerrors.Errorf("dial websocket: %w", err)
 	}
 	go heartbeat(ctx, conn, 15*time.Second)
 
 	var cmdEnv []string
-	if tty {
+	if isInteractive {
 		term := os.Getenv("TERM")
 		if term == "" {
 			term = "xterm"
@@ -137,47 +144,46 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	process, err := execer.Start(ctx, wsep.Command{
 		Command: command,
 		Args:    args,
-		TTY:     tty,
+		TTY:     isInteractive,
 		Stdin:   true,
 		Env:     cmdEnv,
 	})
 	if err != nil {
 		var closeErr websocket.CloseError
 		if xerrors.As(err, &closeErr) {
-			return xerrors.Errorf("network error, is %q online?", envName)
+			return xerrors.Errorf("network error, is %q online? (%w)", envName, err)
 		}
-		return err
+		return xerrors.Errorf("start remote command: %w", err)
 	}
 
-	if tty {
-		go sendResizeEvents(ctx, termfd, process)
+	// Now that the remote process successfully started, if we have a tty, start the resize event watcher.
+	if isInteractive {
+		go sendResizeEvents(ctx, termFD, process)
 	}
 
 	go func() {
 		stdin := process.Stdin()
-		defer stdin.Close()
+		defer func() { _ = stdin.Close() }() // Best effort.
 
 		ap := activity.NewPusher(entClient, env.ID, sshActivityName)
 		wr := ap.Writer(stdin)
-		_, err := io.Copy(wr, os.Stdin)
-		if err != nil {
+		if _, err := io.Copy(wr, os.Stdin); err != nil {
 			cancel()
 		}
 	}()
 	go func() {
-		_, err := io.Copy(os.Stdout, process.Stdout())
-		if err != nil {
+		if _, err := io.Copy(os.Stdout, process.Stdout()); err != nil {
 			cancel()
 		}
 	}()
 	go func() {
-		_, err := io.Copy(os.Stderr, process.Stderr())
-		if err != nil {
+
+		if _, err := io.Copy(os.Stderr, process.Stderr()); err != nil {
 			cancel()
 		}
 	}()
-	err = process.Wait()
-	if err != nil {
+
+	if err := process.Wait(); err != nil {
 		var closeErr websocket.CloseError
 		if xerrors.Is(err, ctx.Err()) || xerrors.As(err, &closeErr) {
 			return xerrors.Errorf("network error, is %q online?", envName)
@@ -187,7 +193,7 @@ func runCommand(ctx context.Context, envName string, command string, args []stri
 	return nil
 }
 
-func heartbeat(ctx context.Context, c *websocket.Conn, interval time.Duration) {
+func heartbeat(ctx context.Context, conn *websocket.Conn, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -196,9 +202,9 @@ func heartbeat(ctx context.Context, c *websocket.Conn, interval time.Duration) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			err := c.Ping(ctx)
-			if err != nil {
-				flog.Fatal("\nFailed to ping websocket: %v, exiting...", err)
+			if err := conn.Ping(ctx); err != nil {
+				// NOTE: Prefix with \r\n to attempt to have clearer output as we might still be in raw mode.
+				flog.Fatal("\r\nFailed to ping websocket: %s, exiting.", err)
 			}
 		}
 	}
