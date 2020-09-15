@@ -14,7 +14,7 @@ var ErrNotFound = xerrors.Errorf("resource not found")
 // apiError is the expected payload format for our errors.
 type apiError struct {
 	Err struct {
-		Msg string `json:"msg,required"`
+		Msg string `json:"msg"`
 	} `json:"error"`
 }
 
