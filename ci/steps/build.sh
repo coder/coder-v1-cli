@@ -7,10 +7,11 @@ popd() { builtin popd >/dev/null; }
 set -euo pipefail
 cd "$(dirname "$0")"
 
-export GOARCH=amd64
 tag=$(git describe --tags)
 
 build() {
+	echo "Building coder-cli for $GOOS-$GOARCH..."
+
 	tmpdir=$(mktemp -d)
 	go build -ldflags "-X main.version=${tag}" -o "$tmpdir/coder" ../../cmd/coder
 
@@ -33,12 +34,11 @@ build() {
 # Darwin builds do not work from Linux, so only try to build them from Darwin.
 # See: https://github.com/cdr/coder-cli/issues/20
 if [[ "$(uname)" == "Darwin" ]]; then
-	GOOS=linux build
-	CGO_ENABLED=1 GOOS=darwin build
-	GOOS=windows GOARCH=386 build
-	exit 0
+	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 build
+else
+	echo "Warning: Darwin builds don't work on Linux."
+	echo "Please use an OSX machine to build Darwin tars."
 fi
 
-echo "Warning: Darwin builds don't work on Linux."
-echo "Please use an OSX machine to build Darwin tars."
-GOOS=linux build
+GOOS=linux GOARCH=amd64 build
+GOOS=windows GOARCH=386 build
