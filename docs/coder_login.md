@@ -7,7 +7,7 @@ Authenticate this client for future operations
 Authenticate this client for future operations
 
 ```
-coder login [Coder Enterprise URL eg. http://my.coder.domain/] [flags]
+coder login [Coder Enterprise URL eg. https://my.coder.domain/] [flags]
 ```
 
 ### Options

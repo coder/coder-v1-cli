@@ -43,7 +43,7 @@ jobs:
       - name: test
         uses: ./ci/image
         with:
-          args: go test ./internal/... ./cmd/...
+          args: go test -v -cover -covermode=count ./internal/... ./cmd/...
   gendocs:
     runs-on: ubuntu-latest
     steps:
