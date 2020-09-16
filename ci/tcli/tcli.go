@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -18,17 +17,6 @@ import (
 	"golang.org/x/xerrors"
 )
 
-var (
-	_ runnable = &ContainerRunner{}
-	_ runnable = &HostRunner{}
-)
-
-type runnable interface {
-	Run(ctx context.Context, command string) *Assertable
-	RunCmd(cmd *exec.Cmd) *Assertable
-	io.Closer
-}
-
 // ContainerConfig describes the ContainerRunner configuration schema for initializing a testing environment
 type ContainerConfig struct {
 	Name       string
@@ -36,7 +24,8 @@ type ContainerConfig struct {
 	BindMounts map[string]string
 }
 
-func mountArgs(m map[string]string) (args []string) {
+func mountArgs(m map[string]string) []string {
+	args := make([]string, 0, len(m))
 	for src, dest := range m {
 		args = append(args, "--mount", fmt.Sprintf("type=bind,source=%s,target=%s", src, dest))
 	}
@@ -54,7 +43,6 @@ func preflightChecks() error {
 // ContainerRunner specifies a runtime container for performing command tests
 type ContainerRunner struct {
 	name string
-	ctx  context.Context
 }
 
 // NewContainerRunner starts a new docker container for executing command tests
@@ -83,13 +71,15 @@ func NewContainerRunner(ctx context.Context, config *ContainerConfig) (*Containe
 
 	return &ContainerRunner{
 		name: config.Name,
-		ctx:  ctx,
 	}, nil
 }
 
 // Close kills and removes the command execution testing container
 func (r *ContainerRunner) Close() error {
-	cmd := exec.CommandContext(r.ctx,
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx,
 		"sh", "-c", strings.Join([]string{
 			"docker", "kill", r.name, "&&",
 			"docker", "rm", r.name,
