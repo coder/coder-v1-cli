@@ -52,7 +52,10 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 			remote = args[1]
 		)
 
-		entClient := requireAuth()
+		client, err := newClient()
+		if err != nil {
+			return err
+		}
 
 		info, err := os.Stat(local)
 		if err != nil {
@@ -64,21 +67,21 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 
 		remoteTokens := strings.SplitN(remote, ":", 2)
 		if len(remoteTokens) != 2 {
-			flog.Fatal("remote misformatted")
+			return xerrors.New("remote misformatted")
 		}
 		var (
 			envName   = remoteTokens[0]
 			remoteDir = remoteTokens[1]
 		)
 
-		env, err := findEnv(cmd.Context(), entClient, envName, coder.Me)
+		env, err := findEnv(cmd.Context(), client, envName, coder.Me)
 		if err != nil {
 			return err
 		}
 
 		absLocal, err := filepath.Abs(local)
 		if err != nil {
-			flog.Fatal("make abs path out of %v: %v", local, absLocal)
+			return xerrors.Errorf("make abs path out of %s, %s: %w", local, absLocal, err)
 		}
 
 		s := sync.Sync{
@@ -86,7 +89,7 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 			Env:       *env,
 			RemoteDir: remoteDir,
 			LocalDir:  absLocal,
-			Client:    entClient,
+			Client:    client,
 		}
 
 		localVersion := rsyncVersion()
@@ -95,7 +98,7 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 		if rsyncErr != nil {
 			flog.Info("Unable to determine remote rsync version.  Proceeding cautiously.")
 		} else if localVersion != remoteVersion {
-			flog.Fatal("rsync protocol mismatch: local = %v, remote = %v", localVersion, rsyncErr)
+			return xerrors.Errorf("rsync protocol mismatch: local = %s, remote = %s", localVersion, remoteVersion)
 		}
 
 		for err == nil || err == sync.ErrRestartSync {
