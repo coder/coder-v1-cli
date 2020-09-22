@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os/exec"
 	"regexp"
@@ -33,14 +32,6 @@ type runnable interface {
 type ContainerConfig struct {
 	Name       string
 	Image      string
-	BindMounts map[string]string
-}
-
-func mountArgs(m map[string]string) (args []string) {
-	for src, dest := range m {
-		args = append(args, "--mount", fmt.Sprintf("type=bind,source=%s,target=%s", src, dest))
-	}
-	return args
 }
 
 func preflightChecks() error {
@@ -68,9 +59,8 @@ func NewContainerRunner(ctx context.Context, config *ContainerConfig) (*Containe
 		"--name", config.Name,
 		"--network", "host",
 		"-it", "-d",
+		config.Image,
 	}
-	args = append(args, mountArgs(config.BindMounts)...)
-	args = append(args, config.Image)
 
 	cmd := exec.CommandContext(ctx, "docker", args...)
 
@@ -85,6 +75,18 @@ func NewContainerRunner(ctx context.Context, config *ContainerConfig) (*Containe
 		name: config.Name,
 		ctx:  ctx,
 	}, nil
+}
+
+// CopyFiles copies all the given file mappings as { <source>: <destination> } into the given container runner.
+func (c *ContainerRunner) CopyFiles(ctx context.Context, files map[string]string) error {
+	for src, dest := range files {
+		cmd := exec.CommandContext(ctx, "docker", "cp", src, c.name+":"+dest)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return xerrors.Errorf("run \"docker cp\" (%s): %w ", string(output), err)
+		}
+	}
+	return nil
 }
 
 // Close kills and removes the command execution testing container

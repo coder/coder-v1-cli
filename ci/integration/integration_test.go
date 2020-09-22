@@ -20,12 +20,14 @@ func run(t *testing.T, container string, execute func(t *testing.T, ctx context.
 		c, err := tcli.NewContainerRunner(ctx, &tcli.ContainerConfig{
 			Image: "codercom/enterprise-dev",
 			Name:  container,
-			BindMounts: map[string]string{
-				binpath: "/bin/coder",
-			},
 		})
 		assert.Success(t, "new run container", err)
 		defer c.Close()
+
+		err = c.CopyFiles(ctx, map[string]string{
+			binpath: "/bin/coder",
+		})
+		assert.Success(t, "copy binary into testing container", err)
 
 		execute(t, ctx, c)
 	})
