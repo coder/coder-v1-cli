@@ -120,10 +120,10 @@ func (c *ContainerRunner) Run(ctx context.Context, command string) *Assertable {
 }
 
 // RunCmd lifts the given *exec.Cmd into the runtime container
-func (r *ContainerRunner) RunCmd(cmd *exec.Cmd) *Assertable {
+func (c *ContainerRunner) RunCmd(cmd *exec.Cmd) *Assertable {
 	path, _ := exec.LookPath("docker")
 	cmd.Path = path
-	cmd.Args = append([]string{"docker", "exec", "-i", r.name}, cmd.Args...)
+	cmd.Args = append([]string{"docker", "exec", "-i", c.name}, cmd.Args...)
 
 	return &Assertable{
 		cmd:   cmd,
