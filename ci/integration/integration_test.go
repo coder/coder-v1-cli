@@ -24,7 +24,7 @@ func run(t *testing.T, container string, execute func(t *testing.T, ctx context.
 			Image: "codercom/enterprise-dev",
 			Name:  container,
 			// use this bind mount just to fix the user perms issue
-			// 
+			//
 			// we'll overwrite this value with the proper binary value later to fix the case
 			// where we're using docker in docker and bind mounts aren't correct
 			BindMounts: map[string]string{
@@ -34,7 +34,7 @@ func run(t *testing.T, container string, execute func(t *testing.T, ctx context.
 		assert.Success(t, "new run container", err)
 		defer c.Close()
 
-		// read the test binary 
+		// read the test binary
 		contents, err := ioutil.ReadFile(binpath)
 		assert.Success(t, "read coder cli binary", err)
 
@@ -43,8 +43,8 @@ func run(t *testing.T, container string, execute func(t *testing.T, ctx context.
 		cmd := exec.CommandContext(ctx, "sh", "-c", "sudo cat - > /bin/coder")
 		cmd.Stdin = bytes.NewReader(contents)
 		c.RunCmd(cmd).Assert(t,
-				tcli.Success(),
-				tcli.StderrEmpty(),
+			tcli.Success(),
+			tcli.StderrEmpty(),
 		)
 
 		execute(t, ctx, c)
