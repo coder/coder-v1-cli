@@ -21,16 +21,16 @@ func TestUsers(t *testing.T) {
 		headlessLogin(ctx, t, c)
 
 		var user coder.User
-		c.Run(ctx, `coder users ls --output json | jq -c '.[] | select( .username == "charlie")'`).Assert(t,
+		c.Run(ctx, `coder users ls --output json | jq -c '.[] | select( .username == "admin")'`).Assert(t,
 			tcli.Success(),
 			tcli.StdoutJSONUnmarshal(&user),
 		)
-		assert.Equal(t, "user email is as expected", "charlie@coder.com", user.Email)
-		assert.Equal(t, "username is as expected", "Charlie", user.Name)
+		assert.Equal(t, "user email is as expected", "admin", user.Email)
+		assert.Equal(t, "name is as expected", "admin", user.Name)
 
-		c.Run(ctx, "coder users ls --output human | grep charlie").Assert(t,
+		c.Run(ctx, "coder users ls --output human | grep admin").Assert(t,
 			tcli.Success(),
-			tcli.StdoutMatches("charlie"),
+			tcli.StdoutMatches("admin"),
 		)
 
 		c.Run(ctx, "coder logout").Assert(t,
