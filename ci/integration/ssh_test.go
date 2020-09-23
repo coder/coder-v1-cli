@@ -23,7 +23,7 @@ func TestSSH(t *testing.T) {
 		assert := tcli.Success()
 
 		// if we don't have any environments, "coder config-ssh" will fail
-		if len(envs) > 0 {
+		if len(envs) == 0 {
 			assert = tcli.Error()
 		}
 		c.Run(ctx, "coder config-ssh").Assert(t,
