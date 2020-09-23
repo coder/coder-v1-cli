@@ -8,7 +8,6 @@ import (
 	"io"
 	"os/exec"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 
@@ -89,11 +88,12 @@ func NewContainerRunner(ctx context.Context, config *ContainerConfig) (*Containe
 
 // Close kills and removes the command execution testing container
 func (r *ContainerRunner) Close() error {
-	cmd := exec.CommandContext(r.ctx,
-		"sh", "-c", strings.Join([]string{
-			"docker", "kill", r.name, "&&",
-			"docker", "rm", r.name,
-		}, " "))
+	ctx, cancel := context.WithTimeout(context.Background(), 2* time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx,
+		"sh", "-c", fmt.Sprintf("docker kill %s && docker rm %s", r.name, r.name),
+	)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -114,7 +114,6 @@ func (r *ContainerRunner) Run(ctx context.Context, command string) *Assertable {
 
 	return &Assertable{
 		cmd:   cmd,
-		tname: command,
 	}
 }
 
@@ -122,12 +121,10 @@ func (r *ContainerRunner) Run(ctx context.Context, command string) *Assertable {
 func (r *ContainerRunner) RunCmd(cmd *exec.Cmd) *Assertable {
 	path, _ := exec.LookPath("docker")
 	cmd.Path = path
-	command := strings.Join(cmd.Args, " ")
 	cmd.Args = append([]string{"docker", "exec", "-i", r.name}, cmd.Args...)
 
 	return &Assertable{
 		cmd:   cmd,
-		tname: command,
 	}
 }
 
@@ -141,7 +138,6 @@ func (r *HostRunner) Run(ctx context.Context, command string) *Assertable {
 
 	return &Assertable{
 		cmd:   cmd,
-		tname: command,
 	}
 }
 
@@ -149,7 +145,6 @@ func (r *HostRunner) Run(ctx context.Context, command string) *Assertable {
 func (r *HostRunner) RunCmd(cmd *exec.Cmd) *Assertable {
 	return &Assertable{
 		cmd:   cmd,
-		tname: strings.Join(cmd.Args, " "),
 	}
 }
 
@@ -161,7 +156,6 @@ func (r *HostRunner) Close() error {
 // Assertable describes an initialized command ready to be run and asserted against
 type Assertable struct {
 	cmd   *exec.Cmd
-	tname string
 }
 
 // Assert runs the Assertable and

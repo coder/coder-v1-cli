@@ -1,8 +1,11 @@
 package integration
 
 import (
+	"bytes"
 	"context"
+	"io/ioutil"
 	"math/rand"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -20,12 +23,29 @@ func run(t *testing.T, container string, execute func(t *testing.T, ctx context.
 		c, err := tcli.NewContainerRunner(ctx, &tcli.ContainerConfig{
 			Image: "codercom/enterprise-dev",
 			Name:  container,
+			// use this bind mount just to fix the user perms issue
+			// 
+			// we'll overwrite this value with the proper binary value later to fix the case
+			// where we're using docker in docker and bind mounts aren't correct
 			BindMounts: map[string]string{
 				binpath: "/bin/coder",
 			},
 		})
 		assert.Success(t, "new run container", err)
 		defer c.Close()
+
+		// read the test binary 
+		contents, err := ioutil.ReadFile(binpath)
+		assert.Success(t, "read coder cli binary", err)
+
+		// inject the test binary into the container runner
+		// this is preferable to the bind mount given it's docker in docker limitation
+		cmd := exec.CommandContext(ctx, "sh", "-c", "sudo cat - > /bin/coder")
+		cmd.Stdin = bytes.NewReader(contents)
+		c.RunCmd(cmd).Assert(t,
+				tcli.Success(),
+				tcli.StderrEmpty(),
+		)
 
 		execute(t, ctx, c)
 	})
