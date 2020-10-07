@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 
 	"cdr.dev/coder-cli/coder-sdk"
@@ -42,10 +41,8 @@ func makeLoginCmd() *cobra.Command {
 			// Don't return errors as it would print the usage.
 
 			if err := login(cmd, u, config.URL, config.Session); err != nil {
-				flog.Error("Login error: %s.", err)
-				os.Exit(1)
+				return xerrors.Errorf("Login error", err)
 			}
-
 			return nil
 		},
 	}

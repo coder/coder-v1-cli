@@ -5,8 +5,6 @@ import (
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"golang.org/x/xerrors"
-
-	"go.coder.com/flog"
 )
 
 // Helpers for working with the Coder Enterprise API.
@@ -73,7 +71,6 @@ func findEnv(ctx context.Context, client *coder.Client, envName, userEmail strin
 		// Keep track of what we found for the logs.
 		found = append(found, env.Name)
 	}
-	flog.Error("found %q", found)
-	flog.Error("%q not found", envName)
+
 	return nil, coder.ErrNotFound
 }

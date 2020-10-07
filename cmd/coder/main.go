@@ -42,8 +42,6 @@ func main() {
 	app.Version = fmt.Sprintf("%s %s %s/%s", version, runtime.Version(), runtime.GOOS, runtime.GOARCH)
 
 	if err := app.ExecuteContext(ctx); err != nil {
-		// NOTE: The returned error is already handled and logged by the cmd lib (cobra), so no need to re-handle it here.
-		//       As we are in the main, if there was an error, exit the process with an error code.
-		os.Exit(1)
+		flog.Fatal("%v", err)
 	}
 }

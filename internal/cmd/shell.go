@@ -71,7 +71,7 @@ func shell(_ *cobra.Command, cmdArgs []string) error {
 		if exitErr, ok := err.(wsep.ExitError); ok {
 			os.Exit(exitErr.Code)
 		}
-		flog.Fatal("%+v", err)
+		return xerrors.Errorf("run command: %w", err)
 	}
 	return nil
 }
