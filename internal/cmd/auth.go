@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"context"
+	"net/http"
 	"net/url"
 
 	"golang.org/x/xerrors"
@@ -27,8 +29,24 @@ func newClient() (*coder.Client, error) {
 		return nil, xerrors.Errorf("url misformatted: %w try runing \"coder login\" with a valid URL", err)
 	}
 
-	return &coder.Client{
+	c := &coder.Client{
 		BaseURL: u,
 		Token:   sessionToken,
-	}, nil
+	}
+
+	// Make sure we can make a request so the final
+	// error is more clean.
+	_, err = c.Me(context.Background())
+	if err != nil {
+		var he *coder.HTTPError
+		if xerrors.As(err, &he) {
+			switch he.StatusCode {
+			case http.StatusUnauthorized:
+				return nil, xerrors.Errorf("not authenticated: try running \"coder login`\"")
+			}
+		}
+		return nil, err
+	}
+
+	return c, nil
 }

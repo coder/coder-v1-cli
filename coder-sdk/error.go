@@ -2,6 +2,7 @@ package coder
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 
@@ -18,19 +19,28 @@ type apiError struct {
 	} `json:"error"`
 }
 
-func bodyError(resp *http.Response) error {
-	byt, err := httputil.DumpResponse(resp, true)
+// HTTPError represents an error from the Coder API.
+type HTTPError struct {
+	*http.Response
+}
+
+func (e *HTTPError) Error() string {
+	dump, err := httputil.DumpResponse(e.Response, false)
 	if err != nil {
-		return xerrors.Errorf("dump response: %w", err)
+		return fmt.Sprintf("dump response: %+v", err)
 	}
 
 	var msg apiError
 	// Try to decode the payload as an error, if it fails or if there is no error message,
 	// return the response URL with the dump.
-	if err := json.NewDecoder(resp.Body).Decode(&msg); err != nil || msg.Err.Msg == "" {
-		return xerrors.Errorf("%s\n%s", resp.Request.URL, byt)
+	if err := json.NewDecoder(e.Response.Body).Decode(&msg); err != nil || msg.Err.Msg == "" {
+		return fmt.Sprintf("%s\n%s", e.Response.Request.URL, dump)
 	}
 
 	// If the payload was a in the expected error format with a message, include it.
-	return xerrors.Errorf("%s\n%s%s", resp.Request.URL, byt, msg.Err.Msg)
+	return fmt.Sprintf("%s\n%s%s", e.Response.Request.URL, dump, msg.Err.Msg)
+}
+
+func bodyError(resp *http.Response) error {
+	return &HTTPError{resp}
 }
