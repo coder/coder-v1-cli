@@ -107,6 +107,11 @@ func (c Client) DeleteEnvironment(ctx context.Context, envID string) error {
 	return c.requestBody(ctx, http.MethodDelete, "/api/environments/"+envID, nil, nil)
 }
 
+// StopEnvironment stops the stops.
+func (c Client) StopEnvironment(ctx context.Context, envID string) error {
+	return c.requestBody(ctx, http.MethodPut, "/api/environments/"+envID+"/stop", nil, nil)
+}
+
 // DialWsep dials an environments command execution interface
 // See https://github.com/cdr/wsep for details.
 func (c Client) DialWsep(ctx context.Context, env *Environment) (*websocket.Conn, error) {

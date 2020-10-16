@@ -61,6 +61,34 @@ func makeEnvsCommand() *cobra.Command {
 	}
 	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human | json")
 	cmd.AddCommand(lsCmd)
+	cmd.AddCommand(stopEnvCommand(&user))
 
 	return cmd
+}
+
+func stopEnvCommand(user *string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "stop [environment_name]",
+		Short: "stop a Coder environment by name",
+		Long:  "Stop a Coder environment by name",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client, err := newClient()
+			if err != nil {
+				return xerrors.Errorf("new client: %w", err)
+			}
+
+			envName := args[0]
+			env, err := findEnv(cmd.Context(), client, envName, *user)
+			if err != nil {
+				return xerrors.Errorf("find environment by name: %w", err)
+			}
+
+			if err = client.StopEnvironment(cmd.Context(), env.ID); err != nil {
+				return xerrors.Errorf("stop environment: %w", err)
+			}
+			flog.Success("Successfully stopped environment %q", envName)
+			return nil
+		},
+	}
 }
