@@ -171,7 +171,7 @@ func makeSSHConfig(host, userName, envName, privateKeyFilepath string) string {
    User %s-%s
    StrictHostKeyChecking no
    ConnectTimeout=0
-   IdentityFile=%s
+   IdentityFile="%s"
    ServerAliveInterval 60
    ServerAliveCountMax 3
 `, envName, host, userName, envName, privateKeyFilepath)
