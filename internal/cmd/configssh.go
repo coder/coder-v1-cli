@@ -130,7 +130,10 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 		}
 		err = writeSSHKey(ctx, client, privateKeyFilepath)
 		if err != nil {
-			fmt.Printf("Your private ssh key already exists at \"%s\"\nYou may need to remove the existing file and re-run this command\n", privateKeyFilepath)
+			if !xerrors.Is(err, os.ErrPermission) {
+				return xerrors.Errorf("write ssh key: %w", err)
+			}
+			fmt.Printf("Your private ssh key already exists at \"%s\"\nYou may need to remove the existing private key file and re-run this command\n\n", privateKeyFilepath)
 		} else {
 			fmt.Printf("Your private ssh key was written to \"%s\"\n", privateKeyFilepath)
 		}
