@@ -58,6 +58,12 @@ MacOS:
   -h, --help   help for completion
 ```
 
+### Options inherited from parent commands
+
+```
+  -v, --verbose   show verbose output
+```
+
 ### SEE ALSO
 
 * [coder](coder.md)	 - coder provides a CLI for working with an existing Coder Enterprise installation

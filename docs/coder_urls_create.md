@@ -18,6 +18,12 @@ coder urls create [env_name] [port] [--access <level>] [--name <name>] [flags]
       --name string     DevURL name
 ```
 
+### Options inherited from parent commands
+
+```
+  -v, --verbose   show verbose output
+```
+
 ### SEE ALSO
 
 * [coder urls](coder_urls.md)	 - Interact with environment DevURLs

@@ -21,6 +21,7 @@ coder envs ls [flags]
 
 ```
       --user string   Specify the user whose resources to target (default "me")
+  -v, --verbose       show verbose output
 ```
 
 ### SEE ALSO

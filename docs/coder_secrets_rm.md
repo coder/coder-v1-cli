@@ -26,6 +26,7 @@ coder secrets rm mysql-password mysql-user
 
 ```
       --user string   Specify the user whose resources to target (default "me")
+  -v, --verbose       show verbose output
 ```
 
 ### SEE ALSO
