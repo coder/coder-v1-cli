@@ -21,7 +21,7 @@ type Environment struct {
 	UserID           string           `json:"user_id"            tab:"-"`
 	LastBuiltAt      time.Time        `json:"last_built_at"      tab:"-"`
 	CPUCores         float32          `json:"cpu_cores"          tab:"CPUCores"`
-	MemoryGB         int              `json:"memory_gb"          tab:"MemoryGB"`
+	MemoryGB         float32          `json:"memory_gb"          tab:"MemoryGB"`
 	DiskGB           int              `json:"disk_gb"            tab:"DiskGB"`
 	GPUs             int              `json:"gpus"               tab:"GPUs"`
 	Updating         bool             `json:"updating"           tab:"Updating"`
@@ -91,6 +91,16 @@ func (c Client) CreateEnvironment(ctx context.Context, orgID string, req CreateE
 		return nil, err
 	}
 	return &env, nil
+}
+
+// ListEnvironments lists environments returned by the given filter.
+// TODO: add the filter options
+func (c Client) ListEnvironments(ctx context.Context) ([]Environment, error) {
+	var envs []Environment
+	if err := c.requestBody(ctx, http.MethodGet, "/api/environments", nil, &envs); err != nil {
+		return nil, err
+	}
+	return envs, nil
 }
 
 // EnvironmentsByOrganization gets the list of environments owned by the given user.
