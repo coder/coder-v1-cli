@@ -23,6 +23,7 @@ func makeResourceCmd() *cobra.Command {
 }
 
 func resourceTop() *cobra.Command {
+	var group string
 	cmd := &cobra.Command{
 		Use: "top",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -34,14 +35,16 @@ func resourceTop() *cobra.Command {
 
 			// NOTE: it's not worth parrallelizing these calls yet given that this specific endpoint
 			// takes about 20x times longer than the other two
-			envs, err := client.Environments(ctx)
+			allEnvs, err := client.Environments(ctx)
 			if err != nil {
 				return xerrors.Errorf("get environments %w", err)
 			}
-
-			userEnvs := make(map[string][]coder.Environment)
-			for _, e := range envs {
-				userEnvs[e.UserID] = append(userEnvs[e.UserID], e)
+			// only include environments whose last status was "ON"
+			envs := make([]coder.Environment, 0)
+			for _, e := range allEnvs {
+				if e.LatestStat.ContainerStatus == coder.EnvironmentOn {
+					envs = append(envs, e)
+				}
 			}
 
 			users, err := client.Users(ctx)
@@ -49,54 +52,119 @@ func resourceTop() *cobra.Command {
 				return xerrors.Errorf("get users: %w", err)
 			}
 
-			orgIDMap := make(map[string]coder.Organization)
-			orglist, err := client.Organizations(ctx)
+			orgs, err := client.Organizations(ctx)
 			if err != nil {
 				return xerrors.Errorf("get organizations: %w", err)
 			}
-			for _, o := range orglist {
-				orgIDMap[o.ID] = o
+
+			var groups []groupable
+			var labeler envLabeler
+			switch group {
+			case "user":
+				userEnvs := make(map[string][]coder.Environment, len(users))
+				for _, e := range envs {
+					userEnvs[e.UserID] = append(userEnvs[e.UserID], e)
+				}
+				for _, u := range users {
+					groups = append(groups, userGrouping{user: u, envs: userEnvs[u.ID]})
+				}
+				orgIDMap := make(map[string]coder.Organization)
+				for _, o := range orgs {
+					orgIDMap[o.ID] = o
+				}
+				labeler = orgLabeler{orgIDMap}
+			case "org":
+				orgEnvs := make(map[string][]coder.Environment, len(orgs))
+				for _, e := range envs {
+					orgEnvs[e.OrganizationID] = append(orgEnvs[e.OrganizationID], e)
+				}
+				for _, o := range orgs {
+					groups = append(groups, orgGrouping{org: o, envs: orgEnvs[o.ID]})
+				}
+				userIDMap := make(map[string]coder.User)
+				for _, u := range users {
+					userIDMap[u.ID] = u
+				}
+				labeler = userLabeler{userIDMap}
+			default:
+				return xerrors.Errorf("unknown --group %q", group)
 			}
 
-			printResourceTop(os.Stdout, users, orgIDMap, userEnvs)
+			printResourceTop(os.Stdout, groups, labeler)
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&group, "group", "user", "the grouping parameter (user|org)")
 
 	return cmd
 }
 
-func printResourceTop(writer io.Writer, users []coder.User, orgIDMap map[string]coder.Organization, userEnvs map[string][]coder.Environment) {
+// groupable specifies a structure capable of being an aggregation group of environments (user, org, all)
+type groupable interface {
+	header() string
+	environments() []coder.Environment
+}
+
+type userGrouping struct {
+	user coder.User
+	envs []coder.Environment
+}
+
+func (u userGrouping) environments() []coder.Environment {
+	return u.envs
+}
+
+func (u userGrouping) header() string {
+	return fmt.Sprintf("%s\t(%s)", truncate(u.user.Name, 20, "..."), u.user.Email)
+}
+
+type orgGrouping struct {
+	org  coder.Organization
+	envs []coder.Environment
+}
+
+func (o orgGrouping) environments() []coder.Environment {
+	return o.envs
+}
+
+func (o orgGrouping) header() string {
+	plural := "s"
+	if len(o.org.Members) < 2 {
+		plural = ""
+	}
+	return fmt.Sprintf("%s\t(%v member%s)", truncate(o.org.Name, 20, "..."), len(o.org.Members), plural)
+}
+
+func printResourceTop(writer io.Writer, groups []groupable, labeler envLabeler) {
 	tabwriter := tabwriter.NewWriter(writer, 0, 0, 4, ' ', 0)
 	defer func() { _ = tabwriter.Flush() }()
 
-	var userResources []aggregatedUser
-	for _, u := range users {
+	var userResources []aggregatedResources
+	for _, group := range groups {
 		// truncate user names to ensure tabwriter doesn't push our entire table too far
-		u.Name = truncate(u.Name, 20, "...")
-		userResources = append(userResources, aggregatedUser{User: u, resources: aggregateEnvResources(userEnvs[u.ID])})
+		userResources = append(userResources, aggregatedResources{groupable: group, resources: aggregateEnvResources(group.environments())})
 	}
 	sort.Slice(userResources, func(i, j int) bool {
 		return userResources[i].cpuAllocation > userResources[j].cpuAllocation
 	})
 
 	for _, u := range userResources {
-		_, _ = fmt.Fprintf(tabwriter, "%s\t(%s)\t%s", u.Name, u.Email, u.resources)
+		_, _ = fmt.Fprintf(tabwriter, "%s\t%s", u.header(), u.resources)
 		if verbose {
-			if len(userEnvs[u.ID]) > 0 {
+			if len(u.environments()) > 0 {
 				_, _ = fmt.Fprintf(tabwriter, "\f")
 			}
-			for _, env := range userEnvs[u.ID] {
+			for _, env := range u.environments() {
 				_, _ = fmt.Fprintf(tabwriter, "\t")
-				_, _ = fmt.Fprintln(tabwriter, fmtEnvResources(env, orgIDMap))
+				_, _ = fmt.Fprintln(tabwriter, fmtEnvResources(env, labeler))
 			}
 		}
 		_, _ = fmt.Fprint(tabwriter, "\n")
 	}
 }
 
-type aggregatedUser struct {
-	coder.User
+type aggregatedResources struct {
+	groupable
 	resources
 }
 
@@ -109,8 +177,28 @@ func resourcesFromEnv(env coder.Environment) resources {
 	}
 }
 
-func fmtEnvResources(env coder.Environment, orgs map[string]coder.Organization) string {
-	return fmt.Sprintf("%s\t%s\t[org: %s]", env.Name, resourcesFromEnv(env), orgs[env.OrganizationID].Name)
+func fmtEnvResources(env coder.Environment, labeler envLabeler) string {
+	return fmt.Sprintf("%s\t%s\t%s", env.Name, resourcesFromEnv(env), labeler.label(env))
+}
+
+type envLabeler interface {
+	label(coder.Environment) string
+}
+
+type orgLabeler struct {
+	orgMap map[string]coder.Organization
+}
+
+func (o orgLabeler) label(e coder.Environment) string {
+	return fmt.Sprintf("[org: %s]", o.orgMap[e.OrganizationID].Name)
+}
+
+type userLabeler struct {
+	userMap map[string]coder.User
+}
+
+func (u userLabeler) label(e coder.Environment) string {
+	return fmt.Sprintf("[user: %s]", u.userMap[e.UserID].Email)
 }
 
 func aggregateEnvResources(envs []coder.Environment) resources {
