@@ -2,18 +2,21 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"text/tabwriter"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
 )
 
 func makeResourceCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "resources",
-		Short: "manager Coder resources with platform-level context (users, organizations, environments)",
+		Use:    "resources",
+		Short:  "manager Coder resources with platform-level context (users, organizations, environments)",
+		Hidden: true,
 	}
 	cmd.AddCommand(resourceTop())
 	return cmd
@@ -24,15 +27,16 @@ func resourceTop() *cobra.Command {
 		Use: "top",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-
 			client, err := newClient()
 			if err != nil {
 				return err
 			}
 
-			envs, err := client.ListEnvironments(ctx)
+			// NOTE: it's not worth parrallelizing these calls yet given that this specific endpoint
+			// takes about 20x times longer than the other two
+			envs, err := client.Environments(ctx)
 			if err != nil {
-				return err
+				return xerrors.Errorf("get environments %w", err)
 			}
 
 			userEnvs := make(map[string][]coder.Environment)
@@ -42,49 +46,53 @@ func resourceTop() *cobra.Command {
 
 			users, err := client.Users(ctx)
 			if err != nil {
-				return err
+				return xerrors.Errorf("get users: %w", err)
 			}
 
-			orgs := make(map[string]coder.Organization)
+			orgIDMap := make(map[string]coder.Organization)
 			orglist, err := client.Organizations(ctx)
 			if err != nil {
-				return err
+				return xerrors.Errorf("get organizations: %w", err)
 			}
 			for _, o := range orglist {
-				orgs[o.ID] = o
+				orgIDMap[o.ID] = o
 			}
 
-			tabwriter := tabwriter.NewWriter(os.Stdout, 0, 0, 4, ' ', 0)
-			var userResources []aggregatedUser
-			for _, u := range users {
-				// truncate user names to ensure tabwriter doesn't push our entire table too far
-				u.Name = truncate(u.Name, 20, "...")
-				userResources = append(userResources, aggregatedUser{User: u, resources: aggregateEnvResources(userEnvs[u.ID])})
-			}
-			sort.Slice(userResources, func(i, j int) bool {
-				return userResources[i].cpuAllocation > userResources[j].cpuAllocation
-			})
-
-			for _, u := range userResources {
-				_, _ = fmt.Fprintf(tabwriter, "%s\t(%s)\t%s", u.Name, u.Email, u.resources)
-				if verbose {
-					if len(userEnvs[u.ID]) > 0 {
-						_, _ = fmt.Fprintf(tabwriter, "\f")
-					}
-					for _, env := range userEnvs[u.ID] {
-						_, _ = fmt.Fprintf(tabwriter, "\t")
-						_, _ = fmt.Fprintln(tabwriter, fmtEnvResources(env, orgs))
-					}
-				}
-				fmt.Fprint(tabwriter, "\n")
-			}
-			_ = tabwriter.Flush()
-
+			printResourceTop(os.Stdout, users, orgIDMap, userEnvs)
 			return nil
 		},
 	}
 
 	return cmd
+}
+
+func printResourceTop(writer io.Writer, users []coder.User, orgIDMap map[string]coder.Organization, userEnvs map[string][]coder.Environment) {
+	tabwriter := tabwriter.NewWriter(writer, 0, 0, 4, ' ', 0)
+	defer func() { _ = tabwriter.Flush() }()
+
+	var userResources []aggregatedUser
+	for _, u := range users {
+		// truncate user names to ensure tabwriter doesn't push our entire table too far
+		u.Name = truncate(u.Name, 20, "...")
+		userResources = append(userResources, aggregatedUser{User: u, resources: aggregateEnvResources(userEnvs[u.ID])})
+	}
+	sort.Slice(userResources, func(i, j int) bool {
+		return userResources[i].cpuAllocation > userResources[j].cpuAllocation
+	})
+
+	for _, u := range userResources {
+		_, _ = fmt.Fprintf(tabwriter, "%s\t(%s)\t%s", u.Name, u.Email, u.resources)
+		if verbose {
+			if len(userEnvs[u.ID]) > 0 {
+				_, _ = fmt.Fprintf(tabwriter, "\f")
+			}
+			for _, env := range userEnvs[u.ID] {
+				_, _ = fmt.Fprintf(tabwriter, "\t")
+				_, _ = fmt.Fprintln(tabwriter, fmtEnvResources(env, orgIDMap))
+			}
+		}
+		_, _ = fmt.Fprint(tabwriter, "\n")
+	}
 }
 
 type aggregatedUser struct {

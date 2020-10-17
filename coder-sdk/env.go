@@ -93,9 +93,9 @@ func (c Client) CreateEnvironment(ctx context.Context, orgID string, req CreateE
 	return &env, nil
 }
 
-// ListEnvironments lists environments returned by the given filter.
-// TODO: add the filter options
-func (c Client) ListEnvironments(ctx context.Context) ([]Environment, error) {
+// Environments lists environments returned by the given filter.
+// TODO: add the filter options, explore performance issues
+func (c Client) Environments(ctx context.Context) ([]Environment, error) {
 	var envs []Environment
 	if err := c.requestBody(ctx, http.MethodGet, "/api/environments", nil, &envs); err != nil {
 		return nil, err
