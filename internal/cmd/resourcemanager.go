@@ -15,7 +15,7 @@ import (
 func makeResourceCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "resources",
-		Short:  "manager Coder resources with platform-level context (users, organizations, environments)",
+		Short:  "manage Coder resources with platform-level context (users, organizations, environments)",
 		Hidden: true,
 	}
 	cmd.AddCommand(resourceTop())
@@ -141,8 +141,10 @@ func printResourceTop(writer io.Writer, groups []groupable, labeler envLabeler) 
 
 	var userResources []aggregatedResources
 	for _, group := range groups {
-		// truncate user names to ensure tabwriter doesn't push our entire table too far
-		userResources = append(userResources, aggregatedResources{groupable: group, resources: aggregateEnvResources(group.environments())})
+		userResources = append(
+			userResources,
+			aggregatedResources{groupable: group, resources: aggregateEnvResources(group.environments())},
+		)
 	}
 	sort.Slice(userResources, func(i, j int) bool {
 		return userResources[i].cpuAllocation > userResources[j].cpuAllocation
@@ -220,7 +222,30 @@ type resources struct {
 }
 
 func (a resources) String() string {
-	return fmt.Sprintf("[cpu: alloc=%.1fvCPU, util=%.1f]\t[mem: alloc=%.1fGB, util=%.1f]", a.cpuAllocation, a.cpuUtilization, a.memAllocation, a.memUtilization)
+	return fmt.Sprintf(
+		"[cpu: alloc=%.1fvCPU]\t[mem: alloc=%.1fGB]",
+		a.cpuAllocation, a.memAllocation,
+	)
+
+	// TODO@cmoog: consider adding the utilization info once a historical average is considered or implemented
+	// return fmt.Sprintf(
+	// 	"[cpu: alloc=%.1fvCPU, util=%s]\t[mem: alloc=%.1fGB, util=%s]",
+	// 	a.cpuAllocation, a.cpuUtilPercentage(), a.memAllocation, a.memUtilPercentage(),
+	// )
+}
+
+func (a resources) cpuUtilPercentage() string {
+	if a.cpuAllocation == 0 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%.1f%%", a.cpuUtilization/a.cpuAllocation*100)
+}
+
+func (a resources) memUtilPercentage() string {
+	if a.memAllocation == 0 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%.1f%%", a.memUtilization/a.memAllocation*100)
 }
 
 // truncate the given string and replace the removed chars with some replacement (ex: "...")
