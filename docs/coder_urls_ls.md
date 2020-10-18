@@ -17,6 +17,12 @@ coder urls ls [environment_name] [flags]
   -o, --output string   human|json (default "human")
 ```
 
+### Options inherited from parent commands
+
+```
+  -v, --verbose   show verbose output
+```
+
 ### SEE ALSO
 
 * [coder urls](coder_urls.md)	 - Interact with environment DevURLs

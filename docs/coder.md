@@ -9,7 +9,8 @@ coder provides a CLI for working with an existing Coder Enterprise installation
 ### Options
 
 ```
-  -h, --help   help for coder
+  -h, --help      help for coder
+  -v, --verbose   show verbose output
 ```
 
 ### SEE ALSO

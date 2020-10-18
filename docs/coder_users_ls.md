@@ -24,6 +24,12 @@ coder users ls -o json | jq .[] | jq -r .email
   -o, --output string   human | json (default "human")
 ```
 
+### Options inherited from parent commands
+
+```
+  -v, --verbose   show verbose output
+```
+
 ### SEE ALSO
 
 * [coder users](coder_users.md)	 - Interact with Coder user accounts

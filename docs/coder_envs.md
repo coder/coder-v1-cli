@@ -13,6 +13,12 @@ Perform operations on the Coder environments owned by the active user.
       --user string   Specify the user whose resources to target (default "me")
 ```
 
+### Options inherited from parent commands
+
+```
+  -v, --verbose   show verbose output
+```
+
 ### SEE ALSO
 
 * [coder](coder.md)	 - coder provides a CLI for working with an existing Coder Enterprise installation

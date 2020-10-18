@@ -7,6 +7,9 @@ import (
 	"github.com/spf13/cobra/doc"
 )
 
+// verbose is a global flag for specifying that a command should give verbose output
+var verbose bool = false
+
 // Make constructs the "coder" root command
 func Make() *cobra.Command {
 	app := &cobra.Command{
@@ -24,9 +27,11 @@ func Make() *cobra.Command {
 		makeEnvsCommand(),
 		makeSyncCmd(),
 		makeURLCmd(),
+		makeResourceCmd(),
 		completionCmd,
 		genDocs(app),
 	)
+	app.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "show verbose output")
 	return app
 }
 

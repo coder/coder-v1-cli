@@ -12,9 +12,9 @@ import (
 // Helpers for working with the Coder Enterprise API.
 
 // lookupUserOrgs gets a list of orgs the user is apart of.
-func lookupUserOrgs(user *coder.User, orgs []coder.Org) []coder.Org {
+func lookupUserOrgs(user *coder.User, orgs []coder.Organization) []coder.Organization {
 	// NOTE: We don't know in advance how many orgs the user is in so we can't pre-alloc.
-	var userOrgs []coder.Org
+	var userOrgs []coder.Organization
 
 	for _, org := range orgs {
 		for _, member := range org.Members {
@@ -36,7 +36,7 @@ func getEnvs(ctx context.Context, client *coder.Client, email string) ([]coder.E
 		return nil, xerrors.Errorf("get user: %w", err)
 	}
 
-	orgs, err := client.Orgs(ctx)
+	orgs, err := client.Organizations(ctx)
 	if err != nil {
 		return nil, xerrors.Errorf("get orgs: %w", err)
 	}
