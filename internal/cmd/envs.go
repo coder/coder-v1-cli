@@ -7,12 +7,13 @@ import (
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
 
-func makeEnvsCommand() *cobra.Command {
+func envsCommand() *cobra.Command {
 	var outputFmt string
 	var user string
 	cmd := &cobra.Command{
@@ -68,26 +69,48 @@ func makeEnvsCommand() *cobra.Command {
 
 func stopEnvCommand(user *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "stop [environment_name]",
-		Short: "stop a Coder environment by name",
-		Long:  "Stop a Coder environment by name",
-		Args:  cobra.ExactArgs(1),
+		Use:   "stop [...environment_names]",
+		Short: "stop Coder environments by name",
+		Long:  "Stop Coder environments by name",
+		Example: `coder envs stop front-end-env
+coder envs stop front-end-env backend-env
+
+# stop all of your environments
+coder envs ls -o json | jq -c '.[].name' | xargs coder envs stop
+
+# stop all environments for a given user
+coder envs --user charlie@coder.com ls -o json \
+	| jq -c '.[].name' \
+	| xargs coder envs --user charlie@coder.com stop`,
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := newClient()
 			if err != nil {
 				return xerrors.Errorf("new client: %w", err)
 			}
 
-			envName := args[0]
-			env, err := findEnv(cmd.Context(), client, envName, *user)
-			if err != nil {
-				return xerrors.Errorf("find environment by name: %w", err)
+			var egroup errgroup.Group
+			for _, envName := range args {
+				envName := envName
+				egroup.Go(func() error {
+					env, err := findEnv(cmd.Context(), client, envName, *user)
+					if err != nil {
+						flog.Error("failed to find environment by name \"%s\": %v", env.Name, err)
+						return xerrors.Errorf("find environment by name: %w", err)
+					}
+
+					if err = client.StopEnvironment(cmd.Context(), env.ID); err != nil {
+						flog.Error("failed to stop environment \"%s\": %v", env.Name, err)
+						return xerrors.Errorf("stop environment: %w", err)
+					}
+					flog.Success("Successfully stopped environment %q", envName)
+					return nil
+				})
 			}
 
-			if err = client.StopEnvironment(cmd.Context(), env.ID); err != nil {
-				return xerrors.Errorf("stop environment: %w", err)
+			if err = egroup.Wait(); err != nil {
+				return xerrors.Errorf("some stop operations failed: %w", err)
 			}
-			flog.Success("Successfully stopped environment %q", envName)
 			return nil
 		},
 	}
