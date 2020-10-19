@@ -24,6 +24,6 @@ Alternatively, manually download the latest [release](https://github.com/cdr/cod
 2. Extract the `coder` binary from the tar file, ex:
 
 ```bash
-cd ~/go/bin
+cd ~/bin
 tar -xvf ~/Downloads/coder-cli-linux-amd64.tar.gz
 ```
