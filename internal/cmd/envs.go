@@ -95,7 +95,7 @@ coder envs --user charlie@coder.com ls -o json \
 				egroup.Go(func() error {
 					env, err := findEnv(cmd.Context(), client, envName, *user)
 					if err != nil {
-						flog.Error("failed to find environment by name \"%s\": %v", env.Name, err)
+						flog.Error("failed to find environment by name \"%s\": %v", envName, err)
 						return xerrors.Errorf("find environment by name: %w", err)
 					}
 
