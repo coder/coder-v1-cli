@@ -9,10 +9,11 @@ import (
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"github.com/spf13/cobra"
+	"go.coder.com/flog"
 	"golang.org/x/xerrors"
 )
 
-func makeResourceCmd() *cobra.Command {
+func resourceCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "resources",
 		Short:  "manage Coder resources with platform-level context (users, organizations, environments)",
@@ -22,81 +23,124 @@ func makeResourceCmd() *cobra.Command {
 	return cmd
 }
 
+type resourceTopOptions struct {
+	group           string
+	user            string
+	org             string
+	sortBy          string
+	showEmptyGroups bool
+}
+
 func resourceTop() *cobra.Command {
-	var group string
+	var options resourceTopOptions
+
 	cmd := &cobra.Command{
-		Use: "top",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-			client, err := newClient()
-			if err != nil {
-				return err
-			}
-
-			// NOTE: it's not worth parrallelizing these calls yet given that this specific endpoint
-			// takes about 20x times longer than the other two
-			allEnvs, err := client.Environments(ctx)
-			if err != nil {
-				return xerrors.Errorf("get environments %w", err)
-			}
-			// only include environments whose last status was "ON"
-			envs := make([]coder.Environment, 0)
-			for _, e := range allEnvs {
-				if e.LatestStat.ContainerStatus == coder.EnvironmentOn {
-					envs = append(envs, e)
-				}
-			}
-
-			users, err := client.Users(ctx)
-			if err != nil {
-				return xerrors.Errorf("get users: %w", err)
-			}
-
-			orgs, err := client.Organizations(ctx)
-			if err != nil {
-				return xerrors.Errorf("get organizations: %w", err)
-			}
-
-			var groups []groupable
-			var labeler envLabeler
-			switch group {
-			case "user":
-				userEnvs := make(map[string][]coder.Environment, len(users))
-				for _, e := range envs {
-					userEnvs[e.UserID] = append(userEnvs[e.UserID], e)
-				}
-				for _, u := range users {
-					groups = append(groups, userGrouping{user: u, envs: userEnvs[u.ID]})
-				}
-				orgIDMap := make(map[string]coder.Organization)
-				for _, o := range orgs {
-					orgIDMap[o.ID] = o
-				}
-				labeler = orgLabeler{orgIDMap}
-			case "org":
-				orgEnvs := make(map[string][]coder.Environment, len(orgs))
-				for _, e := range envs {
-					orgEnvs[e.OrganizationID] = append(orgEnvs[e.OrganizationID], e)
-				}
-				for _, o := range orgs {
-					groups = append(groups, orgGrouping{org: o, envs: orgEnvs[o.ID]})
-				}
-				userIDMap := make(map[string]coder.User)
-				for _, u := range users {
-					userIDMap[u.ID] = u
-				}
-				labeler = userLabeler{userIDMap}
-			default:
-				return xerrors.Errorf("unknown --group %q", group)
-			}
-
-			printResourceTop(os.Stdout, groups, labeler)
-			return nil
-		},
+		Use:   "top",
+		Short: "resource viewer with Coder platform annotations",
+		RunE:  runResourceTop(&options),
+		Example: `coder resources top --group org
+coder resources top --group org --verbose --org DevOps
+coder resources top --group user --verbose --user name@example.com
+coder resources top --sort-by memory --show-empty`,
 	}
-	cmd.Flags().StringVar(&group, "group", "user", "the grouping parameter (user|org)")
+	cmd.Flags().StringVar(&options.group, "group", "user", "the grouping parameter (user|org)")
+	cmd.Flags().StringVar(&options.user, "user", "", "filter by a user email")
+	cmd.Flags().StringVar(&options.org, "org", "", "filter by the name of an organization")
+	cmd.Flags().StringVar(&options.sortBy, "sort-by", "cpu", "field to sort aggregate groups and environments by (cpu|memory)")
+	cmd.Flags().BoolVar(&options.showEmptyGroups, "show-empty", false, "show groups with zero active environments")
 
 	return cmd
+}
+
+func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+		client, err := newClient()
+		if err != nil {
+			return err
+		}
+
+		// NOTE: it's not worth parrallelizing these calls yet given that this specific endpoint
+		// takes about 20x times longer than the other two
+		allEnvs, err := client.Environments(ctx)
+		if err != nil {
+			return xerrors.Errorf("get environments %w", err)
+		}
+		// only include environments whose last status was "ON"
+		envs := make([]coder.Environment, 0)
+		for _, e := range allEnvs {
+			if e.LatestStat.ContainerStatus == coder.EnvironmentOn {
+				envs = append(envs, e)
+			}
+		}
+
+		users, err := client.Users(ctx)
+		if err != nil {
+			return xerrors.Errorf("get users: %w", err)
+		}
+
+		orgs, err := client.Organizations(ctx)
+		if err != nil {
+			return xerrors.Errorf("get organizations: %w", err)
+		}
+
+		var groups []groupable
+		var labeler envLabeler
+		switch options.group {
+		case "user":
+			groups, labeler = aggregateByUser(users, orgs, envs, *options)
+		case "org":
+			groups, labeler = aggregateByOrg(users, orgs, envs, *options)
+		default:
+			return xerrors.Errorf("unknown --group %q", options.group)
+		}
+
+		return printResourceTop(os.Stdout, groups, labeler, options.showEmptyGroups, options.sortBy)
+	}
+}
+
+func aggregateByUser(users []coder.User, orgs []coder.Organization, envs []coder.Environment, options resourceTopOptions) ([]groupable, envLabeler) {
+	var groups []groupable
+	orgIDMap := make(map[string]coder.Organization)
+	for _, o := range orgs {
+		orgIDMap[o.ID] = o
+	}
+	userEnvs := make(map[string][]coder.Environment, len(users))
+	for _, e := range envs {
+		if options.org != "" && orgIDMap[e.OrganizationID].Name != options.org {
+			continue
+		}
+		userEnvs[e.UserID] = append(userEnvs[e.UserID], e)
+	}
+	for _, u := range users {
+		if options.user != "" && u.Email != options.user {
+			continue
+		}
+		groups = append(groups, userGrouping{user: u, envs: userEnvs[u.ID]})
+	}
+	return groups, orgLabeler{orgIDMap}
+}
+
+func aggregateByOrg(users []coder.User, orgs []coder.Organization, envs []coder.Environment, options resourceTopOptions) ([]groupable, envLabeler) {
+	var groups []groupable
+	userIDMap := make(map[string]coder.User)
+	for _, u := range users {
+		userIDMap[u.ID] = u
+	}
+	orgEnvs := make(map[string][]coder.Environment, len(orgs))
+	for _, e := range envs {
+		if options.user != "" && userIDMap[e.UserID].Email != options.user {
+			continue
+		}
+		orgEnvs[e.OrganizationID] = append(orgEnvs[e.OrganizationID], e)
+	}
+	for _, o := range orgs {
+		if options.org != "" && o.Name != options.org {
+			continue
+		}
+		groups = append(groups, orgGrouping{org: o, envs: orgEnvs[o.ID]})
+	}
+	return groups, userLabeler{userIDMap}
 }
 
 // groupable specifies a structure capable of being an aggregation group of environments (user, org, all)
@@ -135,20 +179,24 @@ func (o orgGrouping) header() string {
 	return fmt.Sprintf("%s\t(%v member%s)", truncate(o.org.Name, 20, "..."), len(o.org.Members), plural)
 }
 
-func printResourceTop(writer io.Writer, groups []groupable, labeler envLabeler) {
+func printResourceTop(writer io.Writer, groups []groupable, labeler envLabeler, showEmptyGroups bool, sortBy string) error {
 	tabwriter := tabwriter.NewWriter(writer, 0, 0, 4, ' ', 0)
 	defer func() { _ = tabwriter.Flush() }()
 
 	var userResources []aggregatedResources
 	for _, group := range groups {
-		userResources = append(
-			userResources,
-			aggregatedResources{groupable: group, resources: aggregateEnvResources(group.environments())},
-		)
+		if !showEmptyGroups && len(group.environments()) < 1 {
+			continue
+		}
+		userResources = append(userResources, aggregatedResources{
+			groupable: group, resources: aggregateEnvResources(group.environments()),
+		})
 	}
-	sort.Slice(userResources, func(i, j int) bool {
-		return userResources[i].cpuAllocation > userResources[j].cpuAllocation
-	})
+
+	err := sortAggregatedResources(userResources, sortBy)
+	if err != nil {
+		return err
+	}
 
 	for _, u := range userResources {
 		_, _ = fmt.Fprintf(tabwriter, "%s\t%s", u.header(), u.resources)
@@ -163,6 +211,40 @@ func printResourceTop(writer io.Writer, groups []groupable, labeler envLabeler) 
 		}
 		_, _ = fmt.Fprint(tabwriter, "\n")
 	}
+	if len(userResources) == 0 {
+		flog.Info("No groups for the given filters exist with active environments.")
+		flog.Info("Use \"--show-empty\" to see groups with no resources.")
+	}
+	return nil
+}
+
+func sortAggregatedResources(resources []aggregatedResources, sortBy string) error {
+	const cpu = "cpu"
+	const memory = "memory"
+	switch sortBy {
+	case cpu:
+		sort.Slice(resources, func(i, j int) bool {
+			return resources[i].cpuAllocation > resources[j].cpuAllocation
+		})
+	case memory:
+		sort.Slice(resources, func(i, j int) bool {
+			return resources[i].memAllocation > resources[j].memAllocation
+		})
+	default:
+		return xerrors.Errorf("unknown --sort-by value of \"%s\"", sortBy)
+	}
+	for _, group := range resources {
+		envs := group.environments()
+		switch sortBy {
+		case cpu:
+			sort.Slice(envs, func(i, j int) bool { return envs[i].CPUCores > envs[j].CPUCores })
+		case memory:
+			sort.Slice(envs, func(i, j int) bool { return envs[i].MemoryGB > envs[j].MemoryGB })
+		default:
+			return xerrors.Errorf("unknown --sort-by value of \"%s\"", sortBy)
+		}
+	}
+	return nil
 }
 
 type aggregatedResources struct {
