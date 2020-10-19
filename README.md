@@ -12,7 +12,13 @@ You can find additional Coder Enterprise usage documentation on [https://enterpr
 
 ## Install Release
 
-Download the latest [release](https://github.com/cdr/coder-cli/releases):
+Shell
+
+```
+curl -fsSL https://raw.githubusercontent.com/cdr/coder-cli/master/install.sh | sh
+```
+
+Alternatively, manually download the latest [release](https://github.com/cdr/coder-cli/releases):
 
 1. Click a release and download the tar file for your operating system (ex: coder-cli-linux-amd64.tar.gz)
 2. Extract the `coder` binary from the tar file, ex:
