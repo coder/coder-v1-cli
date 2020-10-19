@@ -1,13 +1,28 @@
 ## coder envs stop
 
-stop a Coder environment by name
+stop Coder environments by name
 
 ### Synopsis
 
-Stop a Coder environment by name
+Stop Coder environments by name
 
 ```
-coder envs stop [environment_name] [flags]
+coder envs stop [...environment_names] [flags]
+```
+
+### Examples
+
+```
+coder envs stop front-end-env
+coder envs stop front-end-env backend-env
+
+# stop all of your environments
+coder envs ls -o json | jq -c '.[].name' | xargs coder envs stop
+
+# stop all environments for a given user
+coder envs --user charlie@coder.com ls -o json \
+	| jq -c '.[].name' \
+	| xargs coder envs --user charlie@coder.com stop
 ```
 
 ### Options

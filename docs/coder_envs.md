@@ -23,4 +23,4 @@ Perform operations on the Coder environments owned by the active user.
 
 * [coder](coder.md)	 - coder provides a CLI for working with an existing Coder Enterprise installation
 * [coder envs ls](coder_envs_ls.md)	 - list all environments owned by the active user
-* [coder envs stop](coder_envs_stop.md)	 - stop a Coder environment by name
+* [coder envs stop](coder_envs_stop.md)	 - stop Coder environments by name

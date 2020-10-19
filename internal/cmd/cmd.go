@@ -24,7 +24,7 @@ func Make() *cobra.Command {
 		makeUsersCmd(),
 		makeConfigSSHCmd(),
 		makeSecretsCmd(),
-		makeEnvsCommand(),
+		envsCommand(),
 		makeSyncCmd(),
 		makeURLCmd(),
 		makeResourceCmd(),
