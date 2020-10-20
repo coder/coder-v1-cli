@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"go.coder.com/flog"
+	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/xerrors"
 )
 
@@ -74,6 +76,9 @@ func trailBuildLogs(ctx context.Context, client *coder.Client, envID string) err
 
 	newSpinner := func() *spinner.Spinner { return spinner.New(spinner.CharSets[11], 100*time.Millisecond) }
 
+	// this tells us whether to show dynamic loaders when printing output
+	isTerminal := terminal.IsTerminal(int(os.Stdout.Fd()))
+
 	logs, err := client.FollowEnvironmentBuildLog(ctx, envID)
 	if err != nil {
 		return err
@@ -88,23 +93,32 @@ func trailBuildLogs(ctx context.Context, client *coder.Client, envID string) err
 			// the FE uses this to reset the UI
 			// the CLI doesn't need to do anything here given that we only append to the trail
 		case coder.BuildLogTypeStage:
+			msg := fmt.Sprintf("%s %s", l.BuildLog.Time.Format(time.RFC3339), l.BuildLog.Msg)
+			if !isTerminal {
+				fmt.Println(msg)
+				continue
+			}
 			if s != nil {
 				s.Stop()
 				fmt.Print("\n")
 			}
 			s = newSpinner()
-			msg := fmt.Sprintf("%s %s", l.BuildLog.Time.Format(time.RFC3339), l.BuildLog.Msg)
 			s.Suffix = fmt.Sprintf("  -- %s", msg)
 			s.FinalMSG = fmt.Sprintf("%s -- %s", check, msg)
 			s.Start()
 		case coder.BuildLogTypeSubstage:
 			// TODO(@cmoog) add verbose substage printing
 		case coder.BuildLogTypeError:
+			errMsg := color.RedString("\t%s", l.BuildLog.Msg)
+			if !isTerminal {
+				fmt.Println(errMsg)
+				continue
+			}
 			if s != nil {
 				s.FinalMSG = fmt.Sprintf("%s %s", failure, strings.TrimPrefix(s.Suffix, "  "))
 				s.Stop()
 			}
-			fmt.Print(color.RedString("\t%s", l.BuildLog.Msg))
+			fmt.Print(errMsg)
 			s = newSpinner()
 		case coder.BuildLogTypeDone:
 			if s != nil {
