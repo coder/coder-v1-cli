@@ -64,6 +64,8 @@ func envsCommand() *cobra.Command {
 	cmd.AddCommand(lsCmd)
 	cmd.AddCommand(stopEnvCommand(&user))
 
+	cmd.AddCommand(watchBuildLogCommand())
+	cmd.AddCommand(rebuildEnvCommand())
 	return cmd
 }
 
