@@ -10,7 +10,7 @@ fi
 
 if [ "$OS" = "Windows_NT" ]; then
   target="windows-386"
-  ext=".zip"
+  extension=".zip"
   if ! command -v unzip >/dev/null; then
     echo "Error: unzip is required to install coder-cli" 1>&2
     exit 1
@@ -20,17 +20,18 @@ else
     echo "Error: tar is required to install coder-cli" 1>&2
     exit 1
   fi
-  ext=".tar.gz"
+  extension=".tar.gz"
   case $(uname -s) in
   Darwin) target="darwin-amd64" ;;
   *) target="linux-amd64" ;;
   esac
 fi
 
-if [ $# -eq 0 ]; then
+version=${1:-""}
+if [ "$version" == "" ]; then
   coder_asset_path=$(
     curl -sSf https://github.com/cdr/coder-cli/releases |
-      grep -o "/cdr/coder-cli/releases/download/.*/coder-cli-${target}${ext}" |
+      grep -o "/cdr/coder-cli/releases/download/.*/coder-cli-${target}${extension}" |
       head -n 1
   )
   if [ ! "$coder_asset_path" ]; then
@@ -39,7 +40,7 @@ if [ $# -eq 0 ]; then
   fi
   cdr_uri="https://github.com${coder_asset_path}"
 else
-  cdr_uri="https://github.com/cdr/coder-cli/releases/download/${1}/coder-cli-${target}${ext}"
+  cdr_uri="https://github.com/cdr/coder-cli/releases/download/${1}/coder-cli-${target}${extension}"
 fi
 
 coder_install="${CODER_INSTALL:-$HOME/.coder}"
@@ -50,14 +51,14 @@ if [ ! -d "$bin_dir" ]; then
   mkdir -p "$bin_dir"
 fi
 
-curl --fail --location --progress-bar --output "$exe$ext" "$cdr_uri"
-if [ "$ext" = ".zip" ]; then
-  unzip -d "$bin_dir" -o "$exe$ext"
+curl --fail --location --progress-bar --output "$exe$extension" "$cdr_uri"
+if [ "$extension" = ".zip" ]; then
+  unzip -d "$bin_dir" -o "$exe$extension"
 else
-  tar -xzf "$exe$ext" -C "$bin_dir"
+  tar -xzf "$exe$extension" -C "$bin_dir"
 fi
 chmod +x "$exe"
-rm "$exe$ext"
+rm "$exe$extension"
 
 echo "Coder was installed successfully to $exe"
 if command -v coder >/dev/null; then
