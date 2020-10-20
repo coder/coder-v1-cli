@@ -4,3 +4,4 @@ cmd/coder/coder
 ci/integration/bin
 ci/integration/env.sh
 coder-sdk/env.sh
+.vscode

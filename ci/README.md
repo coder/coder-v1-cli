@@ -7,7 +7,6 @@
 - `steps/gendocs.sh` generates CLI documentation into `/docs` from the command specifications.
 - `steps/lint.sh` lints all Go source files based on the rules set fourth in `/.golangci.yml`.
 
-
 ## integration tests
 
 ### `tcli`
