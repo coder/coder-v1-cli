@@ -122,6 +122,29 @@ func (c Client) StopEnvironment(ctx context.Context, envID string) error {
 	return c.requestBody(ctx, http.MethodPut, "/api/environments/"+envID+"/stop", nil, nil)
 }
 
+// UpdateEnvironmentReq defines the update operation, only setting
+// nil-fields.
+type UpdateEnvironmentReq struct {
+	ImageID              *string   `json:"image_id"`
+	ImageTag             *string   `json:"image_tag"`
+	CPUCores             *float32  `json:"cpu_cores"`
+	MemoryGB             *float32  `json:"memory_gb"`
+	DiskGB               *int      `json:"disk_gb"`
+	GPUs                 *int      `json:"gpus"`
+	Services             *[]string `json:"services"`
+	CodeServerReleaseURL *string   `json:"code_server_release_url"`
+}
+
+// RebuildEnvironment requests that the given envID is rebuilt with no changes to its specification.
+func (c Client) RebuildEnvironment(ctx context.Context, envID string) error {
+	return c.requestBody(ctx, http.MethodPatch, "/api/environments/"+envID, UpdateEnvironmentReq{}, nil)
+}
+
+// EditEnvironment modifies the environment specification and initiates a rebuild.
+func (c Client) EditEnvironment(ctx context.Context, envID string, req UpdateEnvironmentReq) error {
+	return c.requestBody(ctx, http.MethodPatch, "/api/environments/"+envID, req, nil)
+}
+
 // DialWsep dials an environments command execution interface
 // See https://github.com/cdr/wsep for details.
 func (c Client) DialWsep(ctx context.Context, env *Environment) (*websocket.Conn, error) {
@@ -136,6 +159,49 @@ func (c Client) DialIDEStatus(ctx context.Context, envID string) (*websocket.Con
 // DialEnvironmentBuildLog opens a websocket connection for the environment build log messages.
 func (c Client) DialEnvironmentBuildLog(ctx context.Context, envID string) (*websocket.Conn, error) {
 	return c.dialWebsocket(ctx, "/api/environments/"+envID+"/watch-update")
+}
+
+// BuildLog defines a build log record for a Coder environment.
+type BuildLog struct {
+	ID            string `db:"id" json:"id"`
+	EnvironmentID string `db:"environment_id" json:"environment_id"`
+	// BuildID allows the frontend to separate the logs from the old build with the logs from the new.
+	BuildID string       `db:"build_id" json:"build_id"`
+	Time    time.Time    `db:"time" json:"time"`
+	Type    BuildLogType `db:"type" json:"type"`
+	Msg     string       `db:"msg" json:"msg"`
+}
+
+// BuildLogFollowMsg wraps the base BuildLog and adds a field for collecting
+// errors that may occur when follow or parsing.
+type BuildLogFollowMsg struct {
+	BuildLog
+	Err error
+}
+
+// FollowEnvironmentBuildLog trails the build log of a Coder environment.
+func (c Client) FollowEnvironmentBuildLog(ctx context.Context, envID string) (<-chan BuildLogFollowMsg, error) {
+	ch := make(chan BuildLogFollowMsg)
+	ws, err := c.DialEnvironmentBuildLog(ctx, envID)
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		defer ws.Close(websocket.StatusNormalClosure, "normal closure")
+		defer close(ch)
+		for {
+			var msg BuildLog
+			if err := wsjson.Read(ctx, ws, &msg); err != nil {
+				ch <- BuildLogFollowMsg{Err: err}
+				if xerrors.Is(err, context.Canceled) || xerrors.Is(err, context.DeadlineExceeded) {
+					return
+				}
+				continue
+			}
+			ch <- BuildLogFollowMsg{BuildLog: msg}
+		}
+	}()
+	return ch, nil
 }
 
 // DialEnvironmentStats opens a websocket connection for environment stats.
