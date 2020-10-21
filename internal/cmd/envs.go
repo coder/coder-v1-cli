@@ -111,7 +111,7 @@ coder envs --user charlie@coder.com ls -o json \
 			}
 
 			if err = egroup.Wait(); err != nil {
-				return xerrors.Errorf("some stop operations failed: %w", err)
+				return xerrors.Errorf("some stop operations failed")
 			}
 			return nil
 		},

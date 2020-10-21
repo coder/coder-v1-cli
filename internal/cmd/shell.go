@@ -153,7 +153,7 @@ func runCommand(ctx context.Context, envName, command string, args []string) err
 	if err != nil {
 		var closeErr websocket.CloseError
 		if xerrors.As(err, &closeErr) {
-			return xerrors.Errorf("network error, is %q online? (%w)", envName, err)
+			return xerrors.Errorf("network error, is %q online?", envName)
 		}
 		return xerrors.Errorf("start remote command: %w", err)
 	}

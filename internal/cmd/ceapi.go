@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"golang.org/x/xerrors"
@@ -72,5 +73,17 @@ func findEnv(ctx context.Context, client *coder.Client, envName, userEmail strin
 		found = append(found, env.Name)
 	}
 
-	return nil, coder.ErrNotFound
+	return nil, notFoundButDidFind{
+		needle:   envName,
+		haystack: found,
+	}
+}
+
+type notFoundButDidFind struct {
+	needle   string
+	haystack []string
+}
+
+func (n notFoundButDidFind) Error() string {
+	return fmt.Sprintf("\"%s\" not found in %q: %v", n.needle, n.haystack, coder.ErrNotFound)
 }
