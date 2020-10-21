@@ -8,10 +8,14 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/config"
 )
 
-var errNeedLogin = xerrors.New("failed to read session credentials: did you run \"coder login\"?")
+var errNeedLogin = clog.Fatal(
+	"failed to read session credentials",
+	clog.Hint(`did you run "coder login [https://coder.domain.com]"?`),
+)
 
 func newClient() (*coder.Client, error) {
 	sessionToken, err := config.Session.Read()

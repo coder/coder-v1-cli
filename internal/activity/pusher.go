@@ -2,13 +2,13 @@ package activity
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"golang.org/x/time/rate"
 
 	"cdr.dev/coder-cli/coder-sdk"
-
-	"go.coder.com/flog"
+	"cdr.dev/coder-cli/internal/clog"
 )
 
 const pushInterval = time.Minute
@@ -42,6 +42,6 @@ func (p *Pusher) Push(ctx context.Context) {
 	}
 
 	if err := p.client.PushActivity(ctx, p.source, p.envID); err != nil {
-		flog.Error("push activity: %s", err)
+		clog.Log(clog.Error(fmt.Sprintf("push activity: %s", err)))
 	}
 }

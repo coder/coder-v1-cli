@@ -9,11 +9,10 @@ import (
 	"strings"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/sync"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
-
-	"go.coder.com/flog"
 )
 
 func makeSyncCmd() *cobra.Command {
@@ -96,7 +95,7 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 		remoteVersion, rsyncErr := s.Version()
 
 		if rsyncErr != nil {
-			flog.Info("Unable to determine remote rsync version.  Proceeding cautiously.")
+			clog.LogInfo("unable to determine remote rsync version: proceeding cautiously")
 		} else if localVersion != remoteVersion {
 			return xerrors.Errorf("rsync protocol mismatch: local = %s, remote = %s", localVersion, remoteVersion)
 		}

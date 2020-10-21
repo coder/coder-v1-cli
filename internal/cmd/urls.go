@@ -14,9 +14,8 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
-
-	"go.coder.com/flog"
 )
 
 func makeURLCmd() *cobra.Command {
@@ -70,7 +69,7 @@ var urlAccessLevel = map[string]string{
 func validatePort(port string) (int, error) {
 	p, err := strconv.ParseUint(port, 10, 16)
 	if err != nil {
-		flog.Error("Invalid port")
+		clog.Log(clog.Error("invalid port"))
 		return 0, err
 	}
 	if p < 1 {
@@ -83,7 +82,7 @@ func validatePort(port string) (int, error) {
 func accessLevelIsValid(level string) bool {
 	_, ok := urlAccessLevel[level]
 	if !ok {
-		flog.Error("Invalid access level")
+		clog.Log(clog.Error("invalid access level"))
 	}
 	return ok
 }
@@ -101,7 +100,7 @@ func makeListDevURLs(outputFmt *string) func(cmd *cobra.Command, args []string) 
 		switch *outputFmt {
 		case "human":
 			if len(devURLs) < 1 {
-				flog.Info("No devURLs found for environment %q", envName)
+				clog.LogInfo(fmt.Sprintf("no devURLs found for environment %q", envName))
 				return nil
 			}
 			err := xtabwriter.WriteTable(len(devURLs), func(i int) interface{} {
@@ -168,13 +167,13 @@ func makeCreateDevURL() *cobra.Command {
 
 			urlID, found := devURLID(portNum, urls)
 			if found {
-				flog.Info("Updating devurl for port %v", port)
+				clog.LogInfo(fmt.Sprintf("updating devurl for port %v", port))
 				err := client.UpdateDevURL(cmd.Context(), env.ID, urlID, portNum, urlname, access)
 				if err != nil {
 					return xerrors.Errorf("update DevURL: %w", err)
 				}
 			} else {
-				flog.Info("Adding devurl for port %v", port)
+				clog.LogInfo(fmt.Sprintf("Adding devurl for port %v", port))
 				err := client.InsertDevURL(cmd.Context(), env.ID, portNum, urlname, access)
 				if err != nil {
 					return xerrors.Errorf("insert DevURL: %w", err)
@@ -236,7 +235,7 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 
 	urlID, found := devURLID(portNum, urls)
 	if found {
-		flog.Info("Deleting devurl for port %v", port)
+		clog.LogInfo(fmt.Sprintf("deleting devurl for port %v", port))
 	} else {
 		return xerrors.Errorf("No devurl found for port %v", port)
 	}

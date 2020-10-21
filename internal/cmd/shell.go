@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -15,10 +16,9 @@ import (
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/activity"
+	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/x/xterminal"
 	"cdr.dev/wsep"
-
-	"go.coder.com/flog"
 )
 
 func getEnvsForCompletion(user string) func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -153,7 +153,7 @@ func runCommand(ctx context.Context, envName, command string, args []string) err
 	if err != nil {
 		var closeErr websocket.CloseError
 		if xerrors.As(err, &closeErr) {
-			return xerrors.Errorf("network error, is %q online?", envName)
+			return networkErr(client, env)
 		}
 		return xerrors.Errorf("start remote command: %w", err)
 	}
@@ -179,7 +179,6 @@ func runCommand(ctx context.Context, envName, command string, args []string) err
 		}
 	}()
 	go func() {
-
 		if _, err := io.Copy(os.Stderr, process.Stderr()); err != nil {
 			cancel()
 		}
@@ -188,11 +187,24 @@ func runCommand(ctx context.Context, envName, command string, args []string) err
 	if err := process.Wait(); err != nil {
 		var closeErr websocket.CloseError
 		if xerrors.Is(err, ctx.Err()) || xerrors.As(err, &closeErr) {
-			return xerrors.Errorf("network error, is %q online?", envName)
+			return networkErr(client, env)
 		}
 		return err
 	}
 	return nil
+}
+
+func networkErr(client *coder.Client, env *coder.Environment) error {
+	if env.LatestStat.ContainerStatus != coder.EnvironmentOn {
+		return clog.Fatal(
+			"environment is not running",
+			fmt.Sprintf("environment %q is not running", env.Name),
+			fmt.Sprintf("its current status is %q", env.LatestStat.ContainerStatus),
+			clog.BlankLine,
+			clog.Tip("run \"coder envs rebuild %s --follow\" to start the environment", env.Name),
+		)
+	}
+	return xerrors.Errorf("network error, is %q online?", env.Name)
 }
 
 func heartbeat(ctx context.Context, conn *websocket.Conn, interval time.Duration) {
@@ -204,9 +216,10 @@ func heartbeat(ctx context.Context, conn *websocket.Conn, interval time.Duration
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if err := conn.Ping(ctx); err != nil {
-				// NOTE: Prefix with \r\n to attempt to have clearer output as we might still be in raw mode.
-				flog.Fatal("\r\nFailed to ping websocket: %s, exiting.", err)
+			if err := conn.Ping(ctx); err != nil || true {
+				// don't try to do multi-line here because the raw mode makes things weird
+				clog.Log(clog.Fatal("failed to ping websocket, exiting: " + err.Error()))
+				os.Exit(1)
 			}
 		}
 	}

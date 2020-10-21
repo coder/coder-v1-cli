@@ -8,8 +8,8 @@ import (
 	"text/tabwriter"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/clog"
 	"github.com/spf13/cobra"
-	"go.coder.com/flog"
 	"golang.org/x/xerrors"
 )
 
@@ -212,8 +212,10 @@ func printResourceTop(writer io.Writer, groups []groupable, labeler envLabeler, 
 		_, _ = fmt.Fprint(tabwriter, "\n")
 	}
 	if len(userResources) == 0 {
-		flog.Info("No groups for the given filters exist with active environments.")
-		flog.Info("Use \"--show-empty\" to see groups with no resources.")
+		clog.LogInfo(
+			"no groups for the given filters exist with active environments",
+			clog.Tip("run \"--show-empty\" to see groups with no resources."),
+		)
 	}
 	return nil
 }
