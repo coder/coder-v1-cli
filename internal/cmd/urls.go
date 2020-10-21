@@ -75,8 +75,7 @@ func validatePort(port string) (int, error) {
 	}
 	if p < 1 {
 		// Port 0 means 'any free port', which we don't support.
-		flog.Error("Port must be > 0")
-		return 0, strconv.ErrRange
+		return 0, xerrors.New("Port must be > 0")
 	}
 	return int(p), nil
 }

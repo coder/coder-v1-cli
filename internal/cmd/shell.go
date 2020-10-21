@@ -71,7 +71,7 @@ func shell(_ *cobra.Command, cmdArgs []string) error {
 		if exitErr, ok := err.(wsep.ExitError); ok {
 			os.Exit(exitErr.Code)
 		}
-		flog.Fatal("%+v", err)
+		return xerrors.Errorf("run command: %w", err)
 	}
 	return nil
 }
@@ -153,7 +153,7 @@ func runCommand(ctx context.Context, envName, command string, args []string) err
 	if err != nil {
 		var closeErr websocket.CloseError
 		if xerrors.As(err, &closeErr) {
-			return xerrors.Errorf("network error, is %q online? (%w)", envName, err)
+			return xerrors.Errorf("network error, is %q online?", envName)
 		}
 		return xerrors.Errorf("start remote command: %w", err)
 	}
