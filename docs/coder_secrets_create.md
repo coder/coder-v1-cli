@@ -38,3 +38,4 @@ coder secrets create aws-credentials --from-file ./credentials.json
 ### SEE ALSO
 
 * [coder secrets](coder_secrets.md)	 - Interact with Coder Secrets
+

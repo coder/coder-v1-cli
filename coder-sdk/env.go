@@ -78,7 +78,7 @@ type CreateEnvironmentRequest struct {
 	ImageID  string   `json:"image_id"`
 	ImageTag string   `json:"image_tag"`
 	CPUCores float32  `json:"cpu_cores"`
-	MemoryGB int      `json:"memory_gb"`
+	MemoryGB float32  `json:"memory_gb"`
 	DiskGB   int      `json:"disk_gb"`
 	GPUs     int      `json:"gpus"`
 	Services []string `json:"services"`

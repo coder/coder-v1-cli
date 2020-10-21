@@ -25,3 +25,4 @@ coder login [Coder Enterprise URL eg. https://my.coder.domain/] [flags]
 ### SEE ALSO
 
 * [coder](coder.md)	 - coder provides a CLI for working with an existing Coder Enterprise installation
+

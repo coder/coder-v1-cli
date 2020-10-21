@@ -25,3 +25,4 @@ coder provides a CLI for working with an existing Coder Enterprise installation
 * [coder sync](coder_sync.md)	 - Establish a one way directory sync to a Coder environment
 * [coder urls](coder_urls.md)	 - Interact with environment DevURLs
 * [coder users](coder_users.md)	 - Interact with Coder user accounts
+
