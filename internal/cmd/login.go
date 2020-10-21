@@ -9,14 +9,13 @@ import (
 	"strings"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/loginsrv"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
-
-	"go.coder.com/flog"
 )
 
 func makeLoginCmd() *cobra.Command {
@@ -140,7 +139,7 @@ func login(cmd *cobra.Command, envURL *url.URL, urlCfg, sessionCfg config.File) 
 		return xerrors.Errorf("store config: %w", err)
 	}
 
-	flog.Success("Logged in.")
+	clog.LogSuccess("logged in")
 
 	return nil
 }

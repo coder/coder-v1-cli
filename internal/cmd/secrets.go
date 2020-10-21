@@ -10,9 +10,8 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
-
-	"go.coder.com/flog"
 )
 
 func makeSecretsCmd() *cobra.Command {
@@ -154,7 +153,7 @@ func listSecrets(userEmail *string) func(cmd *cobra.Command, _ []string) error {
 		}
 
 		if len(secrets) < 1 {
-			flog.Info("No secrets found")
+			clog.LogInfo("no secrets found")
 			return nil
 		}
 
@@ -212,10 +211,12 @@ func makeRemoveSecrets(userEmail *string) func(c *cobra.Command, args []string) 
 		for _, n := range args {
 			err := client.DeleteSecretByName(cmd.Context(), n, user.ID)
 			if err != nil {
-				flog.Error("failed to delete secret %q: %v", n, err)
+				clog.Log(clog.Error(
+					fmt.Sprintf("failed to delete secret %q: %v", n, err),
+				))
 				errorSeen = true
 			} else {
-				flog.Success("successfully deleted secret %q", n)
+				clog.LogSuccess("successfully deleted secret: %q", n)
 			}
 		}
 		if errorSeen {

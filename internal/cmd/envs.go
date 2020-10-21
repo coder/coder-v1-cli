@@ -2,15 +2,16 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"sync/atomic"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
-
-	"go.coder.com/flog"
 )
 
 func envsCommand() *cobra.Command {
@@ -37,7 +38,7 @@ func envsCommand() *cobra.Command {
 				return err
 			}
 			if len(envs) < 1 {
-				flog.Info("no environments found")
+				clog.LogInfo("no environments found")
 				return nil
 			}
 
@@ -92,26 +93,33 @@ coder envs --user charlie@coder.com ls -o json \
 			}
 
 			var egroup errgroup.Group
+			var fails int32
 			for _, envName := range args {
 				envName := envName
 				egroup.Go(func() error {
 					env, err := findEnv(cmd.Context(), client, envName, *user)
 					if err != nil {
-						flog.Error("failed to find environment by name \"%s\": %v", envName, err)
-						return xerrors.Errorf("find environment by name: %w", err)
+						atomic.AddInt32(&fails, 1)
+						clog.Log(err)
+						return xerrors.Errorf("find env by name: %w", err)
 					}
 
 					if err = client.StopEnvironment(cmd.Context(), env.ID); err != nil {
-						flog.Error("failed to stop environment \"%s\": %v", env.Name, err)
-						return xerrors.Errorf("stop environment: %w", err)
+						atomic.AddInt32(&fails, 1)
+						err = clog.Fatal(fmt.Sprintf("stop environment %q", env.Name),
+							clog.Cause(err.Error()), clog.BlankLine,
+							clog.Hint("current environment status is %q", env.LatestStat.ContainerStatus),
+						)
+						clog.Log(err)
+						return err
 					}
-					flog.Success("Successfully stopped environment %q", envName)
+					clog.LogSuccess(fmt.Sprintf("successfully stopped environment %q", envName))
 					return nil
 				})
 			}
 
 			if err = egroup.Wait(); err != nil {
-				return xerrors.Errorf("some stop operations failed")
+				return clog.Fatal(fmt.Sprintf("%d failure(s) emitted", fails))
 			}
 			return nil
 		},

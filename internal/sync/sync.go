@@ -21,10 +21,9 @@ import (
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/xerrors"
 
-	"go.coder.com/flog"
-
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/activity"
+	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/wsep"
 )
 
@@ -119,7 +118,7 @@ func (s Sync) remoteCmd(ctx context.Context, prog string, args ...string) error 
 
 // initSync performs the initial synchronization of the directory.
 func (s Sync) initSync() error {
-	flog.Info("doing initial sync (%s -> %s)", s.LocalDir, s.RemoteDir)
+	clog.LogInfo(fmt.Sprintf("doing initial sync (%s -> %s)", s.LocalDir, s.RemoteDir))
 
 	start := time.Now()
 	// Delete old files on initial sync (e.g git checkout).
@@ -128,7 +127,9 @@ func (s Sync) initSync() error {
 	if err := s.syncPaths(true, s.LocalDir+"/.", s.RemoteDir); err != nil {
 		return err
 	}
-	flog.Success("finished initial sync (%s)", time.Since(start).Truncate(time.Millisecond))
+	clog.LogSuccess(
+		fmt.Sprintf("finished initial sync (%s)", time.Since(start).Truncate(time.Millisecond)),
+	)
 	return nil
 }
 
@@ -193,16 +194,16 @@ func (s Sync) work(ev timedEvent) {
 	case notify.Remove:
 		err = s.handleDelete(localPath)
 	default:
-		flog.Info("unhandled event %+v %s", ev.Event(), ev.Path())
+		clog.LogInfo(fmt.Sprintf("unhandled event %+v %s", ev.Event(), ev.Path()))
 	}
 
 	log := fmt.Sprintf("%v %s (%s)",
 		ev.Event(), filepath.Base(localPath), time.Since(ev.CreatedAt).Truncate(time.Millisecond*10),
 	)
 	if err != nil {
-		flog.Error(log+": %s", err)
+		clog.Log(clog.Error(fmt.Sprintf("%s: %s", log, err)))
 	} else {
-		flog.Success(log)
+		clog.LogSuccess(log)
 	}
 }
 
@@ -331,7 +332,7 @@ func (s Sync) Run() error {
 		return nil
 	}
 
-	flog.Info("watching %s for changes", s.LocalDir)
+	clog.LogInfo(fmt.Sprintf("watching %s for changes", s.LocalDir))
 
 	var droppedEvents uint64
 	// Timed events lets us track how long each individual file takes to
@@ -347,7 +348,7 @@ func (s Sync) Run() error {
 			}:
 			default:
 				if atomic.AddUint64(&droppedEvents, 1) == 1 {
-					flog.Info("dropped event, sync should restart soon")
+					clog.LogInfo("dropped event, sync should restart soon")
 				}
 			}
 		}

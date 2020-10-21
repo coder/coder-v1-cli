@@ -3,11 +3,10 @@ package cmd
 import (
 	"os"
 
+	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/config"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
-
-	"go.coder.com/flog"
 )
 
 func makeLogoutCmd() *cobra.Command {
@@ -22,11 +21,11 @@ func logout(_ *cobra.Command, _ []string) error {
 	err := config.Session.Delete()
 	if err != nil {
 		if os.IsNotExist(err) {
-			flog.Info("no active session")
+			clog.LogInfo("no active session")
 			return nil
 		}
 		return xerrors.Errorf("delete session: %w", err)
 	}
-	flog.Success("logged out")
+	clog.LogSuccess("logged out")
 	return nil
 }

@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/clog"
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
-	"go.coder.com/flog"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/xerrors"
 )
@@ -56,7 +56,10 @@ coder envs rebuild backend-env --force`,
 					return err
 				}
 			} else {
-				flog.Info("Use \"coder envs watch-build %s\" to follow the build logs", env.Name)
+				clog.LogSuccess(
+					"successfully started rebuild",
+					clog.Tip("run \"coder envs watch-build %s\" to follow the build logs", env.Name),
+				)
 			}
 			return nil
 		},

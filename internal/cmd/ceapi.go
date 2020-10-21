@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/clog"
 	"golang.org/x/xerrors"
 )
 
@@ -73,10 +74,12 @@ func findEnv(ctx context.Context, client *coder.Client, envName, userEmail strin
 		found = append(found, env.Name)
 	}
 
-	return nil, notFoundButDidFind{
-		needle:   envName,
-		haystack: found,
-	}
+	return nil, clog.Fatal(
+		"failed to find environment",
+		fmt.Sprintf("environment %q not found in %q", envName, found),
+		clog.BlankLine,
+		clog.Tip("run \"coder envs ls\" to view your environments"),
+	)
 }
 
 type notFoundButDidFind struct {

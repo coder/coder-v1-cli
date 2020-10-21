@@ -12,8 +12,8 @@ import (
 // ErrNotFound describes an error case in which the requested resource could not be found
 var ErrNotFound = xerrors.Errorf("resource not found")
 
-// apiError is the expected payload format for our errors.
-type apiError struct {
+// APIError is the expected payload format for our errors.
+type APIError struct {
 	Err struct {
 		Msg string `json:"msg"`
 	} `json:"error"`
@@ -30,7 +30,7 @@ func (e *HTTPError) Error() string {
 		return fmt.Sprintf("dump response: %+v", err)
 	}
 
-	var msg apiError
+	var msg APIError
 	// Try to decode the payload as an error, if it fails or if there is no error message,
 	// return the response URL with the dump.
 	if err := json.NewDecoder(e.Response.Body).Decode(&msg); err != nil || msg.Err.Msg == "" {
@@ -38,7 +38,7 @@ func (e *HTTPError) Error() string {
 	}
 
 	// If the payload was a in the expected error format with a message, include it.
-	return fmt.Sprintf("%s\n%s%s", e.Response.Request.URL, dump, msg.Err.Msg)
+	return msg.Err.Msg
 }
 
 func bodyError(resp *http.Response) error {

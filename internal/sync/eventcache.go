@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/rjeczalik/notify"
-
-	"go.coder.com/flog"
 )
 
 type timedEvent struct {
@@ -17,18 +15,14 @@ type timedEvent struct {
 type eventCache map[string]timedEvent
 
 func (cache eventCache) Add(ev timedEvent) {
-	log := flog.New()
-	log.Prefix = ev.Path() + ": "
 	lastEvent, ok := cache[ev.Path()]
 	if ok {
 		switch {
 		// If the file was quickly created and then destroyed, pretend nothing ever happened.
 		case lastEvent.Event() == notify.Create && ev.Event() == notify.Remove:
 			delete(cache, ev.Path())
-			log.Info("ignored Create then Remove")
 			return
 		}
-		log.Info("replaced %s with %s", lastEvent.Event(), ev.Event())
 	}
 	// Only let the latest event for a path have action.
 	cache[ev.Path()] = ev
