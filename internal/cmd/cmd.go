@@ -13,10 +13,11 @@ var verbose bool = false
 // Make constructs the "coder" root command
 func Make() *cobra.Command {
 	app := &cobra.Command{
-		Use:           "coder",
-		Short:         "coder provides a CLI for working with an existing Coder Enterprise installation",
-		SilenceErrors: true,
-		SilenceUsage:  true,
+		Use:               "coder",
+		Short:             "coder provides a CLI for working with an existing Coder Enterprise installation",
+		SilenceErrors:     true,
+		SilenceUsage:      true,
+		DisableAutoGenTag: true,
 	}
 
 	app.AddCommand(

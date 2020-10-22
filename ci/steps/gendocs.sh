@@ -11,12 +11,6 @@ rm -rf ./docs
 mkdir ./docs
 go run ./cmd/coder gen-docs ./docs
 
-# remove cobra footer from each file
-for filename in ./docs/*.md; do
-  trimmed=$(head -n -1 "$filename")
-  echo "$trimmed" >$filename
-done
-
 if [[ ${CI-} && $(git ls-files --other --modified --exclude-standard) ]]; then
   echo "Documentation needs generation:"
   git -c color.ui=always status | grep --color=no '\e\[31m'

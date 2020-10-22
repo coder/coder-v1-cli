@@ -26,3 +26,4 @@ coder sync [local directory] [<env name>:<remote directory>] [flags]
 ### SEE ALSO
 
 * [coder](coder.md)	 - coder provides a CLI for working with an existing Coder Enterprise installation
+

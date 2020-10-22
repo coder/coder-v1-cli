@@ -26,3 +26,4 @@ Interact with secrets objects owned by the active user.
 * [coder secrets ls](coder_secrets_ls.md)	 - List all secrets owned by the active user
 * [coder secrets rm](coder_secrets_rm.md)	 - Remove one or more secrets by name
 * [coder secrets view](coder_secrets_view.md)	 - View a secret by name
+

@@ -41,3 +41,4 @@ coder envs --user charlie@coder.com ls -o json \
 ### SEE ALSO
 
 * [coder envs](coder_envs.md)	 - Interact with Coder environments
+
