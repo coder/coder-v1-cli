@@ -108,7 +108,7 @@ func runCommand(ctx context.Context, envName, command string, args []string) err
 
 	termFD := os.Stdout.Fd()
 
-	isInteractive := terminal.IsTerminal(int(termFD))
+	isInteractive := terminal.IsTerminal(int(termFD)) && terminal.IsTerminal(int(os.Stdin.Fd()))
 	if isInteractive {
 		// If the client has a tty, take over it by setting the raw mode.
 		// This allows for all input to be directly forwarded to the remote process,
@@ -189,7 +189,7 @@ func runCommand(ctx context.Context, envName, command string, args []string) err
 		if xerrors.Is(err, ctx.Err()) || xerrors.As(err, &closeErr) {
 			return networkErr(client, env)
 		}
-		return err
+		return xerrors.Errorf("wait on process: %w", err)
 	}
 	return nil
 }
