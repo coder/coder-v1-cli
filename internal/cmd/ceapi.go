@@ -78,15 +78,6 @@ func findEnv(ctx context.Context, client *coder.Client, envName, userEmail strin
 		"failed to find environment",
 		fmt.Sprintf("environment %q not found in %q", envName, found),
 		clog.BlankLine,
-		clog.Tip("run \"coder envs ls\" to view your environments"),
+		clog.Tipf("run \"coder envs ls\" to view your environments"),
 	)
-}
-
-type notFoundButDidFind struct {
-	needle   string
-	haystack []string
-}
-
-func (n notFoundButDidFind) Error() string {
-	return fmt.Sprintf("\"%s\" not found in %q: %v", n.needle, n.haystack, coder.ErrNotFound)
 }

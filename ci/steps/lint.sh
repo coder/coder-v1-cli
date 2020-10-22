@@ -4,5 +4,8 @@ set -euo pipefail
 
 echo "Linting..."
 
-go vet ./...
-golint -set_exit_status ./...
+cd "$(dirname "$0")"
+cd ../../
+
+echo "--- golangci-lint"
+golangci-lint run -c .golangci.yml
