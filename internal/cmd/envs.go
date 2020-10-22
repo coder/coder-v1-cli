@@ -72,6 +72,7 @@ func envsCommand() *cobra.Command {
 	}
 	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human | json")
 	cmd.AddCommand(lsCmd)
+	cmd.AddCommand(editEnvCommand(&user))
 	cmd.AddCommand(stopEnvCommand(&user))
 	cmd.AddCommand(watchBuildLogCommand())
 	cmd.AddCommand(rebuildEnvCommand())
@@ -205,5 +206,107 @@ coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955
 	cmd.Flags().StringVarP(&img, "image", "i", "", "ID of the image to base the environment off of.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.MarkFlagRequired("image")
+	return cmd
+}
+
+func editEnvCommand(user *string) *cobra.Command {
+	var (
+		img      string
+		tag      string
+		cpuCores float32
+		memGB    float32
+		diskGB   int
+		gpus     int
+		follow   bool
+	)
+
+	cmd := &cobra.Command{
+		Use:    "edit",
+		Short:  "edit an existing environment owned by the active user.",
+		Args:   cobra.ExactArgs(1),
+		Hidden: true,
+		Long:   "Edit an existing environment owned by the active user.",
+		Example: `coder envs edit back-end-env --cpu 4
+
+coder envs edit back-end-env --disk 20`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// We're explicitly ignoring these errors because if any of these
+			// fail we are left with the zero value for the corresponding numeric type.
+			cpuCores, _ = cmd.Flags().GetFloat32("cpu")
+			memGB, _ = cmd.Flags().GetFloat32("memory")
+			diskGB, _ = cmd.Flags().GetInt("disk")
+			gpus, _ = cmd.Flags().GetInt("gpus")
+
+			client, err := newClient()
+			if err != nil {
+				return err
+			}
+
+			envName := args[0]
+
+			env, err := findEnv(cmd.Context(), client, envName, *user)
+			if err != nil {
+				return err
+			}
+
+			var updateReq coder.UpdateEnvironmentReq
+
+			// If any of the flags have defaulted to zero-values, it implies the user does not wish to change that value.
+			// With that said, we can enforce this by reassigning the request field to the corresponding existing environment value.
+			if cpuCores == 0 {
+				updateReq.CPUCores = &env.CPUCores
+			} else {
+				updateReq.CPUCores = &cpuCores
+			}
+
+			if memGB == 0 {
+				updateReq.MemoryGB = &env.MemoryGB
+			} else {
+				updateReq.MemoryGB = &memGB
+			}
+
+			if diskGB == 0 {
+				updateReq.DiskGB = &env.DiskGB
+			} else {
+				updateReq.DiskGB = &diskGB
+			}
+
+			if gpus == 0 {
+				updateReq.GPUs = &env.GPUs
+			} else {
+				updateReq.GPUs = &gpus
+			}
+
+			if img == "" {
+				updateReq.ImageID = &env.ImageID
+			} else {
+				updateReq.ImageID = &img
+			}
+
+			if tag == "" {
+				updateReq.ImageTag = &env.ImageTag
+			} else {
+				updateReq.ImageTag = &tag
+			}
+
+			if err := client.EditEnvironment(cmd.Context(), env.ID, updateReq); err != nil {
+				return xerrors.Errorf("failed to apply changes to environment: '%s'", envName)
+			}
+
+			clog.LogSuccess(
+				"applied changes to the environment, rebuilding...",
+				clog.BlankLine,
+				clog.Tip(`run "coder envs watch-build %q" to trail the build logs`, envName),
+			)
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&img, "image", "i", "", "image ID of the image you wan't the environment to be based off of.")
+	cmd.Flags().StringVarP(&tag, "tag", "t", "latest", "image tag of the image you wan't to base the environment off of.")
+	cmd.Flags().Float32P("cpu", "c", cpuCores, "The number of cpu cores the environment should be provisioned with.")
+	cmd.Flags().Float32P("memory", "m", memGB, "The amount of RAM an environment should be provisioned with.")
+	cmd.Flags().IntP("disk", "d", diskGB, "The amount of disk storage an environment should be provisioned with.")
+	cmd.Flags().IntP("gpu", "g", gpus, "The amount of disk storage to provision the environment with.")
+	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	return cmd
 }
