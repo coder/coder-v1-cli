@@ -216,7 +216,7 @@ func heartbeat(ctx context.Context, conn *websocket.Conn, interval time.Duration
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if err := conn.Ping(ctx); err != nil || true {
+			if err := conn.Ping(ctx); err != nil {
 				// don't try to do multi-line here because the raw mode makes things weird
 				clog.Log(clog.Fatal("failed to ping websocket, exiting: " + err.Error()))
 				os.Exit(1)
