@@ -117,8 +117,8 @@ coder envs --user charlie@coder.com ls -o json \
 					if err = client.StopEnvironment(cmd.Context(), env.ID); err != nil {
 						atomic.AddInt32(&fails, 1)
 						err = clog.Fatal(fmt.Sprintf("stop environment %q", env.Name),
-							clog.Cause(err.Error()), clog.BlankLine,
-							clog.Hint("current environment status is %q", env.LatestStat.ContainerStatus),
+							clog.Causef(err.Error()), clog.BlankLine,
+							clog.Hintf("current environment status is %q", env.LatestStat.ContainerStatus),
 						)
 						clog.Log(err)
 						return err
@@ -186,7 +186,7 @@ coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955
 			clog.LogSuccess(
 				"creating environment...",
 				clog.BlankLine,
-				clog.Tip(`run "coder envs watch-build %q" to trail the build logs`, args[0]),
+				clog.Tipf(`run "coder envs watch-build %q" to trail the build logs`, args[0]),
 			)
 
 			if follow {
@@ -205,7 +205,7 @@ coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955
 	cmd.Flags().IntP("gpus", "g", defaultGPUs, "number GPUs an environment should be provisioned with.")
 	cmd.Flags().StringVarP(&img, "image", "i", "", "ID of the image to base the environment off of.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
-	cmd.MarkFlagRequired("image")
+	_ = cmd.MarkFlagRequired("image")
 	return cmd
 }
 
@@ -296,7 +296,7 @@ coder envs edit back-end-env --disk 20`,
 			clog.LogSuccess(
 				"applied changes to the environment, rebuilding...",
 				clog.BlankLine,
-				clog.Tip(`run "coder envs watch-build %q" to trail the build logs`, envName),
+				clog.Tipf(`run "coder envs watch-build %q" to trail the build logs`, envName),
 			)
 			return nil
 		},

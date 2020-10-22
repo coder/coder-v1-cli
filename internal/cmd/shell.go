@@ -201,7 +201,7 @@ func networkErr(client *coder.Client, env *coder.Environment) error {
 			fmt.Sprintf("environment %q is not running", env.Name),
 			fmt.Sprintf("its current status is %q", env.LatestStat.ContainerStatus),
 			clog.BlankLine,
-			clog.Tip("run \"coder envs rebuild %s --follow\" to start the environment", env.Name),
+			clog.Tipf("run \"coder envs rebuild %s --follow\" to start the environment", env.Name),
 		)
 	}
 	return xerrors.Errorf("network error, is %q online?", env.Name)

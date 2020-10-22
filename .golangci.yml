@@ -1,0 +1,17 @@
+# See https://golangci-lint.run/usage/configuration/
+linters-settings:
+  goconst:
+    min-len: 4 
+    min-occurrences: 3
+  gocognit:
+    min-complexity: 46
+  nestif:
+    min-complexity: 10
+  golint:
+  govet:
+    settings:
+      printf:
+        funcs: # Run `go tool vet help printf` to see available settings for `printf` analyzer.
+          - (cdr.dev/coder-cli/internal/clog).Tipf
+          - (cdr.dev/coder-cli/internal/clog).Hintf
+          - (cdr.dev/coder-cli/internal/clog).Causef

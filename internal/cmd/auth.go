@@ -14,7 +14,7 @@ import (
 
 var errNeedLogin = clog.Fatal(
 	"failed to read session credentials",
-	clog.Hint(`did you run "coder login [https://coder.domain.com]"?`),
+	clog.Hintf(`did you run "coder login [https://coder.domain.com]"?`),
 )
 
 func newClient() (*coder.Client, error) {

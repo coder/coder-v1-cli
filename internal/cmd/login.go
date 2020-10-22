@@ -40,7 +40,7 @@ func makeLoginCmd() *cobra.Command {
 			// Don't return errors as it would print the usage.
 
 			if err := login(cmd, u, config.URL, config.Session); err != nil {
-				return xerrors.Errorf("Login error", err)
+				return xerrors.Errorf("login error: %w", err)
 			}
 			return nil
 		},

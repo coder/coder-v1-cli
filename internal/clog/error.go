@@ -112,18 +112,18 @@ func Bold(a string) string {
 	return color.New(color.Bold).Sprint(a)
 }
 
-// Tip formats according to the given format specifier and prepends a bolded "tip: " header.
-func Tip(format string, a ...interface{}) string {
+// Tipf formats according to the given format specifier and prepends a bolded "tip: " header.
+func Tipf(format string, a ...interface{}) string {
 	return fmt.Sprintf("%s %s", Bold("tip:"), fmt.Sprintf(format, a...))
 }
 
-// Hint formats according to the given format specifier and prepends a bolded "hint: " header.
-func Hint(format string, a ...interface{}) string {
+// Hintf formats according to the given format specifier and prepends a bolded "hint: " header.
+func Hintf(format string, a ...interface{}) string {
 	return fmt.Sprintf("%s %s", Bold("hint:"), fmt.Sprintf(format, a...))
 }
 
-// Cause formats according to the given format specifier and prepends a bolded "cause: " header.
-func Cause(format string, a ...interface{}) string {
+// Causef formats according to the given format specifier and prepends a bolded "cause: " header.
+func Causef(format string, a ...interface{}) string {
 	return fmt.Sprintf("%s %s", Bold("cause:"), fmt.Sprintf(format, a...))
 }
 
