@@ -47,6 +47,7 @@ func rsyncVersion() string {
 func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		var (
+			ctx    = cmd.Context()
 			local  = args[0]
 			remote = args[1]
 		)
@@ -56,17 +57,9 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		info, err := os.Stat(local)
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			return xerrors.Errorf("%s must be a directory", local)
-		}
-
 		remoteTokens := strings.SplitN(remote, ":", 2)
 		if len(remoteTokens) != 2 {
-			return xerrors.New("remote misformatted")
+			return xerrors.New("remote malformatted")
 		}
 		var (
 			envName   = remoteTokens[0]
@@ -76,6 +69,17 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 		env, err := findEnv(cmd.Context(), client, envName, coder.Me)
 		if err != nil {
 			return err
+		}
+
+		info, err := os.Stat(local)
+		if err != nil {
+			return err
+		}
+		if info.Mode().IsRegular() {
+			return sync.SingleFile(ctx, local, remoteDir, env, client)
+		}
+		if !info.IsDir() {
+			return xerrors.Errorf("local path must lead to a regular file or directory: %w", err)
 		}
 
 		absLocal, err := filepath.Abs(local)
