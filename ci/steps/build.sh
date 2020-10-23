@@ -40,5 +40,5 @@ else
 	echo "Please use an OSX machine to build Darwin tars."
 fi
 
-GOOS=linux GOARCH=amd64 build
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 build
 GOOS=windows GOARCH=386 build
