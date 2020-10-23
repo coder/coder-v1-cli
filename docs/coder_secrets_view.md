@@ -2,10 +2,6 @@
 
 View a secret by name
 
-### Synopsis
-
-View a secret by name
-
 ```
 coder secrets view [secret_name] [flags]
 ```

@@ -2,10 +2,6 @@
 
 Remove a dev url
 
-### Synopsis
-
-Remove a dev url
-
 ```
 coder urls rm [environment_name] [port] [flags]
 ```
