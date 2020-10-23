@@ -183,17 +183,18 @@ coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955
 				return xerrors.Errorf("create environment: %w", err)
 			}
 
-			clog.LogSuccess(
-				"creating environment...",
-				clog.BlankLine,
-				clog.Tipf(`run "coder envs watch-build %q" to trail the build logs`, args[0]),
-			)
-
 			if follow {
+				clog.LogSuccess("creating environment...")
 				if err := trailBuildLogs(cmd.Context(), client, env.ID); err != nil {
 					return err
 				}
+				return nil
 			}
+
+			clog.LogSuccess("creating environment...",
+				clog.BlankLine,
+				clog.Tipf(`run "coder envs watch-build %q" to trail the build logs`, env.Name),
+			)
 			return nil
 		},
 	}
@@ -293,8 +294,15 @@ coder envs edit back-end-env --disk 20`,
 				return xerrors.Errorf("failed to apply changes to environment: '%s'", envName)
 			}
 
-			clog.LogSuccess(
-				"applied changes to the environment, rebuilding...",
+			if follow {
+				clog.LogSuccess("applied changes to the environment, rebuilding...")
+				if err := trailBuildLogs(cmd.Context(), client, env.ID); err != nil {
+					return err
+				}
+				return nil
+			}
+
+			clog.LogSuccess("applied changes to the environment, rebuilding...",
 				clog.BlankLine,
 				clog.Tipf(`run "coder envs watch-build %q" to trail the build logs`, envName),
 			)

@@ -2,10 +2,6 @@
 
 Interact with Coder user accounts
 
-### Synopsis
-
-Interact with Coder user accounts
-
 ### Options
 
 ```

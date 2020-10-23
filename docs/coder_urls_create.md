@@ -2,10 +2,6 @@
 
 Create a new devurl for an environment
 
-### Synopsis
-
-Create a new devurl for an environment
-
 ```
 coder urls create [env_name] [port] [--access <level>] [--name <name>] [flags]
 ```

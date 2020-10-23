@@ -2,10 +2,6 @@
 
 Remove local authentication credentials if any exist
 
-### Synopsis
-
-Remove local authentication credentials if any exist
-
 ```
 coder logout [flags]
 ```

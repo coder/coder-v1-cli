@@ -2,10 +2,6 @@
 
 coder provides a CLI for working with an existing Coder Enterprise installation
 
-### Synopsis
-
-coder provides a CLI for working with an existing Coder Enterprise installation
-
 ### Options
 
 ```

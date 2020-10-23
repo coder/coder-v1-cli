@@ -2,10 +2,6 @@
 
 List all secrets owned by the active user
 
-### Synopsis
-
-List all secrets owned by the active user
-
 ```
 coder secrets ls [flags]
 ```

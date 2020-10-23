@@ -2,10 +2,6 @@
 
 Remove one or more secrets by name
 
-### Synopsis
-
-Remove one or more secrets by name
-
 ```
 coder secrets rm [...secret_name] [flags]
 ```

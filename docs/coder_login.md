@@ -2,10 +2,6 @@
 
 Authenticate this client for future operations
 
-### Synopsis
-
-Authenticate this client for future operations
-
 ```
 coder login [Coder Enterprise URL eg. https://my.coder.domain/] [flags]
 ```

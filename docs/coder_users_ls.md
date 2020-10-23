@@ -2,10 +2,6 @@
 
 list all user accounts
 
-### Synopsis
-
-list all user accounts
-
 ```
 coder users ls [flags]
 ```

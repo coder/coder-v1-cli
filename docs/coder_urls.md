@@ -2,10 +2,6 @@
 
 Interact with environment DevURLs
 
-### Synopsis
-
-Interact with environment DevURLs
-
 ### Options
 
 ```
