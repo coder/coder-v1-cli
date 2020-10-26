@@ -9,7 +9,7 @@ import (
 )
 
 // From Coder organization images
-const ubuntuImgID = "5f443b16-30652892427b955601330fa5"
+// const ubuntuImgID = "5f443b16-30652892427b955601330fa5"
 
 func TestEnvsCLI(t *testing.T) {
 	t.Parallel()
@@ -37,6 +37,18 @@ func TestEnvsCLI(t *testing.T) {
 			tcli.StderrEmpty(),
 		)
 
+		// Image unset.
+		c.Run(ctx, "coder envs create test-env").Assert(t,
+			tcli.StderrMatches(regexp.QuoteMeta("fatal: required flag(s) \"image\" not set")),
+			tcli.Error(),
+		)
+
+		// Image not imported.
+		c.Run(ctx, "coder envs create test-env --image doesntmatter").Assert(t,
+			tcli.StderrMatches(regexp.QuoteMeta("fatal: image not found - did you forget to import this image?")),
+			tcli.Error(),
+		)
+
 		// TODO(Faris) : uncomment this when we can safely purge the environments
 		// the integrations tests would create in the sidecar
 		// Successfully create environment.
@@ -46,12 +58,6 @@ func TestEnvsCLI(t *testing.T) {
 		// 	tcli.StderrMatches(regexp.QuoteMeta("Successfully created environment \"test-ubuntu\"")),
 		// )
 
-		// Invalid environment name should fail.
-		c.Run(ctx, "coder envs create --image "+ubuntuImgID+" this-IS-an-invalid-EnvironmentName").Assert(t,
-			tcli.Error(),
-			tcli.StderrMatches(regexp.QuoteMeta("environment name must conform to regex ^[a-z0-9]([a-z0-9-]+)?")),
-		)
-
 		// TODO(Faris) : uncomment this when we can safely purge the environments
 		// the integrations tests would create in the sidecar
 		// Successfully provision environment with fractional resource amounts
@@ -59,11 +65,5 @@ func TestEnvsCLI(t *testing.T) {
 		// 	tcli.Success(),
 		// 	tcli.StderrMatches(regexp.QuoteMeta("Successfully created environment \"non-whole-resource-amounts\"")),
 		// )
-
-		// Image does not exist should fail.
-		c.Run(ctx, "coder envs create --image does-not-exist env-will-not-be-created").Assert(t,
-			tcli.Error(),
-			tcli.StderrMatches(regexp.QuoteMeta("does not exist")),
-		)
 	})
 }
