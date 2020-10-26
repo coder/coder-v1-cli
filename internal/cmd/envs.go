@@ -9,6 +9,7 @@ import (
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
@@ -24,7 +25,6 @@ const (
 )
 
 func envsCommand() *cobra.Command {
-	var outputFmt string
 	var user string
 	cmd := &cobra.Command{
 		Use:   "envs",
@@ -33,7 +33,22 @@ func envsCommand() *cobra.Command {
 	}
 	cmd.PersistentFlags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 
-	lsCmd := &cobra.Command{
+	cmd.AddCommand(
+		lsEnvsCommand(&user),
+		stopEnvsCommand(&user),
+		rmEnvsCommand(&user),
+		watchBuildLogCommand(),
+		rebuildEnvCommand(),
+		createEnvCommand(),
+		editEnvCommand(&user),
+	)
+	return cmd
+}
+
+func lsEnvsCommand(user *string) *cobra.Command {
+	var outputFmt string
+
+	cmd := &cobra.Command{
 		Use:   "ls",
 		Short: "list all environments owned by the active user",
 		Long:  "List all Coder environments owned by the active user.",
@@ -42,7 +57,7 @@ func envsCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			envs, err := getEnvs(cmd.Context(), client, user)
+			envs, err := getEnvs(cmd.Context(), client, *user)
 			if err != nil {
 				return err
 			}
@@ -70,17 +85,13 @@ func envsCommand() *cobra.Command {
 			return nil
 		},
 	}
-	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human | json")
-	cmd.AddCommand(lsCmd)
-	cmd.AddCommand(editEnvCommand(&user))
-	cmd.AddCommand(stopEnvCommand(&user))
-	cmd.AddCommand(watchBuildLogCommand())
-	cmd.AddCommand(rebuildEnvCommand())
-	cmd.AddCommand(createEnvCommand())
+
+	cmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human | json")
+
 	return cmd
 }
 
-func stopEnvCommand(user *string) *cobra.Command {
+func stopEnvsCommand(user *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "stop [...environment_names]",
 		Short: "stop Coder environments by name",
@@ -316,5 +327,63 @@ coder envs edit back-end-env --disk 20`,
 	cmd.Flags().IntP("disk", "d", diskGB, "The amount of disk storage an environment should be provisioned with.")
 	cmd.Flags().IntP("gpu", "g", gpus, "The amount of disk storage to provision the environment with.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
+	return cmd
+}
+
+func rmEnvsCommand(user *string) *cobra.Command {
+	var force bool
+	cmd := &cobra.Command{
+		Use:    "rm [...environment_names]",
+		Short:  "remove Coder environments by name",
+		Hidden: true,
+		Args:   cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			client, err := newClient()
+			if err != nil {
+				return err
+			}
+			if !force {
+				confirm := promptui.Prompt{
+					Label:     fmt.Sprintf("Delete environments %q? (all data will be lost)", args),
+					IsConfirm: true,
+				}
+				if _, err := confirm.Run(); err != nil {
+					return err
+				}
+			}
+
+			var egroup errgroup.Group
+			var failures int32
+			for _, envName := range args {
+				envName := envName
+				egroup.Go(func() error {
+					env, err := findEnv(ctx, client, envName, *user)
+					if err != nil {
+						atomic.AddInt32(&failures, 1)
+						clog.Log(err)
+						return err
+					}
+					if err = client.DeleteEnvironment(cmd.Context(), env.ID); err != nil {
+						atomic.AddInt32(&failures, 1)
+						err = clog.Error(
+							fmt.Sprintf(`failed to delete environment "%s"`, env.Name),
+							clog.Causef(err.Error()),
+						)
+						clog.Log(err)
+						return err
+					}
+					clog.LogSuccess(fmt.Sprintf("deleted environment %q", env.Name))
+					return nil
+				})
+			}
+
+			if err = egroup.Wait(); err != nil {
+				return xerrors.Errorf("%d failure(s) emitted", failures)
+			}
+			return nil
+		},
+	}
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "force remove the specified environments without prompting first")
 	return cmd
 }
