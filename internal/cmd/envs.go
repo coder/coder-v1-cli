@@ -4,14 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sync/atomic"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
 )
 
@@ -113,36 +111,27 @@ coder envs --user charlie@coder.com ls -o json \
 				return xerrors.Errorf("new client: %w", err)
 			}
 
-			var egroup errgroup.Group
-			var fails int32
+			egroup := clog.LoggedErrGroup()
 			for _, envName := range args {
 				envName := envName
 				egroup.Go(func() error {
 					env, err := findEnv(cmd.Context(), client, envName, *user)
 					if err != nil {
-						atomic.AddInt32(&fails, 1)
-						clog.Log(err)
-						return xerrors.Errorf("find env by name: %w", err)
+						return err
 					}
 
 					if err = client.StopEnvironment(cmd.Context(), env.ID); err != nil {
-						atomic.AddInt32(&fails, 1)
-						err = clog.Fatal(fmt.Sprintf("stop environment %q", env.Name),
+						return clog.Error(fmt.Sprintf("stop environment %q", env.Name),
 							clog.Causef(err.Error()), clog.BlankLine,
 							clog.Hintf("current environment status is %q", env.LatestStat.ContainerStatus),
 						)
-						clog.Log(err)
-						return err
 					}
 					clog.LogSuccess(fmt.Sprintf("successfully stopped environment %q", envName))
 					return nil
 				})
 			}
 
-			if err = egroup.Wait(); err != nil {
-				return clog.Fatal(fmt.Sprintf("%d failure(s) emitted", fails))
-			}
-			return nil
+			return egroup.Wait()
 		},
 	}
 }
@@ -353,35 +342,25 @@ func rmEnvsCommand(user *string) *cobra.Command {
 				}
 			}
 
-			var egroup errgroup.Group
-			var failures int32
+			egroup := clog.LoggedErrGroup()
 			for _, envName := range args {
 				envName := envName
 				egroup.Go(func() error {
 					env, err := findEnv(ctx, client, envName, *user)
 					if err != nil {
-						atomic.AddInt32(&failures, 1)
-						clog.Log(err)
 						return err
 					}
 					if err = client.DeleteEnvironment(cmd.Context(), env.ID); err != nil {
-						atomic.AddInt32(&failures, 1)
-						err = clog.Error(
+						return clog.Error(
 							fmt.Sprintf(`failed to delete environment "%s"`, env.Name),
 							clog.Causef(err.Error()),
 						)
-						clog.Log(err)
-						return err
 					}
 					clog.LogSuccess(fmt.Sprintf("deleted environment %q", env.Name))
 					return nil
 				})
 			}
-
-			if err = egroup.Wait(); err != nil {
-				return xerrors.Errorf("%d failure(s) emitted", failures)
-			}
-			return nil
+			return egroup.Wait()
 		},
 	}
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "force remove the specified environments without prompting first")
