@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -10,6 +11,7 @@ import (
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/config"
+	"cdr.dev/coder-cli/internal/version"
 )
 
 var errNeedLogin = clog.Fatal(
@@ -18,6 +20,7 @@ var errNeedLogin = clog.Fatal(
 )
 
 func newClient() (*coder.Client, error) {
+	ctx := context.Background()
 	sessionToken, err := config.Session.Read()
 	if err != nil {
 		return nil, errNeedLogin
@@ -38,9 +41,7 @@ func newClient() (*coder.Client, error) {
 		Token:   sessionToken,
 	}
 
-	// Make sure we can make a request so the final
-	// error is more clean.
-	_, err = c.Me(context.Background())
+	apiVersion, err := c.APIVersion(ctx)
 	if err != nil {
 		var he *coder.HTTPError
 		if xerrors.As(err, &he) {
@@ -50,6 +51,15 @@ func newClient() (*coder.Client, error) {
 			}
 		}
 		return nil, err
+	}
+
+	if !version.VersionsMatch(apiVersion) {
+		clog.Log(clog.Warn(
+			"version mismatch detected",
+			fmt.Sprintf("coder-cli version: %s", version.Version),
+			fmt.Sprintf("Coder API version: %s", apiVersion), clog.BlankLine,
+			clog.Tipf("download the appropriate version here: https://github.com/cdr/coder-cli/releases"),
+		))
 	}
 
 	return c, nil

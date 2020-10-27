@@ -11,11 +11,9 @@ import (
 
 	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/cmd"
+	"cdr.dev/coder-cli/internal/version"
 	"cdr.dev/coder-cli/internal/x/xterminal"
 )
-
-// Using a global for the version so it can be set at build time using ldflags.
-var version = "unknown"
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -39,7 +37,7 @@ func main() {
 	}()
 
 	app := cmd.Make()
-	app.Version = fmt.Sprintf("%s %s %s/%s", version, runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	app.Version = fmt.Sprintf("%s %s %s/%s", version.Version, runtime.Version(), runtime.GOOS, runtime.GOARCH)
 
 	if err := app.ExecuteContext(ctx); err != nil {
 		clog.Log(err)

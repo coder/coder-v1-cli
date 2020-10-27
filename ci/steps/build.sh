@@ -13,7 +13,7 @@ build() {
 	echo "Building coder-cli for $GOOS-$GOARCH..."
 
 	tmpdir=$(mktemp -d)
-	go build -ldflags "-X main.version=${tag}" -o "$tmpdir/coder" ../../cmd/coder
+	go build -ldflags "-X cdr.dev/coder-cli/internal/version.Version=${tag}" -o "$tmpdir/coder" ../../cmd/coder
 
 	pushd "$tmpdir"
 	if [[ "$GOOS" == "windows" ]]; then
