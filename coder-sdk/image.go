@@ -13,7 +13,7 @@ type Image struct {
 	Description     string  `json:"description"`
 	URL             string  `json:"url"` // User-supplied URL for image.
 	DefaultCPUCores float32 `json:"default_cpu_cores"`
-	DefaultMemoryGB int     `json:"default_memory_gb"`
+	DefaultMemoryGB float32 `json:"default_memory_gb"`
 	DefaultDiskGB   int     `json:"default_disk_gb"`
 	Deprecated      bool    `json:"deprecated"`
 }
@@ -46,4 +46,13 @@ func (c Client) ImportImage(ctx context.Context, orgID string, req ImportImageRe
 		return nil, err
 	}
 	return &img, nil
+}
+
+// OrganizationImages returns all of the images imported for orgID.
+func (c Client) OrganizationImages(ctx context.Context, orgID string) ([]Image, error) {
+	var imgs []Image
+	if err := c.requestBody(ctx, http.MethodGet, "/api/orgs/"+orgID+"/images", nil, &imgs); err != nil {
+		return nil, err
+	}
+	return imgs, nil
 }

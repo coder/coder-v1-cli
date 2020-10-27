@@ -68,6 +68,16 @@ func LogSuccess(header string, lines ...string) {
 	}.String())
 }
 
+// LogWarn prints the given warn message to stderr.
+func LogWarn(header string, lines ...string) {
+	fmt.Fprint(os.Stderr, CLIMessage{
+		Level:  "warning",
+		Color:  color.FgYellow,
+		Header: header,
+		Lines:  lines,
+	}.String())
+}
+
 // Warn creates an error with the level "warning".
 func Warn(header string, lines ...string) CLIError {
 	return CLIError{

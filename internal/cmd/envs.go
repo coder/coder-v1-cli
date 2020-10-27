@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -8,19 +9,13 @@ import (
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
+
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
 
-const (
-	defaultOrg              = "default"
-	defaultImgTag           = "latest"
-	defaultCPUCores float32 = 1
-	defaultMemGB    float32 = 1
-	defaultDiskGB           = 10
-	defaultGPUs             = 0
-)
+const defaultImgTag = "latest"
 
 func envsCommand() *cobra.Command {
 	var user string
@@ -37,7 +32,7 @@ func envsCommand() *cobra.Command {
 		rmEnvsCommand(&user),
 		watchBuildLogCommand(),
 		rebuildEnvCommand(),
-		createEnvCommand(),
+		createEnvCommand(&user),
 		editEnvCommand(&user),
 	)
 	return cmd
@@ -136,7 +131,7 @@ coder envs --user charlie@coder.com ls -o json \
 	}
 }
 
-func createEnvCommand() *cobra.Command {
+func createEnvCommand(user *string) *cobra.Command {
 	var (
 		org    string
 		img    string
@@ -158,27 +153,61 @@ coder envs create --image 5f443b16-30652892427b955601330fa5 my-env-name
 coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955601330fa5 my-env-name`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if img == "" {
-				return xerrors.New("image id unset")
+				return xerrors.New("image unset")
 			}
-			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
-			createReq := &coder.CreateEnvironmentRequest{
-				Name:     args[0],
-				ImageID:  img,
-				ImageTag: tag,
-			}
-			// We're explicitly ignoring errors for these because all of these flags
-			// have a non-zero-value default value set already.
-			createReq.CPUCores, _ = cmd.Flags().GetFloat32("cpu")
-			createReq.MemoryGB, _ = cmd.Flags().GetFloat32("memory")
-			createReq.DiskGB, _ = cmd.Flags().GetInt("disk")
-			createReq.GPUs, _ = cmd.Flags().GetInt("gpus")
 
 			client, err := newClient()
 			if err != nil {
 				return err
 			}
 
-			env, err := client.CreateEnvironment(cmd.Context(), org, *createReq)
+			multiOrgMember, err := isMultiOrgMember(cmd.Context(), client, *user)
+			if err != nil {
+				return err
+			}
+
+			if multiOrgMember && org == "" {
+				return xerrors.New("org is required for multi-org members")
+			}
+
+			importedImg, err := findImg(cmd.Context(),
+				findImgConf{
+					client:  client,
+					email:   *user,
+					imgName: img,
+					orgName: org,
+				},
+			)
+			if err != nil {
+				return err
+			}
+
+			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
+			createReq := &coder.CreateEnvironmentRequest{
+				Name:     args[0],
+				ImageID:  importedImg.ID,
+				ImageTag: tag,
+			}
+			// We're explicitly ignoring errors for these because all we
+			// need to now is if the numeric type is 0 or not.
+			createReq.CPUCores, _ = cmd.Flags().GetFloat32("cpu")
+			createReq.MemoryGB, _ = cmd.Flags().GetFloat32("memory")
+			createReq.DiskGB, _ = cmd.Flags().GetInt("disk")
+			createReq.GPUs, _ = cmd.Flags().GetInt("gpus")
+
+			// if any of these defaulted to their zero value we provision
+			// the create request with the imported image defaults instead.
+			if createReq.CPUCores == 0 {
+				createReq.CPUCores = importedImg.DefaultCPUCores
+			}
+			if createReq.MemoryGB == 0 {
+				createReq.MemoryGB = importedImg.DefaultMemoryGB
+			}
+			if createReq.DiskGB == 0 {
+				createReq.DiskGB = importedImg.DefaultDiskGB
+			}
+
+			env, err := client.CreateEnvironment(cmd.Context(), importedImg.OrganizationID, *createReq)
 			if err != nil {
 				return xerrors.Errorf("create environment: %w", err)
 			}
@@ -198,13 +227,13 @@ coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&org, "org", "o", defaultOrg, "ID of the organization the environment should be created under.")
+	cmd.Flags().StringVarP(&org, "org", "o", "", "ID of the organization the environment should be created under.")
 	cmd.Flags().StringVarP(&tag, "tag", "t", defaultImgTag, "tag of the image the environment will be based off of.")
-	cmd.Flags().Float32P("cpu", "c", defaultCPUCores, "number of cpu cores the environment should be provisioned with.")
-	cmd.Flags().Float32P("memory", "m", defaultMemGB, "GB of RAM an environment should be provisioned with.")
-	cmd.Flags().IntP("disk", "d", defaultDiskGB, "GB of disk storage an environment should be provisioned with.")
-	cmd.Flags().IntP("gpus", "g", defaultGPUs, "number GPUs an environment should be provisioned with.")
-	cmd.Flags().StringVarP(&img, "image", "i", "", "ID of the image to base the environment off of.")
+	cmd.Flags().Float32P("cpu", "c", 0, "number of cpu cores the environment should be provisioned with.")
+	cmd.Flags().Float32P("memory", "m", 0, "GB of RAM an environment should be provisioned with.")
+	cmd.Flags().IntP("disk", "d", 0, "GB of disk storage an environment should be provisioned with.")
+	cmd.Flags().IntP("gpus", "g", 0, "number GPUs an environment should be provisioned with.")
+	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image to base the environment off of.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	_ = cmd.MarkFlagRequired("image")
 	return cmd
@@ -212,6 +241,7 @@ coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955
 
 func editEnvCommand(user *string) *cobra.Command {
 	var (
+		org      string
 		img      string
 		tag      string
 		cpuCores float32
@@ -231,13 +261,6 @@ func editEnvCommand(user *string) *cobra.Command {
 
 coder envs edit back-end-env --disk 20`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// We're explicitly ignoring these errors because if any of these
-			// fail we are left with the zero value for the corresponding numeric type.
-			cpuCores, _ = cmd.Flags().GetFloat32("cpu")
-			memGB, _ = cmd.Flags().GetFloat32("memory")
-			diskGB, _ = cmd.Flags().GetInt("disk")
-			gpus, _ = cmd.Flags().GetInt("gpus")
-
 			client, err := newClient()
 			if err != nil {
 				return err
@@ -250,48 +273,41 @@ coder envs edit back-end-env --disk 20`,
 				return err
 			}
 
-			var updateReq coder.UpdateEnvironmentReq
-
-			// If any of the flags have defaulted to zero-values, it implies the user does not wish to change that value.
-			// With that said, we can enforce this by reassigning the request field to the corresponding existing environment value.
-			if cpuCores == 0 {
-				updateReq.CPUCores = &env.CPUCores
-			} else {
-				updateReq.CPUCores = &cpuCores
+			multiOrgMember, err := isMultiOrgMember(cmd.Context(), client, *user)
+			if err != nil {
+				return err
 			}
 
-			if memGB == 0 {
-				updateReq.MemoryGB = &env.MemoryGB
-			} else {
-				updateReq.MemoryGB = &memGB
+			// if the user belongs to multiple organizations we need them to specify which one.
+			if multiOrgMember && org == "" {
+				return xerrors.New("org is required for multi-org members")
 			}
 
-			if diskGB == 0 {
-				updateReq.DiskGB = &env.DiskGB
-			} else {
-				updateReq.DiskGB = &diskGB
+			cpuCores, _ = cmd.Flags().GetFloat32("cpu")
+			memGB, _ = cmd.Flags().GetFloat32("memory")
+			diskGB, _ = cmd.Flags().GetInt("disk")
+			gpus, _ = cmd.Flags().GetInt("gpus")
+
+			req, err := buildUpdateReq(cmd.Context(),
+				updateConf{
+					cpu:         cpuCores,
+					memGB:       memGB,
+					diskGB:      diskGB,
+					gpus:        gpus,
+					client:      client,
+					environment: env,
+					user:        user,
+					image:       img,
+					imageTag:    tag,
+					orgName:     org,
+				},
+			)
+			if err != nil {
+				return err
 			}
 
-			if gpus == 0 {
-				updateReq.GPUs = &env.GPUs
-			} else {
-				updateReq.GPUs = &gpus
-			}
-
-			if img == "" {
-				updateReq.ImageID = &env.ImageID
-			} else {
-				updateReq.ImageID = &img
-			}
-
-			if tag == "" {
-				updateReq.ImageTag = &env.ImageTag
-			} else {
-				updateReq.ImageTag = &tag
-			}
-
-			if err := client.EditEnvironment(cmd.Context(), env.ID, updateReq); err != nil {
-				return xerrors.Errorf("failed to apply changes to environment: '%s'", envName)
+			if err := client.EditEnvironment(cmd.Context(), env.ID, *req); err != nil {
+				return xerrors.Errorf("failed to apply changes to environment %q: %w", envName, err)
 			}
 
 			if follow {
@@ -309,7 +325,8 @@ coder envs edit back-end-env --disk 20`,
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&img, "image", "i", "", "image ID of the image you wan't the environment to be based off of.")
+	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the environment should be created under.")
+	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image you wan't the environment to be based off of.")
 	cmd.Flags().StringVarP(&tag, "tag", "t", "latest", "image tag of the image you wan't to base the environment off of.")
 	cmd.Flags().Float32P("cpu", "c", cpuCores, "The number of cpu cores the environment should be provisioned with.")
 	cmd.Flags().Float32P("memory", "m", memGB, "The amount of RAM an environment should be provisioned with.")
@@ -365,4 +382,111 @@ func rmEnvsCommand(user *string) *cobra.Command {
 	}
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "force remove the specified environments without prompting first")
 	return cmd
+}
+
+type updateConf struct {
+	cpu         float32
+	memGB       float32
+	diskGB      int
+	gpus        int
+	client      *coder.Client
+	environment *coder.Environment
+	user        *string
+	image       string
+	imageTag    string
+	orgName     string
+}
+
+func buildUpdateReq(ctx context.Context, conf updateConf) (*coder.UpdateEnvironmentReq, error) {
+	var (
+		updateReq       coder.UpdateEnvironmentReq
+		defaultCPUCores float32
+		defaultMemGB    float32
+		defaultDiskGB   int
+	)
+
+	// If this is not empty it means the user is requesting to change the environment image.
+	if conf.image != "" {
+		importedImg, err := findImg(ctx,
+			findImgConf{
+				client:  conf.client,
+				email:   *conf.user,
+				imgName: conf.image,
+				orgName: conf.orgName,
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// If the user passes an image arg of the image that
+		// the environment is already using, it was most likely a mistake.
+		if conf.image != importedImg.Repository {
+			return nil, xerrors.Errorf("environment is already using image %q", conf.image)
+		}
+
+		// Since the environment image is being changed,
+		// the resource amount defaults should be changed to
+		// reflect that of the default resource amounts of the new image.
+		defaultCPUCores = importedImg.DefaultCPUCores
+		defaultMemGB = importedImg.DefaultMemoryGB
+		defaultDiskGB = importedImg.DefaultDiskGB
+		updateReq.ImageID = &importedImg.ID
+	} else {
+		// if the environment image is not being changed, the default
+		// resource amounts should reflect the default resource amounts
+		// of the image the environment is already using.
+		defaultCPUCores = conf.environment.CPUCores
+		defaultMemGB = conf.environment.MemoryGB
+		defaultDiskGB = conf.environment.DiskGB
+		updateReq.ImageID = &conf.environment.ImageID
+	}
+
+	// The following logic checks to see if the user specified
+	// any resource amounts for the environment that need to be changed.
+	// If they did not, then we will get the zero value back
+	// and should set the resource amount to the default.
+
+	if conf.cpu == 0 {
+		updateReq.CPUCores = &defaultCPUCores
+	} else {
+		updateReq.CPUCores = &conf.cpu
+	}
+
+	if conf.memGB == 0 {
+		updateReq.MemoryGB = &defaultMemGB
+	} else {
+		updateReq.MemoryGB = &conf.memGB
+	}
+
+	if conf.diskGB == 0 {
+		updateReq.DiskGB = &defaultDiskGB
+	} else {
+		updateReq.DiskGB = &conf.diskGB
+	}
+
+	// Environment disks can not be shrink so we have to overwrite this
+	// if the user accidentally requests it or if the default diskGB value for a
+	// newly requested image is smaller than the current amount the environment is using.
+	if *updateReq.DiskGB < conf.environment.DiskGB {
+		clog.LogWarn("disk can not be shrunk",
+			fmt.Sprintf("keeping environment disk at %d GB", conf.environment.DiskGB),
+		)
+		updateReq.DiskGB = &conf.environment.DiskGB
+	}
+
+	if conf.gpus != 0 {
+		updateReq.GPUs = &conf.gpus
+	}
+
+	if conf.imageTag == "" {
+		// We're forced to make an alloc here because untyped string consts are not addressable.
+		// i.e.  updateReq.ImageTag = &defaultImgTag results in :
+		// invalid operation: cannot take address of defaultImgTag (untyped string constant "latest")
+		imgTag := defaultImgTag
+		updateReq.ImageTag = &imgTag
+	} else {
+		updateReq.ImageTag = &conf.imageTag
+	}
+	return &updateReq, nil
 }

@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/clog"
@@ -80,4 +81,112 @@ func findEnv(ctx context.Context, client *coder.Client, envName, userEmail strin
 		clog.BlankLine,
 		clog.Tipf("run \"coder envs ls\" to view your environments"),
 	)
+}
+
+type findImgConf struct {
+	client  *coder.Client
+	email   string
+	imgName string
+	orgName string
+}
+
+func findImg(ctx context.Context, conf findImgConf) (*coder.Image, error) {
+	switch {
+	case conf.email == "":
+		return nil, xerrors.New("user email unset")
+	case conf.imgName == "":
+		return nil, xerrors.New("image name unset")
+	}
+
+	imgs, err := getImgs(ctx,
+		getImgsConf{
+			client:  conf.client,
+			email:   conf.email,
+			orgName: conf.orgName,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var possibleMatches []coder.Image
+
+	// The user may provide an image thats not an exact match
+	// to one of their imported images but they may be close.
+	// We can assist the user by collecting images that contain
+	// the user provided image flag value as a substring.
+	for _, img := range imgs {
+		// If it's an exact match we can just return and exit.
+		if img.Repository == conf.imgName {
+			return &img, nil
+		}
+		if strings.Contains(img.Repository, conf.imgName) {
+			possibleMatches = append(possibleMatches, img)
+		}
+	}
+
+	if len(possibleMatches) == 0 {
+		return nil, xerrors.New("image not found - did you forget to import this image?")
+	}
+
+	lines := []string{clog.Tipf("Did you mean?")}
+
+	for _, img := range possibleMatches {
+		lines = append(lines, img.Repository)
+	}
+	return nil, clog.Fatal(
+		fmt.Sprintf("Found %d possible matches for %q.", len(possibleMatches), conf.imgName),
+		lines...,
+	)
+}
+
+type getImgsConf struct {
+	client  *coder.Client
+	email   string
+	orgName string
+}
+
+func getImgs(ctx context.Context, conf getImgsConf) ([]coder.Image, error) {
+	u, err := conf.client.UserByEmail(ctx, conf.email)
+	if err != nil {
+		return nil, err
+	}
+
+	orgs, err := conf.client.Organizations(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	orgs = lookupUserOrgs(u, orgs)
+
+	for _, org := range orgs {
+		imgs, err := conf.client.OrganizationImages(ctx, org.ID)
+		if err != nil {
+			return nil, err
+		}
+		// If orgName is set we know the user is a multi-org member
+		// so we should only return the imported images that beong to the org they specified.
+		if conf.orgName != "" && conf.orgName == org.Name {
+			return imgs, nil
+		}
+
+		if conf.orgName == "" {
+			// if orgName is unset we know the user is only part of one org.
+			return imgs, nil
+		}
+	}
+	return nil, xerrors.Errorf("org name %q not found", conf.orgName)
+}
+
+func isMultiOrgMember(ctx context.Context, client *coder.Client, email string) (bool, error) {
+	u, err := client.UserByEmail(ctx, email)
+	if err != nil {
+		return false, xerrors.New("email not found")
+	}
+
+	orgs, err := client.Organizations(ctx)
+	if err != nil {
+		return false, err
+	}
+	return len(lookupUserOrgs(u, orgs)) > 1, nil
 }
