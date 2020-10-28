@@ -2,27 +2,22 @@ package integration
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"regexp"
 	"testing"
 
 	"cdr.dev/coder-cli/ci/tcli"
+	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/slog/sloggers/slogtest/assert"
+	"github.com/google/go-cmp/cmp"
 )
-
-// From Coder organization images
-// const ubuntuImgID = "5f443b16-30652892427b955601330fa5"
 
 func TestEnvsCLI(t *testing.T) {
 	t.Parallel()
 
 	run(t, "coder-cli-env-tests", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
 		headlessLogin(ctx, t, c)
-
-		// Ensure binary is present.
-		c.Run(ctx, "which coder").Assert(t,
-			tcli.Success(),
-			tcli.StdoutMatches("/usr/sbin/coder"),
-			tcli.StderrEmpty(),
-		)
 
 		// Minimum args not received.
 		c.Run(ctx, "coder envs create").Assert(t,
@@ -49,21 +44,74 @@ func TestEnvsCLI(t *testing.T) {
 			tcli.Error(),
 		)
 
-		// TODO(Faris) : uncomment this when we can safely purge the environments
-		// the integrations tests would create in the sidecar
-		// Successfully create environment.
-		// c.Run(ctx, "coder envs create --image "+ubuntuImgID+" test-ubuntu").Assert(t,
-		// 	tcli.Success(),
-		// 	// why does flog.Success write to stderr?
-		// 	tcli.StderrMatches(regexp.QuoteMeta("Successfully created environment \"test-ubuntu\"")),
-		// )
+		name := randString(10)
+		cpu := 2.3
+		c.Run(ctx, fmt.Sprintf("coder envs create %s --image ubuntu --cpu %f", name, cpu)).Assert(t,
+			tcli.Success(),
+		)
 
-		// TODO(Faris) : uncomment this when we can safely purge the environments
-		// the integrations tests would create in the sidecar
-		// Successfully provision environment with fractional resource amounts
-		// c.Run(ctx, fmt.Sprintf(`coder envs create -i %s -c 1.2 -m 1.4 non-whole-resource-amounts`, ubuntuImgID)).Assert(t,
-		// 	tcli.Success(),
-		// 	tcli.StderrMatches(regexp.QuoteMeta("Successfully created environment \"non-whole-resource-amounts\"")),
-		// )
+		t.Cleanup(func() {
+			run(t, "coder-envs-edit-cleanup", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
+				headlessLogin(ctx, t, c)
+				c.Run(ctx, fmt.Sprintf("coder envs rm %s --force", name)).Assert(t)
+			})
+		})
+
+		c.Run(ctx, "coder envs ls").Assert(t,
+			tcli.Success(),
+			tcli.StdoutMatches(regexp.QuoteMeta(name)),
+		)
+
+		var env coder.Environment
+		c.Run(ctx, fmt.Sprintf(`coder envs ls -o json | jq '.[] | select(.name == "%s")'`, name)).Assert(t,
+			tcli.Success(),
+			tcli.StdoutJSONUnmarshal(&env),
+		)
+		assert.Equal(t, "environment cpu was correctly set", cpu, float64(env.CPUCores), floatComparer)
+
+		c.Run(ctx, fmt.Sprintf("coder envs watch-build %s", name)).Assert(t,
+			tcli.Success(),
+		)
+
+		c.Run(ctx, fmt.Sprintf("coder envs rm %s --force", name)).Assert(t,
+			tcli.Success(),
+		)
+	})
+
+	run(t, "coder-cli-env-edit-tests", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
+		headlessLogin(ctx, t, c)
+
+		name := randString(10)
+		c.Run(ctx, fmt.Sprintf("coder envs create %s --image ubuntu --follow", name)).Assert(t,
+			tcli.Success(),
+		)
+		t.Cleanup(func() {
+			run(t, "coder-envs-edit-cleanup", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
+				headlessLogin(ctx, t, c)
+				c.Run(ctx, fmt.Sprintf("coder envs rm %s --force", name)).Assert(t)
+			})
+		})
+
+		cpu := 2.1
+		c.Run(ctx, fmt.Sprintf(`coder envs edit %s --cpu %f --follow`, name, cpu)).Assert(t,
+			tcli.Success(),
+		)
+
+		var env coder.Environment
+		c.Run(ctx, fmt.Sprintf(`coder envs ls -o json | jq '.[] | select(.name == "%s")'`, name)).Assert(t,
+			tcli.Success(),
+			tcli.StdoutJSONUnmarshal(&env),
+		)
+		assert.Equal(t, "cpu cores were updated", cpu, float64(env.CPUCores), floatComparer)
+
+		c.Run(ctx, fmt.Sprintf("coder envs rm %s --force", name)).Assert(t,
+			tcli.Success(),
+		)
 	})
 }
+
+var floatComparer = cmp.Comparer(func(x, y float64) bool {
+	delta := math.Abs(x - y)
+	mean := math.Abs(x+y) / 2.0
+	return delta/mean < 0.001
+})

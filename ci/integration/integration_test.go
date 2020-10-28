@@ -87,7 +87,7 @@ func TestCoderCLI(t *testing.T) {
 var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 func randString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	const charset = "abcdefghijklmnopqrstuvwxyz"
 	b := make([]byte, length)
 	for i := range b {
 		b[i] = charset[seededRand.Intn(len(charset))]
