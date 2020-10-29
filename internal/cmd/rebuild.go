@@ -17,7 +17,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func rebuildEnvCommand() *cobra.Command {
+func rebuildEnvCommand(user *string) *cobra.Command {
 	var follow bool
 	var force bool
 	cmd := &cobra.Command{
@@ -32,7 +32,7 @@ coder envs rebuild backend-env --force`,
 			if err != nil {
 				return err
 			}
-			env, err := findEnv(ctx, client, args[0], coder.Me)
+			env, err := findEnv(ctx, client, args[0], *user)
 			if err != nil {
 				return err
 			}
@@ -136,7 +136,7 @@ func trailBuildLogs(ctx context.Context, client *coder.Client, envID string) err
 	return nil
 }
 
-func watchBuildLogCommand() *cobra.Command {
+func watchBuildLogCommand(user *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "watch-build [environment_name]",
 		Example: "coder watch-build front-end-env",
@@ -148,7 +148,7 @@ func watchBuildLogCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			env, err := findEnv(ctx, client, args[0], coder.Me)
+			env, err := findEnv(ctx, client, args[0], *user)
 			if err != nil {
 				return err
 			}
