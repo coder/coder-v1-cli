@@ -78,19 +78,6 @@ func LogWarn(header string, lines ...string) {
 	}.String())
 }
 
-// Warn creates an error with the level "warning".
-func Warn(header string, lines ...string) CLIError {
-	return CLIError{
-		CLIMessage: CLIMessage{
-			Color:  color.FgYellow,
-			Level:  "warning",
-			Header: header,
-			Lines:  lines,
-		},
-		error: errors.New(header),
-	}
-}
-
 // Error creates an error with the level "error".
 func Error(header string, lines ...string) CLIError {
 	return CLIError{
