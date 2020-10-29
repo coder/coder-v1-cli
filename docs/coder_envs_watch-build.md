@@ -9,7 +9,7 @@ coder envs watch-build [environment_name] [flags]
 ### Examples
 
 ```
-coder watch-build front-end-env
+coder envs watch-build front-end-env
 ```
 
 ### Options

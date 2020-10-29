@@ -139,7 +139,7 @@ func trailBuildLogs(ctx context.Context, client *coder.Client, envID string) err
 func watchBuildLogCommand(user *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "watch-build [environment_name]",
-		Example: "coder watch-build front-end-env",
+		Example: "coder envs watch-build front-end-env",
 		Short:   "trail the build log of a Coder environment",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
