@@ -77,7 +77,7 @@ coder envs rebuild backend-env --force`,
 func trailBuildLogs(ctx context.Context, client *coder.Client, envID string) error {
 	const check = "✅"
 	const failure = "❌"
-=
+
 	newSpinner := func() *spinner.Spinner { return spinner.New(spinner.CharSets[11], 100*time.Millisecond) }
 
 	// this tells us whether to show dynamic loaders when printing output
