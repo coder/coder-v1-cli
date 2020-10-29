@@ -1,4 +1,6 @@
 #!/bin/sh
+# coder-cli installation helper script
+# fork of https://github.com/denoland/deno_install
 # TODO(everyone): Keep this script simple and easily auditable.
 
 set -e
@@ -28,7 +30,7 @@ else
 fi
 
 version=${1:-""}
-if [ "$version" == "" ]; then
+if [ "$version" = "" ]; then
   coder_asset_path=$(
     curl -sSf https://github.com/cdr/coder-cli/releases |
       grep -o "/cdr/coder-cli/releases/download/.*/coder-cli-${target}${extension}" |

@@ -2,8 +2,6 @@
 
 set -euo pipefail
 
-echo "Linting..."
-
 cd "$(dirname "$0")"
 cd ../../
 
