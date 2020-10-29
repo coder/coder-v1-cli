@@ -9,7 +9,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func makeLogoutCmd() *cobra.Command {
+func logoutCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "logout",
 		Short: "Remove local authentication credentials if any exist",

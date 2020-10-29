@@ -14,6 +14,7 @@ coder sh [environment_name] [<command [args...]>] [flags]
 
 ```
 coder sh backend-env
+coder sh front-end-dev cat ~/config.json
 ```
 
 ### Options

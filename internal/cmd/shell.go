@@ -23,11 +23,12 @@ import (
 
 func getEnvsForCompletion(user string) func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		ctx := cmd.Context()
 		client, err := newClient()
 		if err != nil {
 			return nil, cobra.ShellCompDirectiveDefault
 		}
-		envs, err := getEnvs(context.TODO(), client, user)
+		envs, err := getEnvs(ctx, client, user)
 		if err != nil {
 			return nil, cobra.ShellCompDirectiveDefault
 		}
@@ -40,7 +41,7 @@ func getEnvsForCompletion(user string) func(cmd *cobra.Command, args []string, t
 	}
 }
 
-func makeShellCmd() *cobra.Command {
+func shCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:                "sh [environment_name] [<command [args...]>]",
 		Short:              "Open a shell and execute commands in a Coder environment",
@@ -49,13 +50,13 @@ func makeShellCmd() *cobra.Command {
 		DisableFlagParsing: true,
 		ValidArgsFunction:  getEnvsForCompletion(coder.Me),
 		RunE:               shell,
-		Example:            "coder sh backend-env",
+		Example: `coder sh backend-env
+coder sh front-end-dev cat ~/config.json`,
 	}
 }
 
-func shell(_ *cobra.Command, cmdArgs []string) error {
-	ctx := context.Background()
-
+func shell(cmd *cobra.Command, cmdArgs []string) error {
+	ctx := cmd.Context()
 	command := "sh"
 	args := []string{"-c"}
 	if len(cmdArgs) > 1 {
@@ -104,6 +105,18 @@ func runCommand(ctx context.Context, envName, command string, args []string) err
 	env, err := findEnv(ctx, client, envName, coder.Me)
 	if err != nil {
 		return xerrors.Errorf("find environment: %w", err)
+	}
+
+	// check if a rebuild is required before attempting to open a shell
+	for _, r := range env.RebuildMessages {
+		// use the first rebuild message that is required
+		if r.Required {
+			return clog.Error(
+				fmt.Sprintf(`environment "%s" requires a rebuild`, env.Name),
+				clog.Causef(r.Text), clog.BlankLine,
+				clog.Tipf(`run "coder envs rebuild %s" to rebuild`, env.Name),
+			)
+		}
 	}
 
 	termFD := os.Stdout.Fd()

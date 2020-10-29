@@ -18,7 +18,7 @@ import (
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 )
 
-func makeURLCmd() *cobra.Command {
+func urlCmd() *cobra.Command {
 	var outputFmt string
 	cmd := &cobra.Command{
 		Use:   "urls",
@@ -29,7 +29,7 @@ func makeURLCmd() *cobra.Command {
 		Short:             "List all DevURLs for an environment",
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: getEnvsForCompletion(coder.Me),
-		RunE:              makeListDevURLs(&outputFmt),
+		RunE:              listDevURLsCmd(&outputFmt),
 	}
 	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human|json")
 
@@ -43,7 +43,7 @@ func makeURLCmd() *cobra.Command {
 	cmd.AddCommand(
 		lsCmd,
 		rmCmd,
-		makeCreateDevURL(),
+		createDevURLCmd(),
 	)
 
 	return cmd
@@ -89,7 +89,7 @@ func accessLevelIsValid(level string) bool {
 
 // Run gets the list of active devURLs from the cemanager for the
 // specified environment and outputs info to stdout.
-func makeListDevURLs(outputFmt *string) func(cmd *cobra.Command, args []string) error {
+func listDevURLsCmd(outputFmt *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		envName := args[0]
 		devURLs, err := urlList(cmd.Context(), envName)
@@ -120,7 +120,7 @@ func makeListDevURLs(outputFmt *string) func(cmd *cobra.Command, args []string) 
 	}
 }
 
-func makeCreateDevURL() *cobra.Command {
+func createDevURLCmd() *cobra.Command {
 	var (
 		access  string
 		urlname string

@@ -14,7 +14,7 @@ import (
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 )
 
-func makeSecretsCmd() *cobra.Command {
+func secretsCmd() *cobra.Command {
 	var user string
 	cmd := &cobra.Command{
 		Use:   "secrets",
@@ -26,28 +26,28 @@ func makeSecretsCmd() *cobra.Command {
 		&cobra.Command{
 			Use:   "ls",
 			Short: "List all secrets owned by the active user",
-			RunE:  listSecrets(&user),
+			RunE:  listSecretsCmd(&user),
 		},
-		makeCreateSecret(&user),
+		createSecretCmd(&user),
 		&cobra.Command{
 			Use:     "rm [...secret_name]",
 			Short:   "Remove one or more secrets by name",
 			Args:    cobra.MinimumNArgs(1),
-			RunE:    makeRemoveSecrets(&user),
+			RunE:    removeSecretsCmd(&user),
 			Example: "coder secrets rm mysql-password mysql-user",
 		},
 		&cobra.Command{
 			Use:     "view [secret_name]",
 			Short:   "View a secret by name",
 			Args:    cobra.ExactArgs(1),
-			RunE:    makeViewSecret(&user),
+			RunE:    viewSecretCmd(&user),
 			Example: "coder secrets view mysql-password",
 		},
 	)
 	return cmd
 }
 
-func makeCreateSecret(userEmail *string) *cobra.Command {
+func createSecretCmd(userEmail *string) *cobra.Command {
 	var (
 		fromFile    string
 		fromLiteral string
@@ -136,7 +136,7 @@ coder secrets create aws-credentials --from-file ./credentials.json`,
 	return cmd
 }
 
-func listSecrets(userEmail *string) func(cmd *cobra.Command, _ []string) error {
+func listSecretsCmd(userEmail *string) func(cmd *cobra.Command, _ []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
 		client, err := newClient()
 		if err != nil {
@@ -169,7 +169,7 @@ func listSecrets(userEmail *string) func(cmd *cobra.Command, _ []string) error {
 	}
 }
 
-func makeViewSecret(userEmail *string) func(cmd *cobra.Command, args []string) error {
+func viewSecretCmd(userEmail *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		var (
 			name = args[0]
@@ -196,7 +196,7 @@ func makeViewSecret(userEmail *string) func(cmd *cobra.Command, args []string) e
 	}
 }
 
-func makeRemoveSecrets(userEmail *string) func(c *cobra.Command, args []string) error {
+func removeSecretsCmd(userEmail *string) func(c *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		client, err := newClient()
 		if err != nil {

@@ -10,7 +10,7 @@ import (
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
 )
 
-func makeUsersCmd() *cobra.Command {
+func usersCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "users",
 		Short: "Interact with Coder user accounts",
