@@ -17,7 +17,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func rebuildEnvCommand() *cobra.Command {
+func rebuildEnvCommand(user *string) *cobra.Command {
 	var follow bool
 	var force bool
 	cmd := &cobra.Command{
@@ -26,14 +26,13 @@ func rebuildEnvCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Example: `coder envs rebuild front-end-env --follow
 coder envs rebuild backend-env --force`,
-		Hidden: true, // TODO(@cmoog) un-hide
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient()
 			if err != nil {
 				return err
 			}
-			env, err := findEnv(ctx, client, args[0], coder.Me)
+			env, err := findEnv(ctx, client, args[0], *user)
 			if err != nil {
 				return err
 			}
@@ -44,7 +43,10 @@ coder envs rebuild backend-env --force`,
 					IsConfirm: true,
 				}).Run()
 				if err != nil {
-					return err
+					return clog.Fatal(
+						"failed to confirm prompt", clog.BlankLine,
+						clog.Tipf(`use "--force" to rebuild without a confirmation prompt`),
+					)
 				}
 			}
 
@@ -65,7 +67,7 @@ coder envs rebuild backend-env --force`,
 		},
 	}
 
-	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
+	cmd.Flags().BoolVar(&follow, "follow", false, "follow build log after initiating rebuild")
 	cmd.Flags().BoolVar(&force, "force", false, "force rebuild without showing a confirmation prompt")
 	return cmd
 }
@@ -134,20 +136,19 @@ func trailBuildLogs(ctx context.Context, client *coder.Client, envID string) err
 	return nil
 }
 
-func watchBuildLogCommand() *cobra.Command {
+func watchBuildLogCommand(user *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "watch-build [environment_name]",
-		Example: "coder watch-build front-end-env",
+		Example: "coder envs watch-build front-end-env",
 		Short:   "trail the build log of a Coder environment",
 		Args:    cobra.ExactArgs(1),
-		Hidden:  true, // TODO(@cmoog) un-hide
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient()
 			if err != nil {
 				return err
 			}
-			env, err := findEnv(ctx, client, args[0], coder.Me)
+			env, err := findEnv(ctx, client, args[0], *user)
 			if err != nil {
 				return err
 			}

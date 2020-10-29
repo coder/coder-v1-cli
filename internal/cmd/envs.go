@@ -30,8 +30,8 @@ func envsCommand() *cobra.Command {
 		lsEnvsCommand(&user),
 		stopEnvsCommand(&user),
 		rmEnvsCommand(&user),
-		watchBuildLogCommand(),
-		rebuildEnvCommand(),
+		watchBuildLogCommand(&user),
+		rebuildEnvCommand(&user),
 		createEnvCommand(&user),
 		editEnvCommand(&user),
 	)
