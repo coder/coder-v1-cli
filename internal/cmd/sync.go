@@ -15,7 +15,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func makeSyncCmd() *cobra.Command {
+func syncCmd() *cobra.Command {
 	var init bool
 	cmd := &cobra.Command{
 		Use:   "sync [local directory] [<env name>:<remote directory>]",

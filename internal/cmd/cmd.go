@@ -21,24 +21,24 @@ func Make() *cobra.Command {
 	}
 
 	app.AddCommand(
-		makeLoginCmd(),
-		makeLogoutCmd(),
+		loginCmd(),
+		logoutCmd(),
 		shCmd(),
-		makeUsersCmd(),
-		makeConfigSSHCmd(),
-		makeSecretsCmd(),
-		envsCommand(),
-		makeSyncCmd(),
-		makeURLCmd(),
+		usersCmd(),
+		configSSHCmd(),
+		secretsCmd(),
+		envsCmd(),
+		syncCmd(),
+		urlCmd(),
 		resourceCmd(),
-		completionCmd,
-		genDocs(app),
+		completionCmd(),
+		genDocsCmd(app),
 	)
 	app.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "show verbose output")
 	return app
 }
 
-func genDocs(rootCmd *cobra.Command) *cobra.Command {
+func genDocsCmd(rootCmd *cobra.Command) *cobra.Command {
 	return &cobra.Command{
 		Use:     "gen-docs [dir_path]",
 		Short:   "Generate a markdown documentation tree for the root command.",
@@ -52,17 +52,18 @@ func genDocs(rootCmd *cobra.Command) *cobra.Command {
 }
 
 // reference: https://github.com/spf13/cobra/blob/master/shell_completions.md
-var completionCmd = &cobra.Command{
-	Use:   "completion [bash|zsh|fish|powershell]",
-	Short: "Generate completion script",
-	Example: `coder completion fish > ~/.config/fish/completions/coder.fish
+func completionCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "completion [bash|zsh|fish|powershell]",
+		Short: "Generate completion script",
+		Example: `coder completion fish > ~/.config/fish/completions/coder.fish
 coder completion zsh > "${fpath[1]}/_coder"
 
 Linux:
   $ coder completion bash > /etc/bash_completion.d/coder
 MacOS:
   $ coder completion bash > /usr/local/etc/bash_completion.d/coder`,
-	Long: `To load completions:
+		Long: `To load completions:
 
 Bash:
 
@@ -93,19 +94,20 @@ $ coder completion fish | source
 To load completions for each session, execute once:
 $ coder completion fish > ~/.config/fish/completions/coder.fish
 `,
-	DisableFlagsInUseLine: true,
-	ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
-	Args:                  cobra.ExactValidArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		switch args[0] {
-		case "bash":
-			_ = cmd.Root().GenBashCompletion(os.Stdout) // Best effort.
-		case "zsh":
-			_ = cmd.Root().GenZshCompletion(os.Stdout) // Best effort.
-		case "fish":
-			_ = cmd.Root().GenFishCompletion(os.Stdout, true) // Best effort.
-		case "powershell":
-			_ = cmd.Root().GenPowerShellCompletion(os.Stdout) // Best effort.
-		}
-	},
+		DisableFlagsInUseLine: true,
+		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+		Args:                  cobra.ExactValidArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			switch args[0] {
+			case "bash":
+				_ = cmd.Root().GenBashCompletion(os.Stdout) // Best effort.
+			case "zsh":
+				_ = cmd.Root().GenZshCompletion(os.Stdout) // Best effort.
+			case "fish":
+				_ = cmd.Root().GenFishCompletion(os.Stdout, true) // Best effort.
+			case "powershell":
+				_ = cmd.Root().GenPowerShellCompletion(os.Stdout) // Best effort.
+			}
+		},
+	}
 }

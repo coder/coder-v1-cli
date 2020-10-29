@@ -18,7 +18,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func makeLoginCmd() *cobra.Command {
+func loginCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "login [Coder Enterprise URL eg. https://my.coder.domain/]",
 		Short: "Authenticate this client for future operations",

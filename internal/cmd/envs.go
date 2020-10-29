@@ -17,7 +17,7 @@ import (
 
 const defaultImgTag = "latest"
 
-func envsCommand() *cobra.Command {
+func envsCmd() *cobra.Command {
 	var user string
 	cmd := &cobra.Command{
 		Use:   "envs",
@@ -28,12 +28,12 @@ func envsCommand() *cobra.Command {
 
 	cmd.AddCommand(
 		lsEnvsCommand(&user),
-		stopEnvsCommand(&user),
-		rmEnvsCommand(&user),
+		stopEnvsCmd(&user),
+		rmEnvsCmd(&user),
 		watchBuildLogCommand(&user),
 		rebuildEnvCommand(&user),
-		createEnvCommand(&user),
-		editEnvCommand(&user),
+		createEnvCmd(&user),
+		editEnvCmd(&user),
 	)
 	return cmd
 }
@@ -84,7 +84,7 @@ func lsEnvsCommand(user *string) *cobra.Command {
 	return cmd
 }
 
-func stopEnvsCommand(user *string) *cobra.Command {
+func stopEnvsCmd(user *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "stop [...environment_names]",
 		Short: "stop Coder environments by name",
@@ -131,7 +131,7 @@ coder envs --user charlie@coder.com ls -o json \
 	}
 }
 
-func createEnvCommand(user *string) *cobra.Command {
+func createEnvCmd(user *string) *cobra.Command {
 	var (
 		org    string
 		img    string
@@ -239,7 +239,7 @@ coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955
 	return cmd
 }
 
-func editEnvCommand(user *string) *cobra.Command {
+func editEnvCmd(user *string) *cobra.Command {
 	var (
 		org      string
 		img      string
@@ -336,7 +336,7 @@ coder envs edit back-end-env --disk 20`,
 	return cmd
 }
 
-func rmEnvsCommand(user *string) *cobra.Command {
+func rmEnvsCmd(user *string) *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
 		Use:   "rm [...environment_names]",

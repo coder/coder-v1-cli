@@ -18,7 +18,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func makeConfigSSHCmd() *cobra.Command {
+func configSSHCmd() *cobra.Command {
 	var (
 		configpath string
 		remove     = false
