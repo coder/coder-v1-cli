@@ -33,7 +33,7 @@ func secretsCmd() *cobra.Command {
 			Use:     "rm [...secret_name]",
 			Short:   "Remove one or more secrets by name",
 			Args:    cobra.MinimumNArgs(1),
-			RunE:    remoteSecretsCmd(&user),
+			RunE:    removeSecretsCmd(&user),
 			Example: "coder secrets rm mysql-password mysql-user",
 		},
 		&cobra.Command{
@@ -196,7 +196,7 @@ func viewSecretCmd(userEmail *string) func(cmd *cobra.Command, args []string) er
 	}
 }
 
-func remoteSecretsCmd(userEmail *string) func(c *cobra.Command, args []string) error {
+func removeSecretsCmd(userEmail *string) func(c *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		client, err := newClient()
 		if err != nil {
