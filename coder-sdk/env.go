@@ -39,10 +39,6 @@ type RebuildMessage struct {
 	Text             string           `json:"text"`
 	Required         bool             `json:"required"`
 	AutoOffThreshold xjson.MSDuration `json:"auto_off_threshold" tab:"-"`
-	RebuildMessages  []struct {
-		Text     string `json:"text"`
-		Required bool   `json:"required"`
-	} `json:"rebuild_messages" tab:"-"`
 }
 
 // EnvironmentStat represents the state of an environment

@@ -23,7 +23,7 @@ func Make() *cobra.Command {
 	app.AddCommand(
 		makeLoginCmd(),
 		makeLogoutCmd(),
-		makeShellCmd(),
+		shCmd(),
 		makeUsersCmd(),
 		makeConfigSSHCmd(),
 		makeSecretsCmd(),
