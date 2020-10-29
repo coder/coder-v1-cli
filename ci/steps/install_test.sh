@@ -25,3 +25,4 @@ export CODER_INSTALL="$HOME/coder-1.12.2"
 export CODER_INSTALL="."
 ./install.sh v1.12.2
 bin/coder --version | grep 1.12.2
+rm ./bin/coder

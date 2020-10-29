@@ -12,18 +12,19 @@ You can find additional Coder Enterprise usage documentation on [https://enterpr
 
 ## Install Release
 
-Shell
-
-```
-curl -fsSL https://raw.githubusercontent.com/cdr/coder-cli/master/install.sh | sh
-```
-
-Alternatively, manually download the latest [release](https://github.com/cdr/coder-cli/releases):
+Download the latest [release](https://github.com/cdr/coder-cli/releases)
 
 1. Click a release and download the tar file for your operating system (ex: coder-cli-linux-amd64.tar.gz)
 2. Extract the `coder` binary from the tar file, ex:
 
 ```bash
-cd ~/bin
-tar -xvf ~/Downloads/coder-cli-linux-amd64.tar.gz
+cd ~/Downloads
+tar -xvf ./coder-cli-darwin-amd64.tar.gz
+./coder --help
+```
+
+Alternatively, use this helper script for MacOS and Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cdr/coder-cli/master/install.sh | sh
 ```

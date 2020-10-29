@@ -54,7 +54,10 @@ jobs:
         with:
           args: ./ci/steps/gendocs.sh
   install-test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v1
       - run: ./ci/steps/install_test.sh
