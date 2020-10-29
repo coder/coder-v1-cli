@@ -26,7 +26,6 @@ func rebuildEnvCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Example: `coder envs rebuild front-end-env --follow
 coder envs rebuild backend-env --force`,
-		Hidden: true, // TODO(@cmoog) un-hide
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient()
@@ -44,7 +43,10 @@ coder envs rebuild backend-env --force`,
 					IsConfirm: true,
 				}).Run()
 				if err != nil {
-					return err
+					return clog.Fatal(
+						"failed to confirm prompt", clog.BlankLine, 
+						clog.Tipf(`use "--force" to rebuild without a confirmation prompt`),
+					)
 				}
 			}
 
@@ -65,7 +67,7 @@ coder envs rebuild backend-env --force`,
 		},
 	}
 
-	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
+	cmd.Flags().BoolVar(&follow, "follow", false, "follow build log after initiating rebuild")
 	cmd.Flags().BoolVar(&force, "force", false, "force rebuild without showing a confirmation prompt")
 	return cmd
 }
@@ -140,7 +142,6 @@ func watchBuildLogCommand() *cobra.Command {
 		Example: "coder watch-build front-end-env",
 		Short:   "trail the build log of a Coder environment",
 		Args:    cobra.ExactArgs(1),
-		Hidden:  true, // TODO(@cmoog) un-hide
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient()
