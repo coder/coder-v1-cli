@@ -33,7 +33,7 @@ func newClient() (*coder.Client, error) {
 
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, xerrors.Errorf("url misformatted: %w try runing \"coder login\" with a valid URL", err)
+		return nil, xerrors.Errorf("url malformed: %w try runing \"coder login\" with a valid URL", err)
 	}
 
 	c := &coder.Client{
@@ -54,12 +54,12 @@ func newClient() (*coder.Client, error) {
 	}
 
 	if !version.VersionsMatch(apiVersion) {
-		clog.Log(clog.Warn(
+		clog.LogWarn(
 			"version mismatch detected",
 			fmt.Sprintf("coder-cli version: %s", version.Version),
 			fmt.Sprintf("Coder API version: %s", apiVersion), clog.BlankLine,
 			clog.Tipf("download the appropriate version here: https://github.com/cdr/coder-cli/releases"),
-		))
+		)
 	}
 
 	return c, nil

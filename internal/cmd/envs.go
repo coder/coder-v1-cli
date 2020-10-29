@@ -326,8 +326,8 @@ coder envs edit back-end-env --disk 20`,
 		},
 	}
 	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the environment should be created under.")
-	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image you wan't the environment to be based off of.")
-	cmd.Flags().StringVarP(&tag, "tag", "t", "latest", "image tag of the image you wan't to base the environment off of.")
+	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image you want the environment to be based off of.")
+	cmd.Flags().StringVarP(&tag, "tag", "t", "latest", "image tag of the image you want to base the environment off of.")
 	cmd.Flags().Float32P("cpu", "c", cpuCores, "The number of cpu cores the environment should be provisioned with.")
 	cmd.Flags().Float32P("memory", "m", memGB, "The amount of RAM an environment should be provisioned with.")
 	cmd.Flags().IntP("disk", "d", diskGB, "The amount of disk storage an environment should be provisioned with.")
@@ -339,10 +339,9 @@ coder envs edit back-end-env --disk 20`,
 func rmEnvsCommand(user *string) *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
-		Use:    "rm [...environment_names]",
-		Short:  "remove Coder environments by name",
-		Hidden: true,
-		Args:   cobra.MinimumNArgs(1),
+		Use:   "rm [...environment_names]",
+		Short: "remove Coder environments by name",
+		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient()
@@ -355,7 +354,10 @@ func rmEnvsCommand(user *string) *cobra.Command {
 					IsConfirm: true,
 				}
 				if _, err := confirm.Run(); err != nil {
-					return err
+					return clog.Fatal(
+						"failed to confirm prompt", clog.BlankLine,
+						clog.Tipf(`use "--force" to rebuild without a confirmation prompt`),
+					)
 				}
 			}
 
