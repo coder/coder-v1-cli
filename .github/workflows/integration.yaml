@@ -22,5 +22,5 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: '^1.14'
-      - name: go test
-        run: go test -v ./ci/integration/...
+      - name: integration tests
+        run: ./ci/steps/integration.sh
