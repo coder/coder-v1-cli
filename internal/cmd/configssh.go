@@ -49,9 +49,7 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 	endToken := "# ------------END-CODER-ENTERPRISE------------"
 
 	return func(cmd *cobra.Command, _ []string) error {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
+		ctx := cmd.Context()
 		usr, err := user.Current()
 		if err != nil {
 			return xerrors.Errorf("get user home directory: %w", err)
@@ -88,22 +86,21 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			return nil
 		}
 
-		client, err := newClient()
+		client, err := newClient(ctx)
 		if err != nil {
 			return err
 		}
 
-		sshAvailable := isSSHAvailable(ctx)
-		if !sshAvailable {
+		if !isSSHAvailable(ctx) {
 			return xerrors.New("SSH is disabled or not available for your Coder Enterprise deployment.")
 		}
 
-		user, err := client.Me(cmd.Context())
+		user, err := client.Me(ctx)
 		if err != nil {
 			return xerrors.Errorf("fetch username: %w", err)
 		}
 
-		envs, err := getEnvs(cmd.Context(), client, coder.Me)
+		envs, err := getEnvs(ctx, client, coder.Me)
 		if err != nil {
 			return err
 		}

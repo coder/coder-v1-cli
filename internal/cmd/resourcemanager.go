@@ -55,7 +55,7 @@ coder resources top --sort-by memory --show-empty`,
 func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
-		client, err := newClient()
+		client, err := newClient(ctx)
 		if err != nil {
 			return err
 		}

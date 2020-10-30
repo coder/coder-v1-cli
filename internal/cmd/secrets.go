@@ -82,8 +82,9 @@ coder secrets create aws-credentials --from-file ./credentials.json`,
 				name  = args[0]
 				value string
 				err   error
+				ctx   = cmd.Context()
 			)
-			client, err := newClient()
+			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
@@ -112,11 +113,11 @@ coder secrets create aws-credentials --from-file ./credentials.json`,
 				}
 			}
 
-			user, err := client.UserByEmail(cmd.Context(), *userEmail)
+			user, err := client.UserByEmail(ctx, *userEmail)
 			if err != nil {
 				return xerrors.Errorf("get user %q by email: %w", *userEmail, err)
 			}
-			err = client.InsertSecret(cmd.Context(), user, coder.InsertSecretReq{
+			err = client.InsertSecret(ctx, user, coder.InsertSecretReq{
 				Name:        name,
 				Value:       value,
 				Description: description,
@@ -138,16 +139,17 @@ coder secrets create aws-credentials --from-file ./credentials.json`,
 
 func listSecretsCmd(userEmail *string) func(cmd *cobra.Command, _ []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
-		client, err := newClient()
+		ctx := cmd.Context()
+		client, err := newClient(ctx)
 		if err != nil {
 			return err
 		}
-		user, err := client.UserByEmail(cmd.Context(), *userEmail)
+		user, err := client.UserByEmail(ctx, *userEmail)
 		if err != nil {
 			return xerrors.Errorf("get user %q by email: %w", *userEmail, err)
 		}
 
-		secrets, err := client.Secrets(cmd.Context(), user.ID)
+		secrets, err := client.Secrets(ctx, user.ID)
 		if err != nil {
 			return xerrors.Errorf("get secrets: %w", err)
 		}
@@ -173,17 +175,18 @@ func viewSecretCmd(userEmail *string) func(cmd *cobra.Command, args []string) er
 	return func(cmd *cobra.Command, args []string) error {
 		var (
 			name = args[0]
+			ctx  = cmd.Context()
 		)
-		client, err := newClient()
+		client, err := newClient(ctx)
 		if err != nil {
 			return err
 		}
-		user, err := client.UserByEmail(cmd.Context(), *userEmail)
+		user, err := client.UserByEmail(ctx, *userEmail)
 		if err != nil {
 			return xerrors.Errorf("get user %q by email: %w", *userEmail, err)
 		}
 
-		secret, err := client.SecretWithValueByName(cmd.Context(), name, user.ID)
+		secret, err := client.SecretWithValueByName(ctx, name, user.ID)
 		if err != nil {
 			return xerrors.Errorf("get secret by name: %w", err)
 		}
@@ -198,18 +201,19 @@ func viewSecretCmd(userEmail *string) func(cmd *cobra.Command, args []string) er
 
 func removeSecretsCmd(userEmail *string) func(c *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		client, err := newClient()
+		ctx := cmd.Context()
+		client, err := newClient(ctx)
 		if err != nil {
 			return err
 		}
-		user, err := client.UserByEmail(cmd.Context(), *userEmail)
+		user, err := client.UserByEmail(ctx, *userEmail)
 		if err != nil {
 			return xerrors.Errorf("get user %q by email: %w", *userEmail, err)
 		}
 
 		errorSeen := false
 		for _, n := range args {
-			err := client.DeleteSecretByName(cmd.Context(), n, user.ID)
+			err := client.DeleteSecretByName(ctx, n, user.ID)
 			if err != nil {
 				clog.Log(clog.Error(
 					fmt.Sprintf("failed to delete secret %q: %v", n, err),

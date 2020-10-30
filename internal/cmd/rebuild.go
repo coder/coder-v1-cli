@@ -28,7 +28,7 @@ func rebuildEnvCommand(user *string) *cobra.Command {
 coder envs rebuild backend-env --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient()
+			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
@@ -144,7 +144,7 @@ func watchBuildLogCommand(user *string) *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient()
+			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
