@@ -14,7 +14,6 @@ func TestUsers(t *testing.T) {
 	run(t, "users-cli-tests", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
 		c.Run(ctx, "which coder").Assert(t,
 			tcli.Success(),
-			tcli.StdoutMatches("/usr/sbin/coder"),
 			tcli.StderrEmpty(),
 		)
 

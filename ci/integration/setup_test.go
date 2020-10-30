@@ -51,14 +51,17 @@ func build(path string) error {
 // write session tokens to the given container runner
 func headlessLogin(ctx context.Context, t *testing.T, runner *tcli.ContainerRunner) {
 	creds := login(ctx, t)
-	cmd := exec.CommandContext(ctx, "sh", "-c", "mkdir -p ~/.config/coder && cat > ~/.config/coder/session")
+	cmd := exec.CommandContext(ctx, "sh", "-c", "mkdir -p $HOME/.config/coder && cat > $HOME/.config/coder/session")
 
 	// !IMPORTANT: be careful that this does not appear in logs
 	cmd.Stdin = strings.NewReader(creds.token)
 	runner.RunCmd(cmd).Assert(t,
 		tcli.Success(),
 	)
-	runner.Run(ctx, fmt.Sprintf("echo -ne %s > ~/.config/coder/url", creds.url)).Assert(t,
+
+	cmd = exec.CommandContext(ctx, "sh", "-c", "cat > $HOME/.config/coder/url")
+	cmd.Stdin = strings.NewReader(creds.url)
+	runner.RunCmd(cmd).Assert(t,
 		tcli.Success(),
 	)
 }

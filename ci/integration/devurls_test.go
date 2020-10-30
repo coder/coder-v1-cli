@@ -12,7 +12,6 @@ func TestDevURLCLI(t *testing.T) {
 	run(t, "coder-cli-devurl-tests", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
 		c.Run(ctx, "which coder").Assert(t,
 			tcli.Success(),
-			tcli.StdoutMatches("/usr/sbin/coder"),
 			tcli.StderrEmpty(),
 		)
 
