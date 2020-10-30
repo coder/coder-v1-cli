@@ -6,9 +6,6 @@ set -e
 cd "$(dirname "$0")"
 cd ../../
 
-# Lint.
-shellcheck -s sh ./*.sh
-
 # Test that we can install the latest version at the default location.
 rm -f ~/.coder/bin/coder
 unset CODER_INSTALL
