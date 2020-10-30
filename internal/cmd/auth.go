@@ -19,8 +19,7 @@ var errNeedLogin = clog.Fatal(
 	clog.Hintf(`did you run "coder login [https://coder.domain.com]"?`),
 )
 
-func newClient() (*coder.Client, error) {
-	ctx := context.Background()
+func newClient(ctx context.Context) (*coder.Client, error) {
 	sessionToken, err := config.Session.Read()
 	if err != nil {
 		return nil, errNeedLogin

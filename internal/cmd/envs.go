@@ -46,11 +46,12 @@ func lsEnvsCommand(user *string) *cobra.Command {
 		Short: "list all environments owned by the active user",
 		Long:  "List all Coder environments owned by the active user.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client, err := newClient()
+			ctx := cmd.Context()
+			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
-			envs, err := getEnvs(cmd.Context(), client, *user)
+			envs, err := getEnvs(ctx, client, *user)
 			if err != nil {
 				return err
 			}
@@ -101,7 +102,8 @@ coder envs --user charlie@coder.com ls -o json \
 	| xargs coder envs --user charlie@coder.com stop`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client, err := newClient()
+			ctx := cmd.Context()
+			client, err := newClient(ctx)
 			if err != nil {
 				return xerrors.Errorf("new client: %w", err)
 			}
@@ -110,12 +112,12 @@ coder envs --user charlie@coder.com ls -o json \
 			for _, envName := range args {
 				envName := envName
 				egroup.Go(func() error {
-					env, err := findEnv(cmd.Context(), client, envName, *user)
+					env, err := findEnv(ctx, client, envName, *user)
 					if err != nil {
 						return err
 					}
 
-					if err = client.StopEnvironment(cmd.Context(), env.ID); err != nil {
+					if err = client.StopEnvironment(ctx, env.ID); err != nil {
 						return clog.Error(fmt.Sprintf("stop environment %q", env.Name),
 							clog.Causef(err.Error()), clog.BlankLine,
 							clog.Hintf("current environment status is %q", env.LatestStat.ContainerStatus),
@@ -152,16 +154,17 @@ coder envs create --image 5f443b16-30652892427b955601330fa5 my-env-name
 # create a new environment using custom resource amounts
 coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955601330fa5 my-env-name`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
 			if img == "" {
 				return xerrors.New("image unset")
 			}
 
-			client, err := newClient()
+			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
 
-			multiOrgMember, err := isMultiOrgMember(cmd.Context(), client, *user)
+			multiOrgMember, err := isMultiOrgMember(ctx, client, *user)
 			if err != nil {
 				return err
 			}
@@ -170,7 +173,7 @@ coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955
 				return xerrors.New("org is required for multi-org members")
 			}
 
-			importedImg, err := findImg(cmd.Context(),
+			importedImg, err := findImg(ctx,
 				findImgConf{
 					client:  client,
 					email:   *user,
@@ -207,14 +210,14 @@ coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955
 				createReq.DiskGB = importedImg.DefaultDiskGB
 			}
 
-			env, err := client.CreateEnvironment(cmd.Context(), importedImg.OrganizationID, *createReq)
+			env, err := client.CreateEnvironment(ctx, importedImg.OrganizationID, *createReq)
 			if err != nil {
 				return xerrors.Errorf("create environment: %w", err)
 			}
 
 			if follow {
 				clog.LogSuccess("creating environment...")
-				if err := trailBuildLogs(cmd.Context(), client, env.ID); err != nil {
+				if err := trailBuildLogs(ctx, client, env.ID); err != nil {
 					return err
 				}
 				return nil
@@ -261,19 +264,20 @@ func editEnvCmd(user *string) *cobra.Command {
 
 coder envs edit back-end-env --disk 20`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client, err := newClient()
+			ctx := cmd.Context()
+			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
 
 			envName := args[0]
 
-			env, err := findEnv(cmd.Context(), client, envName, *user)
+			env, err := findEnv(ctx, client, envName, *user)
 			if err != nil {
 				return err
 			}
 
-			multiOrgMember, err := isMultiOrgMember(cmd.Context(), client, *user)
+			multiOrgMember, err := isMultiOrgMember(ctx, client, *user)
 			if err != nil {
 				return err
 			}
@@ -288,7 +292,7 @@ coder envs edit back-end-env --disk 20`,
 			diskGB, _ = cmd.Flags().GetInt("disk")
 			gpus, _ = cmd.Flags().GetInt("gpus")
 
-			req, err := buildUpdateReq(cmd.Context(),
+			req, err := buildUpdateReq(ctx,
 				updateConf{
 					cpu:         cpuCores,
 					memGB:       memGB,
@@ -306,13 +310,13 @@ coder envs edit back-end-env --disk 20`,
 				return err
 			}
 
-			if err := client.EditEnvironment(cmd.Context(), env.ID, *req); err != nil {
+			if err := client.EditEnvironment(ctx, env.ID, *req); err != nil {
 				return xerrors.Errorf("failed to apply changes to environment %q: %w", envName, err)
 			}
 
 			if follow {
 				clog.LogSuccess("applied changes to the environment, rebuilding...")
-				if err := trailBuildLogs(cmd.Context(), client, env.ID); err != nil {
+				if err := trailBuildLogs(ctx, client, env.ID); err != nil {
 					return err
 				}
 				return nil
@@ -344,7 +348,7 @@ func rmEnvsCmd(user *string) *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient()
+			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
@@ -369,7 +373,7 @@ func rmEnvsCmd(user *string) *cobra.Command {
 					if err != nil {
 						return err
 					}
-					if err = client.DeleteEnvironment(cmd.Context(), env.ID); err != nil {
+					if err = client.DeleteEnvironment(ctx, env.ID); err != nil {
 						return clog.Error(
 							fmt.Sprintf(`failed to delete environment "%s"`, env.Name),
 							clog.Causef(err.Error()),

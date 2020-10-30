@@ -14,7 +14,7 @@ func run(t *testing.T, container string, execute func(t *testing.T, ctx context.
 	t.Run(container, func(t *testing.T) {
 		t.Parallel()
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 		defer cancel()
 
 		c, err := tcli.NewContainerRunner(ctx, &tcli.ContainerConfig{

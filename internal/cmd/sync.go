@@ -52,7 +52,7 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 			remote = args[1]
 		)
 
-		client, err := newClient()
+		client, err := newClient(ctx)
 		if err != nil {
 			return err
 		}
@@ -66,7 +66,7 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 			remoteDir = remoteTokens[1]
 		)
 
-		env, err := findEnv(cmd.Context(), client, envName, coder.Me)
+		env, err := findEnv(ctx, client, envName, coder.Me)
 		if err != nil {
 			return err
 		}

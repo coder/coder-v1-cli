@@ -24,7 +24,7 @@ import (
 func getEnvsForCompletion(user string) func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		ctx := cmd.Context()
-		client, err := newClient()
+		client, err := newClient(ctx)
 		if err != nil {
 			return nil, cobra.ShellCompDirectiveDefault
 		}
@@ -98,7 +98,7 @@ func sendResizeEvents(ctx context.Context, termFD uintptr, process wsep.Process)
 }
 
 func runCommand(ctx context.Context, envName, command string, args []string) error {
-	client, err := newClient()
+	client, err := newClient(ctx)
 	if err != nil {
 		return err
 	}
