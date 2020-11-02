@@ -8,12 +8,12 @@ import (
 
 // Secret describes a Coder secret
 type Secret struct {
-	ID          string    `json:"id"              tab:"-"`
-	Name        string    `json:"name"            tab:"Name"`
-	Value       string    `json:"value,omitempty" tab:"Value"`
-	Description string    `json:"description"     tab:"Description"`
-	CreatedAt   time.Time `json:"created_at"      tab:"CreatedAt"`
-	UpdatedAt   time.Time `json:"updated_at"      tab:"-"`
+	ID          string    `json:"id"              table:"-"`
+	Name        string    `json:"name"            table:"Name"`
+	Value       string    `json:"value,omitempty" table:"Value"`
+	Description string    `json:"description"     table:"Description"`
+	CreatedAt   time.Time `json:"created_at"      table:"CreatedAt"`
+	UpdatedAt   time.Time `json:"updated_at"      table:"-"`
 }
 
 // Secrets gets all secrets for the given user

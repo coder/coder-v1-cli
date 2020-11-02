@@ -8,11 +8,11 @@ import (
 
 // DevURL is the parsed json response record for a devURL from cemanager.
 type DevURL struct {
-	ID     string `json:"id"     tab:"ID"`
-	URL    string `json:"url"    tab:"URL"`
-	Port   int    `json:"port"   tab:"Port"`
-	Access string `json:"access" tab:"Access"`
-	Name   string `json:"name"   tab:"Name"`
+	ID     string `json:"id"     table:"ID"`
+	URL    string `json:"url"    table:"URL"`
+	Port   int    `json:"port"   table:"Port"`
+	Access string `json:"access" table:"Access"`
+	Name   string `json:"name"   table:"Name"`
 }
 
 type delDevURLRequest struct {

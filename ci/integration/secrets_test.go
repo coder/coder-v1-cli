@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"testing"
 
-	"cdr.dev/coder-cli/ci/tcli"
+	"cdr.dev/coder-cli/pkg/tcli"
 )
 
 func TestSecrets(t *testing.T) {

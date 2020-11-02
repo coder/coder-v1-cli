@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"os"
 
+	"cdr.dev/coder-cli/pkg/tablewriter"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
-
-	"cdr.dev/coder-cli/internal/x/xtabwriter"
 )
 
 func usersCmd() *cobra.Command {
@@ -47,7 +46,7 @@ func listUsers(outputFmt *string) func(cmd *cobra.Command, args []string) error 
 		case "human":
 			// For each element, return the user.
 			each := func(i int) interface{} { return users[i] }
-			if err := xtabwriter.WriteTable(len(users), each); err != nil {
+			if err := tablewriter.WriteTable(len(users), each); err != nil {
 				return xerrors.Errorf("write table: %w", err)
 			}
 		case "json":

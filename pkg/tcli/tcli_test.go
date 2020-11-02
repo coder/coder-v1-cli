@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/coder-cli/ci/tcli"
+	"cdr.dev/coder-cli/pkg/tcli"
 	"cdr.dev/slog/sloggers/slogtest/assert"
 )
 

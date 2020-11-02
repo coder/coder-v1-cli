@@ -8,12 +8,12 @@ import (
 
 // User describes a Coder user account.
 type User struct {
-	ID        string    `json:"id"         tab:"-"`
-	Email     string    `json:"email"      tab:"Email"`
-	Username  string    `json:"username"   tab:"Username"`
-	Name      string    `json:"name"       tab:"Name"`
-	CreatedAt time.Time `json:"created_at" tab:"CreatedAt"`
-	UpdatedAt time.Time `json:"updated_at" tab:"-"`
+	ID        string    `json:"id"         table:"-"`
+	Email     string    `json:"email"      table:"Email"`
+	Username  string    `json:"username"   table:"Username"`
+	Name      string    `json:"name"       table:"Name"`
+	CreatedAt time.Time `json:"created_at" table:"CreatedAt"`
+	UpdatedAt time.Time `json:"updated_at" table:"-"`
 }
 
 // Me gets the details of the authenticated user.

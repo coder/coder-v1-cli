@@ -9,10 +9,10 @@ import (
 	"os"
 	"runtime"
 
-	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/cmd"
 	"cdr.dev/coder-cli/internal/version"
 	"cdr.dev/coder-cli/internal/x/xterminal"
+	"cdr.dev/coder-cli/pkg/clog"
 )
 
 func main() {

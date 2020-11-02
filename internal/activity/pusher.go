@@ -8,7 +8,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/clog"
+	"cdr.dev/coder-cli/pkg/clog"
 )
 
 const pushInterval = time.Minute

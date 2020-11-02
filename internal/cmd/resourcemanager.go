@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/clog"
+	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )

@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/loginsrv"
+	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
