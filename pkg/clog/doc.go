@@ -1,4 +1,4 @@
-// package clog provides rich error types and logging helpers for coder-cli.
+// Package clog provides rich error types and logging helpers for coder-cli.
 //
 // clog encourages returning error types rather than
 // logging them and failing with os.Exit as they happen.
