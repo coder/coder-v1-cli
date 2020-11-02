@@ -38,7 +38,7 @@ jobs:
       - name: test
         uses: ./ci/image
         with:
-          args: go test -v -cover -covermode=count ./internal/... ./cmd/...
+          args: go test $(go list ./... | grep -v pkg/tcli | grep -v ci/integration)
   gendocs:
     runs-on: ubuntu-latest
     steps:
