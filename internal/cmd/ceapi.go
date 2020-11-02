@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/clog"
+	"cdr.dev/coder-cli/pkg/clog"
 	"golang.org/x/xerrors"
 )
 

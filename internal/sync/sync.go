@@ -23,7 +23,7 @@ import (
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/activity"
-	"cdr.dev/coder-cli/internal/clog"
+	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/wsep"
 )
 

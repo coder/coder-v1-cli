@@ -10,8 +10,8 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/x/xtabwriter"
+	"cdr.dev/coder-cli/pkg/clog"
 )
 
 func secretsCmd() *cobra.Command {

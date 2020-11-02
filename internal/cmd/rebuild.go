@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/clog"
+	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"

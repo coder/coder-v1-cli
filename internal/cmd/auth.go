@@ -9,9 +9,9 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/version"
+	"cdr.dev/coder-cli/pkg/clog"
 )
 
 var errNeedLogin = clog.Fatal(

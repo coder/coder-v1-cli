@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"cdr.dev/coder-cli/ci/tcli"
+	"cdr.dev/coder-cli/pkg/tcli"
 	"golang.org/x/xerrors"
 )
 
