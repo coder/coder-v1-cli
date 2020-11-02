@@ -38,7 +38,7 @@ jobs:
       - name: test
         uses: ./ci/image
         with:
-          args: go test -v -cover -covermode=count ./internal/... ./cmd/...
+          args: ./ci/steps/unit_test.sh
   gendocs:
     runs-on: ubuntu-latest
     steps:
