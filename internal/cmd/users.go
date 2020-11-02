@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"cdr.dev/coder-cli/internal/x/tablewriter"
+	"cdr.dev/coder-cli/pkg/tablewriter"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )

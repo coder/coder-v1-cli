@@ -14,8 +14,8 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/x/tablewriter"
 	"cdr.dev/coder-cli/pkg/clog"
+	"cdr.dev/coder-cli/pkg/tablewriter"
 )
 
 func urlCmd() *cobra.Command {
