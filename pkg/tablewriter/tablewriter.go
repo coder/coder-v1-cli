@@ -42,7 +42,7 @@ func StructFieldNames(data interface{}) string {
 }
 
 // WriteTable writes the given list elements to stdout in a human readable
-// tabular format. Headers abide by the `tab` struct tag.
+// tabular format. Headers abide by the `table` struct tag.
 //
 // `table:"-"` omits the field and no tag defaults to the Go identifier.
 func WriteTable(length int, each func(i int) interface{}) error {
