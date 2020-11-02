@@ -14,7 +14,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/x/xtabwriter"
+	"cdr.dev/coder-cli/internal/x/tablewriter"
 	"cdr.dev/coder-cli/pkg/clog"
 )
 
@@ -51,11 +51,11 @@ func urlCmd() *cobra.Command {
 
 // DevURL is the parsed json response record for a devURL from cemanager
 type DevURL struct {
-	ID     string `json:"id"     tab:"-"`
-	URL    string `json:"url"    tab:"URL"`
-	Port   int    `json:"port"   tab:"Port"`
-	Name   string `json:"name"   tab:"-"`
-	Access string `json:"access" tab:"Access"`
+	ID     string `json:"id"     table:"-"`
+	URL    string `json:"url"    table:"URL"`
+	Port   int    `json:"port"   table:"Port"`
+	Name   string `json:"name"   table:"-"`
+	Access string `json:"access" table:"Access"`
 }
 
 var urlAccessLevel = map[string]string{
@@ -104,7 +104,7 @@ func listDevURLsCmd(outputFmt *string) func(cmd *cobra.Command, args []string) e
 				clog.LogInfo(fmt.Sprintf("no devURLs found for environment %q", envName))
 				return nil
 			}
-			err := xtabwriter.WriteTable(len(devURLs), func(i int) interface{} {
+			err := tablewriter.WriteTable(len(devURLs), func(i int) interface{} {
 				return devURLs[i]
 			})
 			if err != nil {

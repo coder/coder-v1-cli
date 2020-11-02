@@ -13,32 +13,32 @@ import (
 
 // Environment describes a Coder environment
 type Environment struct {
-	ID               string           `json:"id"                 tab:"-"`
-	Name             string           `json:"name"               tab:"Name"`
-	ImageID          string           `json:"image_id"           tab:"-"`
-	ImageTag         string           `json:"image_tag"          tab:"ImageTag"`
-	OrganizationID   string           `json:"organization_id"    tab:"-"`
-	UserID           string           `json:"user_id"            tab:"-"`
-	LastBuiltAt      time.Time        `json:"last_built_at"      tab:"-"`
-	CPUCores         float32          `json:"cpu_cores"          tab:"CPUCores"`
-	MemoryGB         float32          `json:"memory_gb"          tab:"MemoryGB"`
-	DiskGB           int              `json:"disk_gb"            tab:"DiskGB"`
-	GPUs             int              `json:"gpus"               tab:"GPUs"`
-	Updating         bool             `json:"updating"           tab:"Updating"`
-	LatestStat       EnvironmentStat  `json:"latest_stat"        tab:"Status"`
-	RebuildMessages  []RebuildMessage `json:"rebuild_messages"   tab:"-"`
-	CreatedAt        time.Time        `json:"created_at"         tab:"-"`
-	UpdatedAt        time.Time        `json:"updated_at"         tab:"-"`
-	LastOpenedAt     time.Time        `json:"last_opened_at"     tab:"-"`
-	LastConnectionAt time.Time        `json:"last_connection_at" tab:"-"`
-	AutoOffThreshold xjson.MSDuration `json:"auto_off_threshold" tab:"-"`
+	ID               string           `json:"id"                 table:"-"`
+	Name             string           `json:"name"               table:"Name"`
+	ImageID          string           `json:"image_id"           table:"-"`
+	ImageTag         string           `json:"image_tag"          table:"ImageTag"`
+	OrganizationID   string           `json:"organization_id"    table:"-"`
+	UserID           string           `json:"user_id"            table:"-"`
+	LastBuiltAt      time.Time        `json:"last_built_at"      table:"-"`
+	CPUCores         float32          `json:"cpu_cores"          table:"CPUCores"`
+	MemoryGB         float32          `json:"memory_gb"          table:"MemoryGB"`
+	DiskGB           int              `json:"disk_gb"            table:"DiskGB"`
+	GPUs             int              `json:"gpus"               table:"GPUs"`
+	Updating         bool             `json:"updating"           table:"Updating"`
+	LatestStat       EnvironmentStat  `json:"latest_stat"        table:"Status"`
+	RebuildMessages  []RebuildMessage `json:"rebuild_messages"   table:"-"`
+	CreatedAt        time.Time        `json:"created_at"         table:"-"`
+	UpdatedAt        time.Time        `json:"updated_at"         table:"-"`
+	LastOpenedAt     time.Time        `json:"last_opened_at"     table:"-"`
+	LastConnectionAt time.Time        `json:"last_connection_at" table:"-"`
+	AutoOffThreshold xjson.MSDuration `json:"auto_off_threshold" table:"-"`
 }
 
 // RebuildMessage defines the message shown when an Environment requires a rebuild for it can be accessed.
 type RebuildMessage struct {
 	Text             string           `json:"text"`
 	Required         bool             `json:"required"`
-	AutoOffThreshold xjson.MSDuration `json:"auto_off_threshold" tab:"-"`
+	AutoOffThreshold xjson.MSDuration `json:"auto_off_threshold" table:"-"`
 }
 
 // EnvironmentStat represents the state of an environment

@@ -10,7 +10,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/x/xtabwriter"
+	"cdr.dev/coder-cli/internal/x/tablewriter"
 	"cdr.dev/coder-cli/pkg/clog"
 )
 
@@ -159,7 +159,7 @@ func listSecretsCmd(userEmail *string) func(cmd *cobra.Command, _ []string) erro
 			return nil
 		}
 
-		err = xtabwriter.WriteTable(len(secrets), func(i int) interface{} {
+		err = tablewriter.WriteTable(len(secrets), func(i int) interface{} {
 			s := secrets[i]
 			s.Value = "******" // value is omitted from bulk responses
 			return s

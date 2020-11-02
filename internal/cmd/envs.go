@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/x/xtabwriter"
+	"cdr.dev/coder-cli/internal/x/tablewriter"
 	"cdr.dev/coder-cli/pkg/clog"
 
 	"github.com/manifoldco/promptui"
@@ -62,7 +62,7 @@ func lsEnvsCommand(user *string) *cobra.Command {
 
 			switch outputFmt {
 			case "human":
-				err := xtabwriter.WriteTable(len(envs), func(i int) interface{} {
+				err := tablewriter.WriteTable(len(envs), func(i int) interface{} {
 					return envs[i]
 				})
 				if err != nil {
