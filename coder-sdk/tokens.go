@@ -24,7 +24,7 @@ type createAPITokenResp struct {
 
 func (c Client) CreateAPIToken(ctx context.Context, userID string, req CreateAPITokenReq) (token string, _ error) {
 	var resp createAPITokenResp
-	err :=  c.requestBody(ctx, http.MethodPost, "/api/api-keys/"+userID, req, &resp)
+	err := c.requestBody(ctx, http.MethodPost, "/api/api-keys/"+userID, req, &resp)
 	if err != nil {
 		return "", err
 	}
