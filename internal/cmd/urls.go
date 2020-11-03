@@ -31,7 +31,7 @@ func urlCmd() *cobra.Command {
 		ValidArgsFunction: getEnvsForCompletion(coder.Me),
 		RunE:              listDevURLsCmd(&outputFmt),
 	}
-	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human|json")
+	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", humanOutput, "human|json")
 
 	rmCmd := &cobra.Command{
 		Use:   "rm [environment_name] [port]",
@@ -99,7 +99,7 @@ func listDevURLsCmd(outputFmt *string) func(cmd *cobra.Command, args []string) e
 		}
 
 		switch *outputFmt {
-		case "human":
+		case humanOutput:
 			if len(devURLs) < 1 {
 				clog.LogInfo(fmt.Sprintf("no devURLs found for environment %q", envName))
 				return nil
@@ -110,7 +110,7 @@ func listDevURLsCmd(outputFmt *string) func(cmd *cobra.Command, args []string) e
 			if err != nil {
 				return xerrors.Errorf("write table: %w", err)
 			}
-		case "json":
+		case jsonOutput:
 			if err := json.NewEncoder(os.Stdout).Encode(devURLs); err != nil {
 				return xerrors.Errorf("encode DevURLs as json: %w", err)
 			}
@@ -263,7 +263,12 @@ func urlList(ctx context.Context, envName string) ([]DevURL, error) {
 	reqString := "%s/api/environments/%s/devurls?session_token=%s"
 	reqURL := fmt.Sprintf(reqString, client.BaseURL, env.ID, client.Token)
 
-	resp, err := http.Get(reqURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

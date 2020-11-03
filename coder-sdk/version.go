@@ -12,6 +12,7 @@ func (c Client) APIVersion(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer resp.Body.Close()
 
 	version := resp.Header.Get(coderVersionHeaderKey)
 	if version == "" {

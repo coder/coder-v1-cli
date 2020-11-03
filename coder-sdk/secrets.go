@@ -87,8 +87,10 @@ func (c *Client) DeleteSecretByName(ctx context.Context, name, userID string) er
 	// Delete the secret.
 	// NOTE: This is racy, but acceptable. If the secret is gone or the permission changed since we looked up the id,
 	//       the call will simply fail and surface the error to the user.
-	if _, err := c.request(ctx, http.MethodDelete, "/api/users/"+userID+"/secrets/"+secret.ID, nil); err != nil {
+	resp, err := c.request(ctx, http.MethodDelete, "/api/users/"+userID+"/secrets/"+secret.ID, nil)
+	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	return nil
 }
