@@ -13,6 +13,7 @@ import (
 
 func TestStaticAuth(t *testing.T) {
 	t.Parallel()
+	t.Skip()
 	run(t, "static-auth-test", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
 		headlessLogin(ctx, t, c)
 
