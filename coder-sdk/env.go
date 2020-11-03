@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"cdr.dev/coder-cli/internal/x/xjson"
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
@@ -31,14 +30,14 @@ type Environment struct {
 	UpdatedAt        time.Time        `json:"updated_at"         table:"-"`
 	LastOpenedAt     time.Time        `json:"last_opened_at"     table:"-"`
 	LastConnectionAt time.Time        `json:"last_connection_at" table:"-"`
-	AutoOffThreshold xjson.MSDuration `json:"auto_off_threshold" table:"-"`
+	AutoOffThreshold Duration         `json:"auto_off_threshold" table:"-"`
 }
 
 // RebuildMessage defines the message shown when an Environment requires a rebuild for it can be accessed.
 type RebuildMessage struct {
-	Text             string           `json:"text"`
-	Required         bool             `json:"required"`
-	AutoOffThreshold xjson.MSDuration `json:"auto_off_threshold" table:"-"`
+	Text             string   `json:"text"`
+	Required         bool     `json:"required"`
+	AutoOffThreshold Duration `json:"auto_off_threshold"`
 }
 
 // EnvironmentStat represents the state of an environment
