@@ -125,3 +125,7 @@ type CreateUserReq struct {
 func (c Client) CreateUser(ctx context.Context, req CreateUserReq) error {
 	return c.requestBody(ctx, http.MethodPost, "/api/users", req, nil)
 }
+
+func (c Client) DeleteUser(ctx context.Context, userID string) error {
+	return c.requestBody(ctx, http.MethodDelete, "/api/users/"+userID, nil, nil)
+}
