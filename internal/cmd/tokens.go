@@ -10,8 +10,10 @@ import (
 
 func tokensCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "tokens",
+		Use:   "tokens",
 		Short: "manage Coder API tokens for the active user",
+		Long: "Create and manage API Tokens for authenticating the CLI.\n" +
+			"Statically authenticate using the token value with the " + "`" + "CODER_TOKEN" + "`" + " and " + "`" + "CODER_URL" + "`" + " environment variables.",
 	}
 	cmd.AddCommand(
 		lsTokensCmd(),
@@ -38,9 +40,7 @@ func lsTokensCmd() *cobra.Command {
 				return err
 			}
 
-			err = tablewriter.WriteTable(len(tokens), func(i int) interface{} {
-				return tokens[i]
-			})
+			err = tablewriter.WriteTable(len(tokens), func(i int) interface{} { return tokens[i] })
 			if err != nil {
 				return err
 			}
@@ -75,9 +75,9 @@ func createTokensCmd() *cobra.Command {
 
 func rmTokenCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:  "rm [token_id]",
+		Use:   "rm [token_id]",
 		Short: "remove an API token by its unique ID",
-		Args: cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx)
@@ -94,9 +94,9 @@ func rmTokenCmd() *cobra.Command {
 
 func regenTokenCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:  "regen [token_id]",
+		Use:   "regen [token_id]",
 		Short: "regenerate an API token by its unique ID and print the new token to stdout",
-		Args: cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx)

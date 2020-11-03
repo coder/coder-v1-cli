@@ -2,6 +2,11 @@
 
 manage Coder API tokens for the active user
 
+### Synopsis
+
+Create and manage API Tokens for authenticating the CLI.
+Statically authenticate using the token value with the `CODER_TOKEN` and `CODER_URL` environment variables.
+
 ### Options
 
 ```
