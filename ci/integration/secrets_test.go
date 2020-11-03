@@ -12,6 +12,7 @@ import (
 func TestSecrets(t *testing.T) {
 	t.Parallel()
 	run(t, "secrets-cli-tests", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
+		t.Skip()
 		headlessLogin(ctx, t, c)
 
 		c.Run(ctx, "coder secrets ls").Assert(t,
