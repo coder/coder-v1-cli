@@ -28,6 +28,6 @@ func TestVersion(t *testing.T) {
 	assert.True(t, "versions do not match", !match)
 
 	Version="1.12.2+cli.rc1"
-	match = VersionsMatch("v1.12.2")
+	match = VersionsMatch("v1.12.9")
 	assert.True(t, "versions do match", match)
 }
