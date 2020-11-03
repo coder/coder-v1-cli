@@ -153,7 +153,7 @@ func writeSSHKey(ctx context.Context, client *coder.Client, privateKeyPath strin
 func makeNewConfigs(userName string, envs []coder.Environment, startToken, startMsg, endToken, privateKeyFilepath string) (string, error) {
 	hostname, err := configuredHostname()
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", startToken, startMsg)

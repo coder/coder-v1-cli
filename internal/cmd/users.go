@@ -23,7 +23,7 @@ func usersCmd() *cobra.Command {
 coder users ls -o json | jq .[] | jq -r .email`,
 		RunE: listUsers(&outputFmt),
 	}
-	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human | json")
+	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", humanOutput, "human | json")
 
 	cmd.AddCommand(lsCmd)
 	return cmd
@@ -43,7 +43,7 @@ func listUsers(outputFmt *string) func(cmd *cobra.Command, args []string) error 
 		}
 
 		switch *outputFmt {
-		case "human":
+		case humanOutput:
 			// For each element, return the user.
 			each := func(i int) interface{} { return users[i] }
 			if err := tablewriter.WriteTable(len(users), each); err != nil {

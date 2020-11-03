@@ -15,3 +15,32 @@ linters-settings:
           - (cdr.dev/coder-cli/pkg/clog).Tipf
           - (cdr.dev/coder-cli/pkg/clog).Hintf
           - (cdr.dev/coder-cli/pkg/clog).Causef
+linters:
+  disable-all: true
+  enable:
+    - megacheck
+    - govet
+    - golint
+    - goconst
+    - gocognit
+    - nestif
+    - misspell
+    - unparam
+    - unused
+    - bodyclose
+    - deadcode
+    - depguard
+    - dogsled
+    - errcheck
+    - unconvert
+    - unparam
+    - varcheck
+    - whitespace    
+    - structcheck
+    - stylecheck
+    - typecheck
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    - scopelint
+    - goprintffuncname

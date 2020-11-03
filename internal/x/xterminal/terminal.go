@@ -62,7 +62,7 @@ func ResizeEvents(ctx context.Context, termFD uintptr) chan ResizeEvent {
 		signal.Notify(sigChan, unix.SIGWINCH)
 		defer signal.Stop(sigChan)
 
-		// Emit an inital signal event to make sure the server receives our current window size.
+		// Emit an initial signal event to make sure the server receives our current window size.
 		select {
 		case <-ctx.Done():
 			return
@@ -87,7 +87,6 @@ func ResizeEvents(ctx context.Context, termFD uintptr) chan ResizeEvent {
 					return
 				case events <- event:
 				}
-
 			}
 		}
 	}()

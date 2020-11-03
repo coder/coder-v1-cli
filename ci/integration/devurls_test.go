@@ -76,5 +76,4 @@ func TestDevURLCLI(t *testing.T) {
 	// c.Run(ctx, `coder urls ls env1 -o json | jq -c '.[] | select( .name == "foobar")'`).Assert(t,
 	// 	tcli.Error(),
 	// 	jsonUnmarshals(&durl))
-
 }

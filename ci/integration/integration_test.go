@@ -80,7 +80,6 @@ func TestCoderCLI(t *testing.T) {
 			tcli.Error(),
 		)
 	})
-
 }
 
 var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))

@@ -38,6 +38,11 @@ func envsCmd() *cobra.Command {
 	return cmd
 }
 
+const (
+	humanOutput = "human"
+	jsonOutput  = "json"
+)
+
 func lsEnvsCommand(user *string) *cobra.Command {
 	var outputFmt string
 
@@ -61,14 +66,14 @@ func lsEnvsCommand(user *string) *cobra.Command {
 			}
 
 			switch outputFmt {
-			case "human":
+			case humanOutput:
 				err := tablewriter.WriteTable(len(envs), func(i int) interface{} {
 					return envs[i]
 				})
 				if err != nil {
 					return xerrors.Errorf("write table: %w", err)
 				}
-			case "json":
+			case jsonOutput:
 				err := json.NewEncoder(os.Stdout).Encode(envs)
 				if err != nil {
 					return xerrors.Errorf("write environments as JSON: %w", err)
@@ -80,7 +85,7 @@ func lsEnvsCommand(user *string) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human | json")
+	cmd.Flags().StringVarP(&outputFmt, "output", "o", humanOutput, "human | json")
 
 	return cmd
 }

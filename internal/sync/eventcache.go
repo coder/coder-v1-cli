@@ -40,7 +40,6 @@ func (cache eventCache) SequentialEvents() []timedEvent {
 		// Include files that have deleted here.
 		// It's unclear whether they're files or folders.
 		r = append(r, ev)
-
 	}
 	return r
 }
@@ -58,7 +57,6 @@ func (cache eventCache) ConcurrentEvents() []timedEvent {
 			continue
 		}
 		r = append(r, ev)
-
 	}
 	return r
 }

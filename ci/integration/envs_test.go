@@ -17,7 +17,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func cleanupClient(t *testing.T, ctx context.Context) *coder.Client {
+func cleanupClient(ctx context.Context, t *testing.T) *coder.Client {
 	creds := login(ctx, t)
 
 	u, err := url.Parse(creds.url)
@@ -41,7 +41,7 @@ func TestEnvsCLI(t *testing.T) {
 
 	run(t, "coder-cli-env-tests", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
 		headlessLogin(ctx, t, c)
-		client := cleanupClient(t, ctx)
+		client := cleanupClient(ctx, t)
 
 		// Minimum args not received.
 		c.Run(ctx, "coder envs create").Assert(t,
@@ -101,7 +101,7 @@ func TestEnvsCLI(t *testing.T) {
 
 	run(t, "coder-cli-env-edit-tests", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
 		headlessLogin(ctx, t, c)
-		client := cleanupClient(t, ctx)
+		client := cleanupClient(ctx, t)
 
 		name := randString(10)
 		c.Run(ctx, fmt.Sprintf("coder envs create %s --image ubuntu --follow", name)).Assert(t,

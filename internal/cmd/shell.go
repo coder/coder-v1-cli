@@ -166,7 +166,7 @@ func runCommand(ctx context.Context, envName, command string, args []string) err
 	if err != nil {
 		var closeErr websocket.CloseError
 		if xerrors.As(err, &closeErr) {
-			return networkErr(client, env)
+			return networkErr(env)
 		}
 		return xerrors.Errorf("start remote command: %w", err)
 	}
@@ -200,14 +200,14 @@ func runCommand(ctx context.Context, envName, command string, args []string) err
 	if err := process.Wait(); err != nil {
 		var closeErr websocket.CloseError
 		if xerrors.Is(err, ctx.Err()) || xerrors.As(err, &closeErr) {
-			return networkErr(client, env)
+			return networkErr(env)
 		}
 		return err
 	}
 	return nil
 }
 
-func networkErr(client *coder.Client, env *coder.Environment) error {
+func networkErr(env *coder.Environment) error {
 	if env.LatestStat.ContainerStatus != coder.EnvironmentOn {
 		return clog.Fatal(
 			"environment is not running",

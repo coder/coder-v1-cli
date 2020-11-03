@@ -44,7 +44,7 @@ func newClient(ctx context.Context) (*coder.Client, error) {
 
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, xerrors.Errorf("url malformed: %w try runing \"coder login\" with a valid URL", err)
+		return nil, xerrors.Errorf("url malformed: %w try running \"coder login\" with a valid URL", err)
 	}
 
 	c := &coder.Client{

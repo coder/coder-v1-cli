@@ -58,7 +58,7 @@ type ConfigOAuth struct {
 
 func (c Client) SiteConfigAuth(ctx context.Context) (*ConfigAuth, error) {
 	var conf ConfigAuth
-	if err := c.requestBody(ctx, http.MethodGet, "/api/auth/config", nil, &c); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/auth/config", nil, &conf); err != nil {
 		return nil, err
 	}
 	return &conf, nil
@@ -117,5 +117,5 @@ func (c Client) SiteConfigExtensionMarketplace(ctx context.Context) (*ConfigExte
 }
 
 func (c Client) PutSiteConfigExtensionMarketplace(ctx context.Context, req ConfigExtensionMarketplace) error {
-	return c.requestBody(ctx, http.MethodGet, "/api/extensions/config", req, nil)
+	return c.requestBody(ctx, http.MethodPut, "/api/extensions/config", req, nil)
 }
