@@ -26,8 +26,8 @@ type NewRegistryRequest struct {
 	Password     string `json:"password"`
 }
 
-// ImportImageRequest is used to import new images and registries into Coder
-type ImportImageRequest struct {
+// ImportImageReq is used to import new images and registries into Coder
+type ImportImageReq struct {
 	RegistryID      *string             `json:"registry_id"`  // Used to import images to existing registries.
 	NewRegistry     *NewRegistryRequest `json:"new_registry"` // Used when adding a new registry.
 	Repository      string              `json:"repository"`   // Refers to the image. Ex: "codercom/ubuntu".
@@ -40,7 +40,7 @@ type ImportImageRequest struct {
 }
 
 // ImportImage creates a new image and optionally a new registry
-func (c Client) ImportImage(ctx context.Context, orgID string, req ImportImageRequest) (*Image, error) {
+func (c Client) ImportImage(ctx context.Context, orgID string, req ImportImageReq) (*Image, error) {
 	var img Image
 	if err := c.requestBody(ctx, http.MethodPost, "/api/orgs/"+orgID+"/images", req, &img); err != nil {
 		return nil, err
