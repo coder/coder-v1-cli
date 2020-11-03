@@ -14,16 +14,26 @@ build() {
 
 	tmpdir=$(mktemp -d)
 	go build -ldflags "-X cdr.dev/coder-cli/internal/version.Version=${tag}" -o "$tmpdir/coder" ../../cmd/coder
+	# For MacOS builds to be notarized.
+	cp ../gon.json $tmpdir/gon.json
 
 	pushd "$tmpdir"
-	if [[ "$GOOS" == "windows" ]]; then
-		artifact="coder-cli-$GOOS-$GOARCH.zip"
-		mv coder coder.exe
-		zip "$artifact" coder.exe
-	else
-		artifact="coder-cli-$GOOS-$GOARCH.tar.gz"
-		tar -czf "$artifact" coder
-	fi
+	case "$GOOS" in
+		"windows")
+			artifact="coder-cli-$GOOS-$GOARCH.zip"
+			mv coder coder.exe
+			zip "$artifact" coder.exe
+			;;
+		"linux")
+			artifact="coder-cli-$GOOS-$GOARCH.tar.gz"
+			tar -czf "$artifact" coder	
+			;;
+		"darwin")
+			artifact="coder-cli-$GOOS-$GOARCH.zip"
+			gon -log-level debug ./gon.json
+			mv coder.zip $artifact
+			;;
+	esac
 	popd
 
 	mkdir -p ../bin
