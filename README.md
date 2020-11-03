@@ -1,5 +1,10 @@
 # coder-cli
 
+[![GitHub Release](https://img.shields.io/github/v/release/cdr/coder-cli?color=6b9ded&include_prerelease=false)](https://github.com/cdr/coder-cli/releases)
+[![Documentation](https://godoc.org/cdr.dev/coder-cli?status.svg)](https://pkg.go.dev/cdr.dev/coder-cli/coder-sdk)
+![build](https://github.com/cdr/coder-cli/workflows/build/badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/cdr.dev/coder-cli)](https://goreportcard.com/report/cdr.dev/coder-cli)
+
 `coder` is a command line utility for Coder Enterprise.
 
 To report bugs and request features, please [open an issue](https://github.com/cdr/coder-cli/issues/new).
