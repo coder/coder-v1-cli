@@ -51,7 +51,7 @@ func (c Client) requestBody(ctx context.Context, method, path string, in, out in
 	// Responses in the 100 are handled by the http lib, in the 200 range, we have a success.
 	// Consider anything at or above 300 to be an error.
 	if resp.StatusCode > 299 {
-		return fmt.Errorf("unexpected status code: %w", bodyError(resp))
+		return fmt.Errorf("unexpected status code %d: %w", resp.StatusCode, bodyError(resp))
 	}
 
 	// If we expect a payload, process it as json.
