@@ -13,6 +13,6 @@ func VersionsMatch(apiVersion string) bool {
 	if len(withoutPatchRelease) < 3 {
 		return false
 	}
-	majorMinor := strings.Join(withoutPatchRelease[:len(withoutPatchRelease)-1], ".")
+	majorMinor := strings.Join(withoutPatchRelease[:2], ".")
 	return strings.HasPrefix(strings.TrimPrefix(apiVersion, "v"), strings.TrimPrefix(majorMinor, "v"))
 }
