@@ -30,6 +30,7 @@ func Make() *cobra.Command {
 		envsCmd(),
 		syncCmd(),
 		urlCmd(),
+		tokensCmd(),
 		resourceCmd(),
 		completionCmd(),
 		genDocsCmd(app),

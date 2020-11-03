@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 
 	"golang.org/x/xerrors"
 
@@ -19,15 +20,26 @@ var errNeedLogin = clog.Fatal(
 	clog.Hintf(`did you run "coder login [https://coder.domain.com]"?`),
 )
 
-func newClient(ctx context.Context) (*coder.Client, error) {
-	sessionToken, err := config.Session.Read()
-	if err != nil {
-		return nil, errNeedLogin
-	}
+const tokenEnv = "CODER_TOKEN"
+const urlEnv = "CODER_URL"
 
-	rawURL, err := config.URL.Read()
-	if err != nil {
-		return nil, errNeedLogin
+func newClient(ctx context.Context) (*coder.Client, error) {
+	var (
+		err          error
+		sessionToken = os.Getenv(tokenEnv)
+		rawURL       = os.Getenv(urlEnv)
+	)
+
+	if sessionToken == "" || rawURL == "" {
+		sessionToken, err = config.Session.Read()
+		if err != nil {
+			return nil, errNeedLogin
+		}
+
+		rawURL, err = config.URL.Read()
+		if err != nil {
+			return nil, errNeedLogin
+		}
 	}
 
 	u, err := url.Parse(rawURL)
