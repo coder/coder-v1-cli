@@ -17,9 +17,19 @@ import (
 func secretsCmd() *cobra.Command {
 	var user string
 	cmd := &cobra.Command{
-		Use:   "secrets",
-		Short: "Interact with Coder Secrets",
-		Long:  "Interact with secrets objects owned by the active user.",
+		Use:    "secrets",
+		Short:  "Interact with Coder Secrets",
+		Long:   "Interact with secrets objects owned by the active user.",
+		Hidden: true,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			clog.LogWarn(
+				"The 'secrets' command is now deprecated",
+				"It will be removed in the next minor release",
+			)
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			_ = cmd.Help()
+		},
 	}
 	cmd.PersistentFlags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	cmd.AddCommand(
