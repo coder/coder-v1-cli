@@ -141,6 +141,10 @@ coder envs --user charlie@coder.com ls -o json \
 func createEnvCmd(user *string) *cobra.Command {
 	var (
 		org    string
+		cpu    float32
+		memory float32
+		disk   int
+		gpus   int
 		img    string
 		tag    string
 		follow bool
@@ -150,14 +154,10 @@ func createEnvCmd(user *string) *cobra.Command {
 		Use:   "create [environment_name]",
 		Short: "create a new environment.",
 		Args:  cobra.ExactArgs(1),
-		// Don't unhide this command until we can pass image names instead of image id's.
-		Hidden: true,
-		Long:   "Create a new environment under the active user.",
+		Long:  "Create a new Coder environment.",
 		Example: `# create a new environment using default resource amounts
-coder envs create --image 5f443b16-30652892427b955601330fa5 my-env-name
-
-# create a new environment using custom resource amounts
-coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955601330fa5 my-env-name`,
+coder envs create my-new-env --image ubuntu
+coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ubuntu`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			if img == "" {
@@ -178,14 +178,11 @@ coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955
 				return xerrors.New("org is required for multi-org members")
 			}
 
-			importedImg, err := findImg(ctx,
-				findImgConf{
-					client:  client,
-					email:   *user,
-					imgName: img,
-					orgName: org,
-				},
-			)
+			importedImg, err := findImg(ctx, client, findImgConf{
+				email:   *user,
+				imgName: img,
+				orgName: org,
+			})
 			if err != nil {
 				return err
 			}
@@ -195,13 +192,11 @@ coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955
 				Name:     args[0],
 				ImageID:  importedImg.ID,
 				ImageTag: tag,
+				CPUCores: cpu,
+				MemoryGB: memory,
+				DiskGB:   disk,
+				GPUs:     gpus,
 			}
-			// We're explicitly ignoring errors for these because all we
-			// need to now is if the numeric type is 0 or not.
-			createReq.CPUCores, _ = cmd.Flags().GetFloat32("cpu")
-			createReq.MemoryGB, _ = cmd.Flags().GetFloat32("memory")
-			createReq.DiskGB, _ = cmd.Flags().GetInt("disk")
-			createReq.GPUs, _ = cmd.Flags().GetInt("gpus")
 
 			// if any of these defaulted to their zero value we provision
 			// the create request with the imported image defaults instead.
@@ -230,17 +225,17 @@ coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955
 
 			clog.LogSuccess("creating environment...",
 				clog.BlankLine,
-				clog.Tipf(`run "coder envs watch-build %q" to trail the build logs`, env.Name),
+				clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, env.Name),
 			)
 			return nil
 		},
 	}
 	cmd.Flags().StringVarP(&org, "org", "o", "", "ID of the organization the environment should be created under.")
 	cmd.Flags().StringVarP(&tag, "tag", "t", defaultImgTag, "tag of the image the environment will be based off of.")
-	cmd.Flags().Float32P("cpu", "c", 0, "number of cpu cores the environment should be provisioned with.")
-	cmd.Flags().Float32P("memory", "m", 0, "GB of RAM an environment should be provisioned with.")
-	cmd.Flags().IntP("disk", "d", 0, "GB of disk storage an environment should be provisioned with.")
-	cmd.Flags().IntP("gpus", "g", 0, "number GPUs an environment should be provisioned with.")
+	cmd.Flags().Float32VarP(&cpu, "cpu", "c", 0, "number of cpu cores the environment should be provisioned with.")
+	cmd.Flags().Float32VarP(&memory, "memory", "m", 0, "GB of RAM an environment should be provisioned with.")
+	cmd.Flags().IntVarP(&disk, "disk", "d", 0, "GB of disk storage an environment should be provisioned with.")
+	cmd.Flags().IntVarP(&gpus, "gpus", "g", 0, "number GPUs an environment should be provisioned with.")
 	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image to base the environment off of.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	_ = cmd.MarkFlagRequired("image")
@@ -249,22 +244,21 @@ coder envs create --cpu 4 --disk 100 --memory 8 --image 5f443b16-30652892427b955
 
 func editEnvCmd(user *string) *cobra.Command {
 	var (
-		org      string
-		img      string
-		tag      string
-		cpuCores float32
-		memGB    float32
-		diskGB   int
-		gpus     int
-		follow   bool
+		org    string
+		img    string
+		tag    string
+		cpu    float32
+		memory float32
+		disk   int
+		gpus   int
+		follow bool
 	)
 
 	cmd := &cobra.Command{
-		Use:    "edit",
-		Short:  "edit an existing environment owned by the active user.",
-		Args:   cobra.ExactArgs(1),
-		Hidden: true,
-		Long:   "Edit an existing environment owned by the active user.",
+		Use:   "edit",
+		Short: "edit an existing environment and initiate a rebuild.",
+		Args:  cobra.ExactArgs(1),
+		Long:  "Edit an existing environment and initate a rebuild.",
 		Example: `coder envs edit back-end-env --cpu 4
 
 coder envs edit back-end-env --disk 20`,
@@ -292,25 +286,17 @@ coder envs edit back-end-env --disk 20`,
 				return xerrors.New("org is required for multi-org members")
 			}
 
-			cpuCores, _ = cmd.Flags().GetFloat32("cpu")
-			memGB, _ = cmd.Flags().GetFloat32("memory")
-			diskGB, _ = cmd.Flags().GetInt("disk")
-			gpus, _ = cmd.Flags().GetInt("gpus")
-
-			req, err := buildUpdateReq(ctx,
-				updateConf{
-					cpu:         cpuCores,
-					memGB:       memGB,
-					diskGB:      diskGB,
-					gpus:        gpus,
-					client:      client,
-					environment: env,
-					user:        user,
-					image:       img,
-					imageTag:    tag,
-					orgName:     org,
-				},
-			)
+			req, err := buildUpdateReq(ctx, client, updateConf{
+				cpu:         cpu,
+				memGB:       memory,
+				diskGB:      disk,
+				gpus:        gpus,
+				environment: env,
+				user:        user,
+				image:       img,
+				imageTag:    tag,
+				orgName:     org,
+			})
 			if err != nil {
 				return err
 			}
@@ -329,7 +315,7 @@ coder envs edit back-end-env --disk 20`,
 
 			clog.LogSuccess("applied changes to the environment, rebuilding...",
 				clog.BlankLine,
-				clog.Tipf(`run "coder envs watch-build %q" to trail the build logs`, envName),
+				clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, envName),
 			)
 			return nil
 		},
@@ -337,10 +323,10 @@ coder envs edit back-end-env --disk 20`,
 	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the environment should be created under.")
 	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image you want the environment to be based off of.")
 	cmd.Flags().StringVarP(&tag, "tag", "t", "latest", "image tag of the image you want to base the environment off of.")
-	cmd.Flags().Float32P("cpu", "c", cpuCores, "The number of cpu cores the environment should be provisioned with.")
-	cmd.Flags().Float32P("memory", "m", memGB, "The amount of RAM an environment should be provisioned with.")
-	cmd.Flags().IntP("disk", "d", diskGB, "The amount of disk storage an environment should be provisioned with.")
-	cmd.Flags().IntP("gpu", "g", gpus, "The amount of disk storage to provision the environment with.")
+	cmd.Flags().Float32VarP(&cpu, "cpu", "c", 0, "The number of cpu cores the environment should be provisioned with.")
+	cmd.Flags().Float32VarP(&memory, "memory", "m", 0, "The amount of RAM an environment should be provisioned with.")
+	cmd.Flags().IntVarP(&disk, "disk", "d", 0, "The amount of disk storage an environment should be provisioned with.")
+	cmd.Flags().IntVarP(&gpus, "gpu", "g", 0, "The amount of disk storage to provision the environment with.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	return cmd
 }
@@ -364,7 +350,7 @@ func rmEnvsCmd(user *string) *cobra.Command {
 				}
 				if _, err := confirm.Run(); err != nil {
 					return clog.Fatal(
-						"failed to confirm prompt", clog.BlankLine,
+						"failed to confirm deletion", clog.BlankLine,
 						clog.Tipf(`use "--force" to rebuild without a confirmation prompt`),
 					)
 				}
@@ -400,7 +386,6 @@ type updateConf struct {
 	memGB       float32
 	diskGB      int
 	gpus        int
-	client      *coder.Client
 	environment *coder.Environment
 	user        *string
 	image       string
@@ -408,7 +393,7 @@ type updateConf struct {
 	orgName     string
 }
 
-func buildUpdateReq(ctx context.Context, conf updateConf) (*coder.UpdateEnvironmentReq, error) {
+func buildUpdateReq(ctx context.Context, client *coder.Client, conf updateConf) (*coder.UpdateEnvironmentReq, error) {
 	var (
 		updateReq       coder.UpdateEnvironmentReq
 		defaultCPUCores float32
@@ -418,14 +403,11 @@ func buildUpdateReq(ctx context.Context, conf updateConf) (*coder.UpdateEnvironm
 
 	// If this is not empty it means the user is requesting to change the environment image.
 	if conf.image != "" {
-		importedImg, err := findImg(ctx,
-			findImgConf{
-				client:  conf.client,
-				email:   *conf.user,
-				imgName: conf.image,
-				orgName: conf.orgName,
-			},
-		)
+		importedImg, err := findImg(ctx, client, findImgConf{
+			email:   *conf.user,
+			imgName: conf.image,
+			orgName: conf.orgName,
+		})
 		if err != nil {
 			return nil, err
 		}

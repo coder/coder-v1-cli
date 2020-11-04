@@ -84,13 +84,12 @@ func findEnv(ctx context.Context, client *coder.Client, envName, userEmail strin
 }
 
 type findImgConf struct {
-	client  *coder.Client
 	email   string
 	imgName string
 	orgName string
 }
 
-func findImg(ctx context.Context, conf findImgConf) (*coder.Image, error) {
+func findImg(ctx context.Context, client *coder.Client, conf findImgConf) (*coder.Image, error) {
 	switch {
 	case conf.email == "":
 		return nil, xerrors.New("user email unset")
@@ -98,13 +97,10 @@ func findImg(ctx context.Context, conf findImgConf) (*coder.Image, error) {
 		return nil, xerrors.New("image name unset")
 	}
 
-	imgs, err := getImgs(ctx,
-		getImgsConf{
-			client:  conf.client,
-			email:   conf.email,
-			orgName: conf.orgName,
-		},
-	)
+	imgs, err := getImgs(ctx, client, getImgsConf{
+		email:   conf.email,
+		orgName: conf.orgName,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -129,30 +125,29 @@ func findImg(ctx context.Context, conf findImgConf) (*coder.Image, error) {
 		return nil, xerrors.New("image not found - did you forget to import this image?")
 	}
 
-	lines := []string{clog.Tipf("Did you mean?")}
+	lines := []string{clog.Hintf("Did you mean?")}
 
 	for _, img := range possibleMatches {
-		lines = append(lines, img.Repository)
+		lines = append(lines, fmt.Sprintf("  %s", img.Repository))
 	}
 	return nil, clog.Fatal(
-		fmt.Sprintf("Found %d possible matches for %q.", len(possibleMatches), conf.imgName),
+		fmt.Sprintf("image %s not found", conf.imgName),
 		lines...,
 	)
 }
 
 type getImgsConf struct {
-	client  *coder.Client
 	email   string
 	orgName string
 }
 
-func getImgs(ctx context.Context, conf getImgsConf) ([]coder.Image, error) {
-	u, err := conf.client.UserByEmail(ctx, conf.email)
+func getImgs(ctx context.Context, client *coder.Client, conf getImgsConf) ([]coder.Image, error) {
+	u, err := client.UserByEmail(ctx, conf.email)
 	if err != nil {
 		return nil, err
 	}
 
-	orgs, err := conf.client.Organizations(ctx)
+	orgs, err := client.Organizations(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +155,7 @@ func getImgs(ctx context.Context, conf getImgsConf) ([]coder.Image, error) {
 	orgs = lookupUserOrgs(u, orgs)
 
 	for _, org := range orgs {
-		imgs, err := conf.client.OrganizationImages(ctx, org.ID)
+		imgs, err := client.OrganizationImages(ctx, org.ID)
 		if err != nil {
 			return nil, err
 		}
