@@ -17,7 +17,6 @@ import (
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	// If requested, spin up the pprof webserver.
 	if os.Getenv("PPROF") != "" {
@@ -31,16 +30,19 @@ func main() {
 		clog.Log(clog.Fatal(fmt.Sprintf("set output to raw: %s", err)))
 		os.Exit(1)
 	}
-	defer func() {
+	restoreTerminal := func() {
 		// Best effort. Would result in broken terminal on window but nothing we can do about it.
 		_ = xterminal.Restore(os.Stdout.Fd(), stdoutState)
-	}()
+	}
 
 	app := cmd.Make()
 	app.Version = fmt.Sprintf("%s %s %s/%s", version.Version, runtime.Version(), runtime.GOOS, runtime.GOARCH)
 
 	if err := app.ExecuteContext(ctx); err != nil {
 		clog.Log(err)
+		restoreTerminal()
 		os.Exit(1)
 	}
+	restoreTerminal()
+	cancel()
 }

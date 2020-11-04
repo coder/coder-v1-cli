@@ -1,3 +1,5 @@
+// Package loginsrv defines the login server in use by coder-cli
+// for performing the browser authentication flow.
 package loginsrv
 
 import (

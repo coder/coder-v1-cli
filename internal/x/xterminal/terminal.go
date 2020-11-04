@@ -42,7 +42,7 @@ func ColorEnabled(fd uintptr) (bool, error) {
 	return terminal.IsTerminal(int(fd)), nil
 }
 
-// ResizeEvent describes the new terminal dimensions following a resize
+// ResizeEvent describes the new terminal dimensions following a resize.
 type ResizeEvent struct {
 	Height uint16
 	Width  uint16
