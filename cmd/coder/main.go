@@ -45,6 +45,6 @@ func main() {
 		restoreTerminal()
 		os.Exit(1)
 	}
-	restoreTerminal()
 	cancel()
+	restoreTerminal()
 }
