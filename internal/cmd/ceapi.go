@@ -98,9 +98,9 @@ func findImg(ctx context.Context, client *coder.Client, conf findImgConf) (*code
 	}
 
 	imgs, err := getImgs(ctx, client, getImgsConf{
-			email:   conf.email,
-			orgName: conf.orgName,
-		})
+		email:   conf.email,
+		orgName: conf.orgName,
+	})
 	if err != nil {
 		return nil, err
 	}

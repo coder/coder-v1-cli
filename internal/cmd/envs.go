@@ -157,7 +157,7 @@ func createEnvCmd(user *string) *cobra.Command {
 		Long:  "Create a new Coder environment.",
 		Example: `# create a new environment using default resource amounts
 coder envs create my-new-env --image ubuntu
-coder envs create my-new-powerfull-env --cpu 12 --disk 100 --memory 16 --image ubuntu`,
+coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ubuntu`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			if img == "" {
