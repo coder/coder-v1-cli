@@ -6,7 +6,7 @@ import (
 	"net/url"
 )
 
-// Me is the route param to access resources of the authenticated user.
+// Me is the user ID of the authenticated user.
 const Me = "me"
 
 // Client wraps the Coder HTTP API.
