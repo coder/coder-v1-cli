@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -33,6 +34,61 @@ func cleanupEnv(t *testing.T, client *coder.Client, envID string) func() {
 
 		slogtest.Info(t, "cleanuping up environment", slog.F("env_id", envID))
 		_ = client.DeleteEnvironment(ctx, envID)
+	}
+}
+
+// this is a stopgap until we have support for a `coder images` subcommand
+// until then, we want can use the *coder.Client to ensure our integration tests
+// work on fresh deployments.
+func ensureImageImported(ctx context.Context, t *testing.T, client *coder.Client, img string) {
+	orgs, err := client.Organizations(ctx)
+	assert.Success(t, "get orgs", err)
+
+	var org *coder.Organization
+search:
+	for _, o := range orgs {
+		for _, m := range o.Members {
+			if m.Email == os.Getenv("CODER_EMAIL") {
+				o := o
+				org = &o
+				break search
+			}
+		}
+	}
+	if org == nil {
+		slogtest.Fatal(t, "failed to find org of current user")
+		return // help the linter out a bit
+	}
+
+	registries, err := client.Registries(ctx, org.ID)
+	assert.Success(t, "get registries", err)
+
+	var dockerhubID string
+	for _, r := range registries {
+		if r.Registry == "index.docker.io" {
+			dockerhubID = r.ID
+		}
+	}
+	assert.True(t, "docker hub registry found", dockerhubID != "")
+
+	imgs, err := client.OrganizationImages(ctx, org.ID)
+	assert.Success(t, "get org images", err)
+	found := false
+	for _, i := range imgs {
+		if i.Repository == img {
+			found = true
+		}
+	}
+	if !found {
+		// ignore this error for now as it causes a race with other parallel tests
+		_, _ = client.ImportImage(ctx, org.ID, coder.ImportImageReq{
+			RegistryID:      &dockerhubID,
+			Repository:      img,
+			Tag:             "latest",
+			DefaultCPUCores: 2.5,
+			DefaultDiskGB:   22,
+			DefaultMemoryGB: 3,
+		})
 	}
 }
 
@@ -68,6 +124,8 @@ func TestEnvsCLI(t *testing.T) {
 			tcli.Error(),
 		)
 
+		ensureImageImported(ctx, t, client, "ubuntu")
+
 		name := randString(10)
 		cpu := 2.3
 		c.Run(ctx, fmt.Sprintf("coder envs create %s --image ubuntu --cpu %f", name, cpu)).Assert(t,
@@ -102,6 +160,8 @@ func TestEnvsCLI(t *testing.T) {
 	run(t, "coder-cli-env-edit-tests", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
 		headlessLogin(ctx, t, c)
 		client := cleanupClient(ctx, t)
+
+		ensureImageImported(ctx, t, client, "ubuntu")
 
 		name := randString(10)
 		c.Run(ctx, fmt.Sprintf("coder envs create %s --image ubuntu --follow", name)).Assert(t,
