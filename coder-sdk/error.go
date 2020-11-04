@@ -10,7 +10,11 @@ import (
 )
 
 // ErrNotFound describes an error case in which the requested resource could not be found
-var ErrNotFound = xerrors.Errorf("resource not found")
+var ErrNotFound = xerrors.New("resource not found")
+
+var ErrPermissions = xerrors.New("insufficient permissions")
+
+var ErrAuthentication = xerrors.New("invalid authentication")
 
 // APIError is the expected payload format for our errors.
 type APIError struct {
