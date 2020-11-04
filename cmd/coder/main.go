@@ -28,6 +28,7 @@ func main() {
 	stdoutState, err := xterminal.MakeOutputRaw(os.Stdout.Fd())
 	if err != nil {
 		clog.Log(clog.Fatal(fmt.Sprintf("set output to raw: %s", err)))
+		cancel()
 		os.Exit(1)
 	}
 	restoreTerminal := func() {
@@ -40,6 +41,7 @@ func main() {
 
 	if err := app.ExecuteContext(ctx); err != nil {
 		clog.Log(err)
+		cancel()
 		restoreTerminal()
 		os.Exit(1)
 	}
