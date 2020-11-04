@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"cdr.dev/wsep"
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
@@ -142,8 +143,17 @@ func (c Client) EditEnvironment(ctx context.Context, envID string, req UpdateEnv
 
 // DialWsep dials an environments command execution interface
 // See https://github.com/cdr/wsep for details.
-func (c Client) DialWsep(ctx context.Context, env *Environment) (*websocket.Conn, error) {
-	return c.dialWebsocket(ctx, "/proxy/environments/"+env.ID+"/wsep")
+func (c Client) DialWsep(ctx context.Context, envID string) (*websocket.Conn, error) {
+	return c.dialWebsocket(ctx, "/proxy/environments/"+envID+"/wsep")
+}
+
+// DialExecutor gives a remote execution interface for performing commands inside an environment.
+func (c Client) DialExecutor(ctx context.Context, envID string) (wsep.Execer, error) {
+	ws, err := c.DialWsep(ctx, envID)
+	if err != nil {
+		return nil, err
+	}
+	return wsep.RemoteExecer(ws), nil
 }
 
 // DialIDEStatus opens a websocket connection for cpu load metrics on the environment.
@@ -234,17 +244,17 @@ type buildLogMsg struct {
 }
 
 // WaitForEnvironmentReady will watch the build log and return when done.
-func (c Client) WaitForEnvironmentReady(ctx context.Context, env *Environment) error {
-	conn, err := c.DialEnvironmentBuildLog(ctx, env.ID)
+func (c Client) WaitForEnvironmentReady(ctx context.Context, envID string) error {
+	conn, err := c.DialEnvironmentBuildLog(ctx, envID)
 	if err != nil {
-		return xerrors.Errorf("%s: dial build log: %w", env.Name, err)
+		return xerrors.Errorf("%s: dial build log: %w", envID, err)
 	}
 
 	for {
 		msg := buildLogMsg{}
 		err := wsjson.Read(ctx, conn, &msg)
 		if err != nil {
-			return xerrors.Errorf("%s: reading build log msg: %w", env.Name, err)
+			return xerrors.Errorf("%s: reading build log msg: %w", envID, err)
 		}
 
 		if msg.Type == BuildLogTypeDone {
