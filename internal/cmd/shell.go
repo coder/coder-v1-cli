@@ -140,7 +140,7 @@ func runCommand(ctx context.Context, envName, command string, args []string) err
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	conn, err := client.DialWsep(ctx, env)
+	conn, err := client.DialWsep(ctx, env.ID)
 	if err != nil {
 		return xerrors.Errorf("dial websocket: %w", err)
 	}
