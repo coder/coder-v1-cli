@@ -62,7 +62,7 @@ func lsEnvsCommand(user *string) *cobra.Command {
 			}
 			if len(envs) < 1 {
 				clog.LogInfo("no environments found")
-				return nil
+				envs = []coder.Environment{} // ensures that json output still marshals
 			}
 
 			switch outputFmt {
