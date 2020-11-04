@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/httputil"
 
 	"golang.org/x/xerrors"
 )
@@ -34,16 +33,11 @@ type HTTPError struct {
 }
 
 func (e *HTTPError) Error() string {
-	dump, err := httputil.DumpResponse(e.Response, false)
-	if err != nil {
-		return fmt.Sprintf("dump response: %+v", err)
-	}
-
 	var msg APIError
 	// Try to decode the payload as an error, if it fails or if there is no error message,
 	// return the response URL with the dump.
 	if err := json.NewDecoder(e.Response.Body).Decode(&msg); err != nil || msg.Err.Msg == "" {
-		return fmt.Sprintf("%s\n%s", e.Response.Request.URL, dump)
+		return fmt.Sprintf("%s: %d %s", e.Request.URL, e.StatusCode, e.Status)
 	}
 
 	// If the payload was a in the expected error format with a message, include it.
@@ -51,5 +45,5 @@ func (e *HTTPError) Error() string {
 }
 
 func bodyError(resp *http.Response) error {
-	return &HTTPError{resp}
+	return &HTTPError{Response: resp}
 }
