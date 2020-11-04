@@ -100,7 +100,7 @@ type configSetupMode struct {
 func (c Client) SiteSetupModeEnabled(ctx context.Context) (bool, error) {
 	var conf configSetupMode
 	if err := c.requestBody(ctx, http.MethodGet, "/api/config/setup-mode", nil, &conf); err != nil {
-		return false, nil
+		return false, err
 	}
 	return conf.SetupMode, nil
 }
