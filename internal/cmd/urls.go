@@ -49,7 +49,7 @@ func urlCmd() *cobra.Command {
 	return cmd
 }
 
-// DevURL is the parsed json response record for a devURL from cemanager
+// DevURL is the parsed json response record for a devURL from cemanager.
 type DevURL struct {
 	ID     string `json:"id"     table:"-"`
 	URL    string `json:"url"    table:"URL"`

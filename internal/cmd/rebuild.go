@@ -73,7 +73,7 @@ coder envs rebuild backend-env --force`,
 }
 
 // trailBuildLogs follows the build log for a given environment and prints the staged
-// output with loaders and success/failure indicators for each stage
+// output with loaders and success/failure indicators for each stage.
 func trailBuildLogs(ctx context.Context, client *coder.Client, envID string) error {
 	const check = "✅"
 	const failure = "❌"

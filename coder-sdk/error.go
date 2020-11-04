@@ -9,8 +9,14 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// ErrNotFound describes an error case in which the requested resource could not be found
-var ErrNotFound = xerrors.Errorf("resource not found")
+// ErrNotFound describes an error case in which the requested resource could not be found.
+var ErrNotFound = xerrors.New("resource not found")
+
+// ErrPermissions describes an error case in which the requester has insufficient permissions to access the requested resource.
+var ErrPermissions = xerrors.New("insufficient permissions")
+
+// ErrAuthentication describes the error case in which the requester has invalid authentication.
+var ErrAuthentication = xerrors.New("invalid authentication")
 
 // APIError is the expected payload format for our errors.
 type APIError struct {

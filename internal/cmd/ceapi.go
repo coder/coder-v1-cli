@@ -58,7 +58,7 @@ func getEnvs(ctx context.Context, client *coder.Client, email string) ([]coder.E
 	return allEnvs, nil
 }
 
-// findEnv returns a single environment by name (if it exists.)
+// findEnv returns a single environment by name (if it exists.).
 func findEnv(ctx context.Context, client *coder.Client, envName, userEmail string) (*coder.Environment, error) {
 	envs, err := getEnvs(ctx, client, userEmail)
 	if err != nil {

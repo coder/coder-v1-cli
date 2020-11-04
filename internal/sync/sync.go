@@ -1,3 +1,4 @@
+// Package sync contains logic for establishing a file sync between a local machine and a Coder Enterprise environment.
 package sync
 
 import (
@@ -74,13 +75,13 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 
 	if err := cmd.Run(); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
-			if exitError.ExitCode() == rsyncExitCodeIncompat {
+			switch {
+			case exitError.ExitCode() == rsyncExitCodeIncompat:
 				return xerrors.Errorf("no compatible rsync on remote machine: rsync: %w", err)
-			} else if exitError.ExitCode() == rsyncExitCodeDataStream {
+			case exitError.ExitCode() == rsyncExitCodeDataStream:
 				return xerrors.Errorf("protocol datastream error or no remote rsync found: %w", err)
-			} else {
-				return xerrors.Errorf("rsync: %w", err)
 			}
+			return xerrors.Errorf("rsync: %w", err)
 		}
 		return xerrors.Errorf("rsync: %w", err)
 	}
@@ -207,7 +208,7 @@ func (s Sync) work(ev timedEvent) {
 	}
 }
 
-// ErrRestartSync describes a known error case that can be solved by re-starting the command
+// ErrRestartSync describes a known error case that can be solved by re-starting the command.
 var ErrRestartSync = errors.New("the sync exited because it was overloaded, restart it")
 
 // workEventGroup converges a group of events to prevent duplicate work.
@@ -302,7 +303,7 @@ func (s Sync) Version() (string, error) {
 
 // Run starts the sync synchronously.
 // Use this command to debug what wasn't sync'd correctly:
-// rsync -e "coder sh" -nicr ~/Projects/cdr/coder-cli/. ammar:/home/coder/coder-cli/
+// rsync -e "coder sh" -nicr ~/Projects/cdr/coder-cli/. ammar:/home/coder/coder-cli/.
 func (s Sync) Run() error {
 	events := make(chan notify.EventInfo, maxInflightInotify)
 	// Set up a recursive watch.

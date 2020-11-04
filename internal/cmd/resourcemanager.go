@@ -143,7 +143,7 @@ func aggregateByOrg(users []coder.User, orgs []coder.Organization, envs []coder.
 	return groups, userLabeler{userIDMap}
 }
 
-// groupable specifies a structure capable of being an aggregation group of environments (user, org, all)
+// groupable specifies a structure capable of being an aggregation group of environments (user, org, all).
 type groupable interface {
 	header() string
 	environments() []coder.Environment
@@ -334,7 +334,7 @@ func (a resources) memUtilPercentage() string {
 	return fmt.Sprintf("%.1f%%", a.memUtilization/a.memAllocation*100)
 }
 
-// truncate the given string and replace the removed chars with some replacement (ex: "...")
+// truncate the given string and replace the removed chars with some replacement (ex: "...").
 func truncate(str string, max int, replace string) string {
 	if len(str) <= max {
 		return str

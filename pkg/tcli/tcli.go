@@ -29,7 +29,7 @@ type runnable interface {
 	io.Closer
 }
 
-// ContainerConfig describes the ContainerRunner configuration schema for initializing a testing environment
+// ContainerConfig describes the ContainerRunner configuration schema for initializing a testing environment.
 type ContainerConfig struct {
 	Name       string
 	Image      string
@@ -51,13 +51,13 @@ func preflightChecks() error {
 	return nil
 }
 
-// ContainerRunner specifies a runtime container for performing command tests
+// ContainerRunner specifies a runtime container for performing command tests.
 type ContainerRunner struct {
 	name string
 	ctx  context.Context
 }
 
-// NewContainerRunner starts a new docker container for executing command tests
+// NewContainerRunner starts a new docker container for executing command tests.
 func NewContainerRunner(ctx context.Context, config *ContainerConfig) (*ContainerRunner, error) {
 	if err := preflightChecks(); err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func NewContainerRunner(ctx context.Context, config *ContainerConfig) (*Containe
 	}, nil
 }
 
-// Close kills and removes the command execution testing container
+// Close kills and removes the command execution testing container.
 func (r *ContainerRunner) Close() error {
 	cmd := exec.CommandContext(r.ctx,
 		"sh", "-c", strings.Join([]string{
@@ -118,7 +118,7 @@ func (r *ContainerRunner) Run(ctx context.Context, command string) *Assertable {
 	}
 }
 
-// RunCmd lifts the given *exec.Cmd into the runtime container
+// RunCmd lifts the given *exec.Cmd into the runtime container.
 func (r *ContainerRunner) RunCmd(cmd *exec.Cmd) *Assertable {
 	path, _ := exec.LookPath("docker")
 	cmd.Path = path
@@ -131,7 +131,7 @@ func (r *ContainerRunner) RunCmd(cmd *exec.Cmd) *Assertable {
 	}
 }
 
-// HostRunner executes command tests on the host, outside of a container
+// HostRunner executes command tests on the host, outside of a container.
 type HostRunner struct{}
 
 // Run executes the given command on the host.
@@ -145,7 +145,7 @@ func (r *HostRunner) Run(ctx context.Context, command string) *Assertable {
 	}
 }
 
-// RunCmd executes the given *exec.Cmd on the host
+// RunCmd executes the given *exec.Cmd on the host.
 func (r *HostRunner) RunCmd(cmd *exec.Cmd) *Assertable {
 	return &Assertable{
 		cmd:   cmd,
@@ -153,18 +153,18 @@ func (r *HostRunner) RunCmd(cmd *exec.Cmd) *Assertable {
 	}
 }
 
-// Close is a noop for HostRunner
+// Close is a noop for HostRunner.
 func (r *HostRunner) Close() error {
 	return nil
 }
 
-// Assertable describes an initialized command ready to be run and asserted against
+// Assertable describes an initialized command ready to be run and asserted against.
 type Assertable struct {
 	cmd   *exec.Cmd
 	tname string
 }
 
-// Assert runs the Assertable and
+// Assert runs the Assertable and.
 func (a *Assertable) Assert(t *testing.T, option ...Assertion) {
 	slog.Helper()
 	var (
@@ -183,10 +183,12 @@ func (a *Assertable) Assert(t *testing.T, option ...Assertion) {
 	err := a.cmd.Run()
 	result.Duration = time.Since(start)
 
-	if exitErr, ok := err.(*exec.ExitError); ok {
-		result.ExitCode = exitErr.ExitCode()
-	} else if err != nil {
-		slogtest.Fatal(t, "command failed to run", slog.Error(err), slog.F("command", a.cmd))
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			result.ExitCode = exitErr.ExitCode()
+		} else {
+			slogtest.Fatal(t, "command failed to run", slog.Error(err), slog.F("command", a.cmd))
+		}
 	} else {
 		result.ExitCode = 0
 	}
@@ -211,20 +213,20 @@ func (a *Assertable) Assert(t *testing.T, option ...Assertion) {
 // Pass custom Assertion functions to cover special cases.
 type Assertion func(t *testing.T, r *CommandResult)
 
-// CommandResult contains the aggregated result of a command execution
+// CommandResult contains the aggregated result of a command execution.
 type CommandResult struct {
 	Stdout, Stderr []byte
 	ExitCode       int
 	Duration       time.Duration
 }
 
-// Success asserts that the command exited with an exit code of 0
+// Success asserts that the command exited with an exit code of 0.
 func Success() Assertion {
 	slog.Helper()
 	return ExitCodeIs(0)
 }
 
-// Error asserts that the command exited with a nonzero exit code
+// Error asserts that the command exited with a nonzero exit code.
 func Error() Assertion {
 	return func(t *testing.T, r *CommandResult) {
 		slog.Helper()
@@ -232,7 +234,7 @@ func Error() Assertion {
 	}
 }
 
-// ExitCodeIs asserts that the command exited with the given code
+// ExitCodeIs asserts that the command exited with the given code.
 func ExitCodeIs(code int) Assertion {
 	return func(t *testing.T, r *CommandResult) {
 		slog.Helper()
@@ -240,7 +242,7 @@ func ExitCodeIs(code int) Assertion {
 	}
 }
 
-// StdoutEmpty asserts that the command did not write any data to Stdout
+// StdoutEmpty asserts that the command did not write any data to Stdout.
 func StdoutEmpty() Assertion {
 	return func(t *testing.T, r *CommandResult) {
 		slog.Helper()
@@ -249,7 +251,7 @@ func StdoutEmpty() Assertion {
 }
 
 // GetResult offers an escape hatch from tcli
-// The pointer passed as "result" will be assigned to the command's *CommandResult
+// The pointer passed as "result" will be assigned to the command's *CommandResult.
 func GetResult(result **CommandResult) Assertion {
 	return func(t *testing.T, r *CommandResult) {
 		slog.Helper()
@@ -257,7 +259,7 @@ func GetResult(result **CommandResult) Assertion {
 	}
 }
 
-// StderrEmpty asserts that the command did not write any data to Stderr
+// StderrEmpty asserts that the command did not write any data to Stderr.
 func StderrEmpty() Assertion {
 	return func(t *testing.T, r *CommandResult) {
 		slog.Helper()
@@ -265,7 +267,7 @@ func StderrEmpty() Assertion {
 	}
 }
 
-// StdoutMatches asserts that Stdout contains a substring which matches the given regexp
+// StdoutMatches asserts that Stdout contains a substring which matches the given regexp.
 func StdoutMatches(pattern string) Assertion {
 	return func(t *testing.T, r *CommandResult) {
 		slog.Helper()
@@ -273,7 +275,7 @@ func StdoutMatches(pattern string) Assertion {
 	}
 }
 
-// StderrMatches asserts that Stderr contains a substring which matches the given regexp
+// StderrMatches asserts that Stderr contains a substring which matches the given regexp.
 func StderrMatches(pattern string) Assertion {
 	return func(t *testing.T, r *CommandResult) {
 		slog.Helper()
@@ -305,7 +307,7 @@ func empty(t *testing.T, name string, a []byte) {
 	}
 }
 
-// DurationLessThan asserts that the command completed in less than the given duration
+// DurationLessThan asserts that the command completed in less than the given duration.
 func DurationLessThan(dur time.Duration) Assertion {
 	return func(t *testing.T, r *CommandResult) {
 		slog.Helper()
@@ -318,7 +320,7 @@ func DurationLessThan(dur time.Duration) Assertion {
 	}
 }
 
-// DurationGreaterThan asserts that the command completed in greater than the given duration
+// DurationGreaterThan asserts that the command completed in greater than the given duration.
 func DurationGreaterThan(dur time.Duration) Assertion {
 	return func(t *testing.T, r *CommandResult) {
 		slog.Helper()
@@ -331,7 +333,7 @@ func DurationGreaterThan(dur time.Duration) Assertion {
 	}
 }
 
-// StdoutJSONUnmarshal attempts to unmarshal stdout into the given target
+// StdoutJSONUnmarshal attempts to unmarshal stdout into the given target.
 func StdoutJSONUnmarshal(target interface{}) Assertion {
 	return func(t *testing.T, r *CommandResult) {
 		slog.Helper()
@@ -340,7 +342,7 @@ func StdoutJSONUnmarshal(target interface{}) Assertion {
 	}
 }
 
-// StderrJSONUnmarshal attempts to unmarshal stderr into the given target
+// StderrJSONUnmarshal attempts to unmarshal stderr into the given target.
 func StderrJSONUnmarshal(target interface{}) Assertion {
 	return func(t *testing.T, r *CommandResult) {
 		slog.Helper()

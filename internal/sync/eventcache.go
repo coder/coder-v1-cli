@@ -17,9 +17,8 @@ type eventCache map[string]timedEvent
 func (cache eventCache) Add(ev timedEvent) {
 	lastEvent, ok := cache[ev.Path()]
 	if ok {
-		switch {
 		// If the file was quickly created and then destroyed, pretend nothing ever happened.
-		case lastEvent.Event() == notify.Create && ev.Event() == notify.Remove:
+		if lastEvent.Event() == notify.Create && ev.Event() == notify.Remove {
 			delete(cache, ev.Path())
 			return
 		}

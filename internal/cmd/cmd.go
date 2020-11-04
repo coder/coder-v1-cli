@@ -1,3 +1,4 @@
+// Package cmd constructs all subcommands for coder-cli.
 package cmd
 
 import (
@@ -7,10 +8,10 @@ import (
 	"github.com/spf13/cobra/doc"
 )
 
-// verbose is a global flag for specifying that a command should give verbose output
+// verbose is a global flag for specifying that a command should give verbose output.
 var verbose bool = false
 
-// Make constructs the "coder" root command
+// Make constructs the "coder" root command.
 func Make() *cobra.Command {
 	app := &cobra.Command{
 		Use:               "coder",

@@ -222,16 +222,16 @@ func networkErr(env *coder.Environment) error {
 
 func heartbeat(ctx context.Context, conn *websocket.Conn, interval time.Duration) {
 	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
 	for {
 		select {
 		case <-ctx.Done():
+			ticker.Stop()
 			return
 		case <-ticker.C:
 			if err := conn.Ping(ctx); err != nil {
 				// don't try to do multi-line here because the raw mode makes things weird
 				clog.Log(clog.Fatal("failed to ping websocket, exiting: " + err.Error()))
+				ticker.Stop()
 				os.Exit(1)
 			}
 		}

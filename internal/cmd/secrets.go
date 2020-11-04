@@ -98,15 +98,16 @@ coder secrets create aws-credentials --from-file ./credentials.json`,
 			if err != nil {
 				return err
 			}
-			if fromLiteral != "" {
+			switch {
+			case fromLiteral != "":
 				value = fromLiteral
-			} else if fromFile != "" {
+			case fromFile != "":
 				contents, err := ioutil.ReadFile(fromFile)
 				if err != nil {
 					return xerrors.Errorf("read file: %w", err)
 				}
 				value = string(contents)
-			} else {
+			default:
 				prompt := promptui.Prompt{
 					Label: "value",
 					Mask:  '*',

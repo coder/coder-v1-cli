@@ -13,10 +13,10 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// binpath is populated during package initialization with a path to the coder binary
+// binpath is populated during package initialization with a path to the coder binary.
 var binpath string
 
-// initialize integration tests by building the coder-cli binary
+// initialize integration tests by building the coder-cli binary.
 func init() {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -30,7 +30,7 @@ func init() {
 	}
 }
 
-// build the coder-cli binary and move to the integration testing bin directory
+// build the coder-cli binary and move to the integration testing bin directory.
 func build(path string) error {
 	tar := "coder-cli-linux-amd64.tar.gz"
 	dir := filepath.Dir(path)
@@ -48,7 +48,7 @@ func build(path string) error {
 	return nil
 }
 
-// write session tokens to the given container runner
+// write session tokens to the given container runner.
 func headlessLogin(ctx context.Context, t *testing.T, runner *tcli.ContainerRunner) {
 	creds := login(ctx, t)
 	cmd := exec.CommandContext(ctx, "sh", "-c", "mkdir -p $HOME/.config/coder && cat > $HOME/.config/coder/session")
