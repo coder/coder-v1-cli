@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// String gives a string pointer.
 func String(s string) *string {
 	return &s
 }

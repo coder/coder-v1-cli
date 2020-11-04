@@ -7,7 +7,6 @@ linters-settings:
     min-complexity: 46
   nestif:
     min-complexity: 10
-  golint:
   govet:
     settings:
       printf:

@@ -6,10 +6,10 @@ import (
 	"net/url"
 )
 
-// Me is the route param to access resources of the authenticated user
+// Me is the route param to access resources of the authenticated user.
 const Me = "me"
 
-// Client wraps the Coder HTTP API
+// Client wraps the Coder HTTP API.
 type Client struct {
 	BaseURL *url.URL
 	Token   string

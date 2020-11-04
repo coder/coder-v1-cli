@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-// Image describes a Coder Image
+// Image describes a Coder Image.
 type Image struct {
 	ID              string  `json:"id"`
 	OrganizationID  string  `json:"organization_id"`
@@ -18,7 +18,7 @@ type Image struct {
 	Deprecated      bool    `json:"deprecated"`
 }
 
-// NewRegistryRequest describes a docker registry used in importing an image
+// NewRegistryRequest describes a docker registry used in importing an image.
 type NewRegistryRequest struct {
 	FriendlyName string `json:"friendly_name"`
 	Registry     string `json:"registry"`
@@ -26,7 +26,7 @@ type NewRegistryRequest struct {
 	Password     string `json:"password"`
 }
 
-// ImportImageReq is used to import new images and registries into Coder
+// ImportImageReq is used to import new images and registries into Coder.
 type ImportImageReq struct {
 	RegistryID      *string             `json:"registry_id"`  // Used to import images to existing registries.
 	NewRegistry     *NewRegistryRequest `json:"new_registry"` // Used when adding a new registry.
@@ -39,7 +39,7 @@ type ImportImageReq struct {
 	URL             string              `json:"url"`
 }
 
-// ImportImage creates a new image and optionally a new registry
+// ImportImage creates a new image and optionally a new registry.
 func (c Client) ImportImage(ctx context.Context, orgID string, req ImportImageReq) (*Image, error) {
 	var img Image
 	if err := c.requestBody(ctx, http.MethodPost, "/api/orgs/"+orgID+"/images", req, &img); err != nil {

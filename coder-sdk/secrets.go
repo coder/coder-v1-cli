@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Secret describes a Coder secret
+// Secret describes a Coder secret.
 type Secret struct {
 	ID          string    `json:"id"              table:"-"`
 	Name        string    `json:"name"            table:"Name"`
@@ -16,7 +16,7 @@ type Secret struct {
 	UpdatedAt   time.Time `json:"updated_at"      table:"-"`
 }
 
-// Secrets gets all secrets for the given user
+// Secrets gets all secrets for the given user.
 func (c *Client) Secrets(ctx context.Context, userID string) ([]Secret, error) {
 	var secrets []Secret
 	if err := c.requestBody(ctx, http.MethodGet, "/api/users/"+userID+"/secrets", nil, &secrets); err != nil {
@@ -51,7 +51,7 @@ func (c *Client) SecretWithValueByID(ctx context.Context, id, userID string) (*S
 	return &secret, nil
 }
 
-// SecretByName gets a secret object by name
+// SecretByName gets a secret object by name.
 func (c *Client) SecretByName(ctx context.Context, name, userID string) (*Secret, error) {
 	secrets, err := c.Secrets(ctx, userID)
 	if err != nil {
@@ -72,12 +72,12 @@ type InsertSecretReq struct {
 	Description string `json:"description"`
 }
 
-// InsertSecret adds a new secret for the authed user
+// InsertSecret adds a new secret for the authed user.
 func (c *Client) InsertSecret(ctx context.Context, user *User, req InsertSecretReq) error {
 	return c.requestBody(ctx, http.MethodPost, "/api/users/"+user.ID+"/secrets", req, nil)
 }
 
-// DeleteSecretByName deletes the authenticated users secret with the given name
+// DeleteSecretByName deletes the authenticated users secret with the given name.
 func (c *Client) DeleteSecretByName(ctx context.Context, name, userID string) error {
 	// Lookup the secret by name to get the ID.
 	secret, err := c.SecretByName(ctx, name, userID)

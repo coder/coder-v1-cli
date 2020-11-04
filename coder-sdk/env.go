@@ -10,7 +10,7 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
-// Environment describes a Coder environment
+// Environment describes a Coder environment.
 type Environment struct {
 	ID               string           `json:"id"                 table:"-"`
 	Name             string           `json:"name"               table:"Name"`
@@ -40,7 +40,7 @@ type RebuildMessage struct {
 	AutoOffThreshold Duration `json:"auto_off_threshold"`
 }
 
-// EnvironmentStat represents the state of an environment
+// EnvironmentStat represents the state of an environment.
 type EnvironmentStat struct {
 	Time            time.Time         `json:"time"`
 	LastOnline      time.Time         `json:"last_online"`
@@ -58,7 +58,7 @@ func (e EnvironmentStat) String() string { return string(e.ContainerStatus) }
 // EnvironmentStatus refers to the states of an environment.
 type EnvironmentStatus string
 
-// The following represent the possible environment container states
+// The following represent the possible environment container states.
 const (
 	EnvironmentCreating EnvironmentStatus = "CREATING"
 	EnvironmentOff      EnvironmentStatus = "OFF"
@@ -89,7 +89,7 @@ func (c Client) CreateEnvironment(ctx context.Context, orgID string, req CreateE
 }
 
 // Environments lists environments returned by the given filter.
-// TODO: add the filter options, explore performance issues
+// TODO: add the filter options, explore performance issue.
 func (c Client) Environments(ctx context.Context) ([]Environment, error) {
 	var envs []Environment
 	if err := c.requestBody(ctx, http.MethodGet, "/api/environments", nil, &envs); err != nil {
@@ -146,7 +146,7 @@ func (c Client) DialWsep(ctx context.Context, env *Environment) (*websocket.Conn
 	return c.dialWebsocket(ctx, "/proxy/environments/"+env.ID+"/wsep")
 }
 
-// DialIDEStatus opens a websocket connection for cpu load metrics on the environment
+// DialIDEStatus opens a websocket connection for cpu load metrics on the environment.
 func (c Client) DialIDEStatus(ctx context.Context, envID string) (*websocket.Conn, error) {
 	return c.dialWebsocket(ctx, "/proxy/environments/"+envID+"/ide/api/status")
 }
@@ -204,7 +204,7 @@ func (c Client) DialEnvironmentStats(ctx context.Context, envID string) (*websoc
 	return c.dialWebsocket(ctx, "/api/environments/"+envID+"/watch-stats")
 }
 
-// DialResourceLoad opens a websocket connection for cpu load metrics on the environment
+// DialResourceLoad opens a websocket connection for cpu load metrics on the environment.
 func (c Client) DialResourceLoad(ctx context.Context, envID string) (*websocket.Conn, error) {
 	return c.dialWebsocket(ctx, "/api/environments/"+envID+"/watch-resource-load")
 }
@@ -233,7 +233,7 @@ type buildLogMsg struct {
 	Type BuildLogType `json:"type"`
 }
 
-// WaitForEnvironmentReady will watch the build log and return when done
+// WaitForEnvironmentReady will watch the build log and return when done.
 func (c Client) WaitForEnvironmentReady(ctx context.Context, env *Environment) error {
 	conn, err := c.DialEnvironmentBuildLog(ctx, env.ID)
 	if err != nil {
