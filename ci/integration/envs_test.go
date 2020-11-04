@@ -108,7 +108,7 @@ func TestEnvsCLI(t *testing.T) {
 		// Successfully output help.
 		c.Run(ctx, "coder envs create --help").Assert(t,
 			tcli.Success(),
-			tcli.StdoutMatches(regexp.QuoteMeta("Create a new environment under the active user.")),
+			tcli.StdoutMatches(regexp.QuoteMeta("Create a new Coder environment.")),
 			tcli.StderrEmpty(),
 		)
 
