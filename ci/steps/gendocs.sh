@@ -2,11 +2,9 @@
 
 set -euo pipefail
 
-echo "Generating docs..."
+cd "$(git rev-parse --show-toplevel)"
 
-cd "$(dirname "$0")"
-cd ../../
-
+echo "--- regenerating documentation"  
 rm -rf ./docs
 mkdir ./docs
 go run ./cmd/coder gen-docs ./docs

@@ -31,16 +31,14 @@ func (c *Client) newHTTPClient() (*http.Client, error) {
 		return nil, err
 	}
 
-	jar.SetCookies(c.BaseURL, []*http.Cookie{
-		{
-			Name:     "session_token",
-			Value:    c.Token,
-			MaxAge:   86400,
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   c.BaseURL.Scheme == "https",
-		},
-	})
+	jar.SetCookies(c.BaseURL, []*http.Cookie{{
+		Name:     "session_token",
+		Value:    c.Token,
+		MaxAge:   86400,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   c.BaseURL.Scheme == "https",
+	}})
 
 	return &http.Client{Jar: jar}, nil
 }
