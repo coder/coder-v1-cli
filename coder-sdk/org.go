@@ -8,9 +8,18 @@ import (
 
 // Organization describes an Organization in Coder.
 type Organization struct {
-	ID      string             `json:"id"`
-	Name    string             `json:"name"`
-	Members []OrganizationUser `json:"members"`
+	ID                     string             `json:"id"`
+	Name                   string             `json:"name"`
+	Description            string             `json:"description"`
+	Default                bool               `json:"default"`
+	Members                []OrganizationUser `json:"members"`
+	EnvironmentCount       int                `json:"environment_count"`
+	ResourceNamespace      string             `json:"resource_namespace"`
+	CreatedAt              time.Time          `json:"created_at"`
+	UpdatedAt              time.Time          `json:"updated_at"`
+	AutoOffThreshold       Duration           `json:"auto_off_threshold"`
+	CPUProvisioningRate    float32            `json:"cpu_provisioning_rate"`
+	MemoryProvisioningRate float32            `json:"memory_provisioning_rate"`
 }
 
 // OrganizationUser user wraps the basic User type and adds data specific to the user's membership of an organization.
