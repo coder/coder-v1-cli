@@ -25,7 +25,7 @@ type Client struct {
 // WARNING: If the caller sets a custom transport to set TLS settings or a custom CA, the default
 //          pool will not be used and it might result in a new dns lookup/tls session/socket begin
 //          established each time.
-func (c *Client) newHTTPClient() (*http.Client, error) {
+func (c Client) newHTTPClient() (*http.Client, error) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, err

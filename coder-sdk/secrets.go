@@ -17,7 +17,7 @@ type Secret struct {
 }
 
 // Secrets gets all secrets for the given user.
-func (c *Client) Secrets(ctx context.Context, userID string) ([]Secret, error) {
+func (c Client) Secrets(ctx context.Context, userID string) ([]Secret, error) {
 	var secrets []Secret
 	if err := c.requestBody(ctx, http.MethodGet, "/api/users/"+userID+"/secrets", nil, &secrets); err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func (c *Client) Secrets(ctx context.Context, userID string) ([]Secret, error) {
 }
 
 // SecretWithValueByName gets the Coder secret with its value by its name.
-func (c *Client) SecretWithValueByName(ctx context.Context, name, userID string) (*Secret, error) {
+func (c Client) SecretWithValueByName(ctx context.Context, name, userID string) (*Secret, error) {
 	// Lookup the secret from the name.
 	s, err := c.SecretByName(ctx, name, userID)
 	if err != nil {
@@ -43,7 +43,7 @@ func (c *Client) SecretWithValueByName(ctx context.Context, name, userID string)
 }
 
 // SecretWithValueByID gets the Coder secret with its value by the secret_id.
-func (c *Client) SecretWithValueByID(ctx context.Context, id, userID string) (*Secret, error) {
+func (c Client) SecretWithValueByID(ctx context.Context, id, userID string) (*Secret, error) {
 	var secret Secret
 	if err := c.requestBody(ctx, http.MethodGet, "/api/users/"+userID+"/secrets/"+id, nil, &secret); err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (c *Client) SecretWithValueByID(ctx context.Context, id, userID string) (*S
 }
 
 // SecretByName gets a secret object by name.
-func (c *Client) SecretByName(ctx context.Context, name, userID string) (*Secret, error) {
+func (c Client) SecretByName(ctx context.Context, name, userID string) (*Secret, error) {
 	secrets, err := c.Secrets(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -73,12 +73,12 @@ type InsertSecretReq struct {
 }
 
 // InsertSecret adds a new secret for the authed user.
-func (c *Client) InsertSecret(ctx context.Context, user *User, req InsertSecretReq) error {
+func (c Client) InsertSecret(ctx context.Context, user *User, req InsertSecretReq) error {
 	return c.requestBody(ctx, http.MethodPost, "/api/users/"+user.ID+"/secrets", req, nil)
 }
 
 // DeleteSecretByName deletes the authenticated users secret with the given name.
-func (c *Client) DeleteSecretByName(ctx context.Context, name, userID string) error {
+func (c Client) DeleteSecretByName(ctx context.Context, name, userID string) error {
 	// Lookup the secret by name to get the ID.
 	secret, err := c.SecretByName(ctx, name, userID)
 	if err != nil {
