@@ -128,7 +128,8 @@ coder secrets create aws-credentials --from-file ./credentials.json`,
 			if err != nil {
 				return xerrors.Errorf("get user %q by email: %w", *userEmail, err)
 			}
-			err = client.InsertSecret(ctx, user, coder.InsertSecretReq{
+			//nolint:staticcheck
+			err = client.InsertSecret(ctx, user.ID, coder.InsertSecretReq{
 				Name:        name,
 				Value:       value,
 				Description: description,
@@ -160,6 +161,7 @@ func listSecretsCmd(userEmail *string) func(cmd *cobra.Command, _ []string) erro
 			return xerrors.Errorf("get user %q by email: %w", *userEmail, err)
 		}
 
+		//nolint:staticcheck
 		secrets, err := client.Secrets(ctx, user.ID)
 		if err != nil {
 			return xerrors.Errorf("get secrets: %w", err)
@@ -197,6 +199,7 @@ func viewSecretCmd(userEmail *string) func(cmd *cobra.Command, args []string) er
 			return xerrors.Errorf("get user %q by email: %w", *userEmail, err)
 		}
 
+		//nolint:staticcheck
 		secret, err := client.SecretWithValueByName(ctx, name, user.ID)
 		if err != nil {
 			return xerrors.Errorf("get secret by name: %w", err)
@@ -224,6 +227,7 @@ func removeSecretsCmd(userEmail *string) func(c *cobra.Command, args []string) e
 
 		errorSeen := false
 		for _, n := range args {
+			//nolint:staticcheck
 			err := client.DeleteSecretByName(ctx, n, user.ID)
 			if err != nil {
 				clog.Log(clog.Error(
