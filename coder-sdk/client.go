@@ -25,22 +25,20 @@ type Client struct {
 // WARNING: If the caller sets a custom transport to set TLS settings or a custom CA, the default
 //          pool will not be used and it might result in a new dns lookup/tls session/socket begin
 //          established each time.
-func (c *Client) newHTTPClient() (*http.Client, error) {
+func (c Client) newHTTPClient() (*http.Client, error) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, err
 	}
 
-	jar.SetCookies(c.BaseURL, []*http.Cookie{
-		{
-			Name:     "session_token",
-			Value:    c.Token,
-			MaxAge:   86400,
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   c.BaseURL.Scheme == "https",
-		},
-	})
+	jar.SetCookies(c.BaseURL, []*http.Cookie{{
+		Name:     "session_token",
+		Value:    c.Token,
+		MaxAge:   86400,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   c.BaseURL.Scheme == "https",
+	}})
 
 	return &http.Client{Jar: jar}, nil
 }

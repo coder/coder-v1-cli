@@ -230,7 +230,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&org, "org", "o", "", "ID of the organization the environment should be created under.")
+	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the environment should be created under.")
 	cmd.Flags().StringVarP(&tag, "tag", "t", defaultImgTag, "tag of the image the environment will be based off of.")
 	cmd.Flags().Float32VarP(&cpu, "cpu", "c", 0, "number of cpu cores the environment should be provisioned with.")
 	cmd.Flags().Float32VarP(&memory, "memory", "m", 0, "GB of RAM an environment should be provisioned with.")

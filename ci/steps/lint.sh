@@ -2,10 +2,7 @@
 
 set -euo pipefail
 
-echo "Linting..."
-
-cd "$(dirname "$0")"
-cd ../../
+cd "$(git rev-parse --show-toplevel)"
 
 echo "--- golangci-lint"
 golangci-lint run -c .golangci.yml
