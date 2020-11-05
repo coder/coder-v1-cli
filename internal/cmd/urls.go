@@ -92,8 +92,13 @@ func accessLevelIsValid(level string) bool {
 func listDevURLsCmd(outputFmt *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
+		client, err := newClient(ctx)
+		if err != nil {
+			return err
+		}
 		envName := args[0]
-		devURLs, err := urlList(ctx, envName)
+
+		devURLs, err := urlList(ctx, client, envName)
 		if err != nil {
 			return err
 		}
@@ -162,7 +167,7 @@ func createDevURLCmd() *cobra.Command {
 				return err
 			}
 
-			urls, err := urlList(ctx, envName)
+			urls, err := urlList(ctx, client, envName)
 			if err != nil {
 				return err
 			}
@@ -170,13 +175,23 @@ func createDevURLCmd() *cobra.Command {
 			urlID, found := devURLID(portNum, urls)
 			if found {
 				clog.LogInfo(fmt.Sprintf("updating devurl for port %v", port))
-				err := client.UpdateDevURL(ctx, env.ID, urlID, portNum, urlname, access)
+				err := client.PutDevURL(ctx, env.ID, urlID, coder.PutDevURLReq{
+					Port:   portNum,
+					Name:   urlname,
+					Access: access,
+					EnvID:  env.ID,
+				})
 				if err != nil {
 					return xerrors.Errorf("update DevURL: %w", err)
 				}
 			} else {
 				clog.LogInfo(fmt.Sprintf("Adding devurl for port %v", port))
-				err := client.InsertDevURL(ctx, env.ID, portNum, urlname, access)
+				err := client.CreateDevURL(ctx, env.ID, coder.CreateDevURLReq{
+					Port:   portNum,
+					Name:   urlname,
+					Access: access,
+					EnvID:  env.ID,
+				})
 				if err != nil {
 					return xerrors.Errorf("insert DevURL: %w", err)
 				}
@@ -231,7 +246,7 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	urls, err := urlList(ctx, envName)
+	urls, err := urlList(ctx, client, envName)
 	if err != nil {
 		return err
 	}
@@ -243,18 +258,14 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 		return xerrors.Errorf("No devurl found for port %v", port)
 	}
 
-	if err := client.DelDevURL(ctx, env.ID, urlID); err != nil {
+	if err := client.DeleteDevURL(ctx, env.ID, urlID); err != nil {
 		return xerrors.Errorf("delete DevURL: %w", err)
 	}
 	return nil
 }
 
 // urlList returns the list of active devURLs from the cemanager.
-func urlList(ctx context.Context, envName string) ([]DevURL, error) {
-	client, err := newClient(ctx)
-	if err != nil {
-		return nil, err
-	}
+func urlList(ctx context.Context, client *coder.Client, envName string) ([]DevURL, error) {
 	env, err := findEnv(ctx, client, envName, coder.Me)
 	if err != nil {
 		return nil, err
