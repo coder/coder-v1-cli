@@ -10,21 +10,21 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/websocket"
-	"github.com/rjeczalik/notify"
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/activity"
 	"cdr.dev/coder-cli/pkg/clog"
+	"cdr.dev/coder-cli/pkg/rfsnotify"
 	"cdr.dev/wsep"
 )
 
@@ -155,6 +155,10 @@ func (s Sync) handleCreate(localPath string) error {
 	return nil
 }
 
+func (s Sync) handleChmod(localPath string) error {
+	return nil
+}
+
 func (s Sync) handleDelete(localPath string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -184,22 +188,25 @@ func (s Sync) handleRename(localPath string) error {
 
 func (s Sync) work(ev timedEvent) {
 	var (
-		localPath = ev.Path()
+		localPath = ev.Name
 		err       error
 	)
-	switch ev.Event() {
-	case notify.Write, notify.Create:
+
+	switch {
+	case ev.Op&fsnotify.Write == fsnotify.Write,
+		ev.Op&fsnotify.Create == fsnotify.Create,
+		ev.Op&fsnotify.Chmod == fsnotify.Chmod:
 		err = s.handleCreate(localPath)
-	case notify.Rename:
+	case ev.Op&fsnotify.Rename == fsnotify.Rename:
 		err = s.handleRename(localPath)
-	case notify.Remove:
+	case ev.Op&fsnotify.Remove == fsnotify.Remove:
 		err = s.handleDelete(localPath)
 	default:
-		clog.LogInfo(fmt.Sprintf("unhandled event %+v %s", ev.Event(), ev.Path()))
+		clog.LogInfo(fmt.Sprintf("unhandled event %+v %s", ev.Op.String(), ev.Name))
 	}
 
-	log := fmt.Sprintf("%v %s (%s)",
-		ev.Event(), filepath.Base(localPath), time.Since(ev.CreatedAt).Truncate(time.Millisecond*10),
+	log := fmt.Sprintf("%s %s (%s)",
+		ev.Op.String(), filepath.Base(localPath), time.Since(ev.CreatedAt).Truncate(time.Millisecond*10),
 	)
 	if err != nil {
 		clog.Log(clog.Error(fmt.Sprintf("%s: %s", log, err)))
@@ -233,7 +240,7 @@ func (s Sync) workEventGroup(evs []timedEvent) {
 
 	var wg sync.WaitGroup
 	for _, ev := range cache.ConcurrentEvents() {
-		setConsoleTitle(fmtUpdateTitle(ev.Path()))
+		setConsoleTitle(fmtUpdateTitle(ev.Name))
 
 		wg.Add(1)
 		// TODO: Document why this error is discarded. See https://github.com/cdr/coder-cli/issues/122 for reference.
@@ -305,14 +312,21 @@ func (s Sync) Version() (string, error) {
 // Use this command to debug what wasn't sync'd correctly:
 // rsync -e "coder sh" -nicr ~/Projects/cdr/coder-cli/. ammar:/home/coder/coder-cli/.
 func (s Sync) Run() error {
-	events := make(chan notify.EventInfo, maxInflightInotify)
 	// Set up a recursive watch.
 	// We do this before the initial sync so we can capture any changes
 	// that may have happened during sync.
-	if err := notify.Watch(path.Join(s.LocalDir, "..."), events, notify.All); err != nil {
-		return xerrors.Errorf("create watch: %w", err)
+	watcher, err := rfsnotify.NewWatcher()
+	if err != nil {
+		return xerrors.Errorf("create recursive watcher: %w", err)
 	}
-	defer notify.Stop(events)
+	defer watcher.Close()
+
+	// i am a test
+
+	err = watcher.Add(s.LocalDir)
+	if err != nil {
+		return xerrors.Errorf("watch local directory: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -338,14 +352,14 @@ func (s Sync) Run() error {
 	var droppedEvents uint64
 	// Timed events lets us track how long each individual file takes to
 	// update.
-	timedEvents := make(chan timedEvent, cap(events))
+	timedEvents := make(chan timedEvent, maxInflightInotify)
 	go func() {
 		defer close(timedEvents)
-		for event := range events {
+		for event := range watcher.Events {
 			select {
 			case timedEvents <- timedEvent{
 				CreatedAt: time.Now(),
-				EventInfo: event,
+				Event:     event,
 			}:
 			default:
 				if atomic.AddUint64(&droppedEvents, 1) == 1 {
@@ -380,6 +394,8 @@ func (s Sync) Run() error {
 			s.workEventGroup(eventGroup)
 			eventGroup = eventGroup[:0]
 			ap.Push(context.TODO())
+		case err := <-watcher.Errors:
+			clog.LogWarn("filewatcher errored", err.Error())
 		}
 	}
 }

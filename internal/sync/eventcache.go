@@ -4,27 +4,27 @@ import (
 	"os"
 	"time"
 
-	"github.com/rjeczalik/notify"
+	"github.com/fsnotify/fsnotify"
 )
 
 type timedEvent struct {
 	CreatedAt time.Time
-	notify.EventInfo
+	fsnotify.Event
 }
 
 type eventCache map[string]timedEvent
 
 func (cache eventCache) Add(ev timedEvent) {
-	lastEvent, ok := cache[ev.Path()]
+	lastEvent, ok := cache[ev.Name]
 	if ok {
 		// If the file was quickly created and then destroyed, pretend nothing ever happened.
-		if lastEvent.Event() == notify.Create && ev.Event() == notify.Remove {
-			delete(cache, ev.Path())
+		if lastEvent.Op&fsnotify.Create == fsnotify.Create && ev.Op&fsnotify.Remove == fsnotify.Remove {
+			delete(cache, ev.Name)
 			return
 		}
 	}
 	// Only let the latest event for a path have action.
-	cache[ev.Path()] = ev
+	cache[ev.Name] = ev
 }
 
 // SequentialEvents returns the list of events that pertain to directories.
@@ -32,7 +32,7 @@ func (cache eventCache) Add(ev timedEvent) {
 func (cache eventCache) SequentialEvents() []timedEvent {
 	var r []timedEvent
 	for _, ev := range cache {
-		info, err := os.Stat(ev.Path())
+		info, err := os.Stat(ev.Name)
 		if err == nil && !info.IsDir() {
 			continue
 		}
@@ -48,7 +48,7 @@ func (cache eventCache) SequentialEvents() []timedEvent {
 func (cache eventCache) ConcurrentEvents() []timedEvent {
 	var r []timedEvent
 	for _, ev := range cache {
-		info, err := os.Stat(ev.Path())
+		info, err := os.Stat(ev.Name)
 		if err != nil {
 			continue
 		}
