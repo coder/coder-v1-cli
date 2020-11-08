@@ -9,7 +9,7 @@ on:
         description: "Release channel"
         required: true
         default: "false"
-name: Create Release
+name: Create Github Release
 jobs:
   build:
     name: Create Release
