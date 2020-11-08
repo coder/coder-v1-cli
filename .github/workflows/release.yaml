@@ -1,14 +1,5 @@
 on:
   workflow_dispatch:
-    inputs:
-      preRelease:
-        description: "Pre Release"
-        required: true
-        default: "false"
-      draft:
-        description: "Draft Release"
-        required: true
-        default: "false"
 name: Create Github Release
 jobs:
   build:
@@ -43,8 +34,8 @@ jobs:
             Changes in this Release
             - First Change
             - Second Change
-          draft: ${{ github.event.inputs.draft == 'true' }}
-          prerelease: ${{ github.event.inputs.preRelease == 'true' }}
+          draft: true
+          prerelease: false
       - name: Upload Windows Release
         id: upload-release-asset 
         uses: actions/upload-release-asset@v1
