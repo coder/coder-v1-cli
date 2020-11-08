@@ -1,0 +1,35 @@
+on:
+  workflow_dispatch:
+    inputs:
+      preRelease:
+        description: "Release channel"
+        required: true
+        default: "false"
+      draft:
+        description: "Release channel"
+        required: true
+        default: "false"
+name: Create Release
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      # - run: |
+      #     - git log --no-merges --pretty=format:\"- %h %s\"
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Changes in this Release
+            - First Change
+            - Second Change
+          draft: ${{ github.event.inputs.draft == "true" }}
+          prerelease: ${{ github.event.inputs.preRelease == "true" }}
