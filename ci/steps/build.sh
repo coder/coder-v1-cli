@@ -8,7 +8,8 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)/ci/steps"
 
-tag=$(git describe --tags)
+# tag=$(git describe --tags)
+tag=v1.0.0
 
 build() {
 	echo "--- building coder-cli for $GOOS-$GOARCH"
