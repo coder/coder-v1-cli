@@ -2,11 +2,11 @@ on:
   workflow_dispatch:
     inputs:
       preRelease:
-        description: "Release channel"
+        description: "Pre Release"
         required: true
         default: "false"
       draft:
-        description: "Release channel"
+        description: "Draft Release"
         required: true
         default: "false"
 name: Create Github Release
@@ -31,5 +31,5 @@ jobs:
             Changes in this Release
             - First Change
             - Second Change
-          draft: ${{ github.event.inputs.draft == "true" }}
-          prerelease: ${{ github.event.inputs.preRelease == "true" }}
+          draft: ${{ github.event.inputs.draft == 'true' }}
+          prerelease: ${{ github.event.inputs.preRelease == 'true' }}
