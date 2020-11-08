@@ -1,6 +1,6 @@
 ## coder tags rm
 
-
+remove an image tag
 
 ```
 coder tags rm [tag] [flags]

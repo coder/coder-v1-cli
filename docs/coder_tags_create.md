@@ -1,6 +1,10 @@
 ## coder tags create
 
+add an image tag
 
+### Synopsis
+
+allow users to create environments with this image tag
 
 ```
 coder tags create [tag] [flags]
