@@ -11,6 +11,7 @@ import (
 
 func TestTags(t *testing.T) {
 	t.Parallel()
+	t.Skip("wait for dedicated test cluster so we can create an org")
 	run(t, "tags-cli-tests", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
 		headlessLogin(ctx, t, c)
 		client := cleanupClient(ctx, t)
