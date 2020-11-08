@@ -63,8 +63,8 @@ func tagsCreateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&imageName, "image", "", "image name")
-	cmd.Flags().StringVar(&orgName, "org", "", "organization name")
+	cmd.Flags().StringVarP(&imageName, "image", "i", "", "image name")
+	cmd.Flags().StringVarP(&orgName, "org", "o", "", "organization name")
 	cmd.Flags().BoolVar(&defaultTag, "default", false, "make this tag the default for its image")
 	_ = cmd.MarkFlagRequired("org")
 	_ = cmd.MarkFlagRequired("image")

@@ -17,8 +17,8 @@ coder tags create latest --image ubuntu --org default
 ```
       --default        make this tag the default for its image
   -h, --help           help for create
-      --image string   image name
-      --org string     organization name
+  -i, --image string   image name
+  -o, --org string     organization name
 ```
 
 ### Options inherited from parent commands
