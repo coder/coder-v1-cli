@@ -34,8 +34,8 @@ jobs:
           body: ""
           draft: true
           prerelease: false
-      - name: Upload Windows Release
-        id: upload-windows-release-asset 
+      - name: Upload Linux Release
+        id: upload-linux-release-asset 
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -43,7 +43,7 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./ci/bin/coder-cli-linux-amd64.tar.gz
           asset_name: coder-cli-linux-amd64.tar.gz
-          asset_content_type: application/zip
+          asset_content_type: application/tar+gzip
       - name: Upload MacOS Release
         id: upload-macos-release-asset 
         uses: actions/upload-release-asset@v1
@@ -54,8 +54,8 @@ jobs:
           asset_path: ./ci/bin/coder-cli-darwin-amd64.zip
           asset_name: coder-cli-darwin-amd64.zip
           asset_content_type: application/zip
-      - name: Upload Linux Release
-        id: upload-linux-release-asset 
+      - name: Upload Windows Release
+        id: upload-windows-release-asset 
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
