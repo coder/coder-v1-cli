@@ -13,8 +13,9 @@ import (
 
 func tagsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "tags",
-		Short: "operate on Coder image tags",
+		Use:    "tags",
+		Hidden: true,
+		Short:  "operate on Coder image tags",
 	}
 
 	cmd.AddCommand(
