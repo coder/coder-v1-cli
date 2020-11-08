@@ -8,8 +8,7 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)/ci/steps"
 
-# tag=$(git describe --tags)
-tag=v1.0.0
+tag=$(git describe --tags)
 
 build() {
 	echo "--- building coder-cli for $GOOS-$GOARCH"
@@ -31,15 +30,15 @@ build() {
 			tar -czf "$artifact" coder	
 			;;
 		"darwin")
-		# if [[ ${CI-} ]]; then
-		# 	artifact="coder-cli-$GOOS-$GOARCH.zip"
-		# 	gon -log-level debug ./gon.json
-		# 	mv coder.zip $artifact
-		# else
+		if [[ ${CI-} ]]; then
+			artifact="coder-cli-$GOOS-$GOARCH.zip"
+			gon -log-level debug ./gon.json
+			mv coder.zip $artifact
+		else
 			artifact="coder-cli-$GOOS-$GOARCH.tar.gz"
 			tar -czf "$artifact" coder	
 			echo "--- warning: not in ci, skipping signed release of darwin"
-		# fi
+		fi
 			;;
 	esac
 	popd

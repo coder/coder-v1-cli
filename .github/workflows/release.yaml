@@ -1,5 +1,6 @@
 on:
-  workflow_dispatch:
+  push:
+    tags: "v*"
 name: Create Github Release
 jobs:
   build:
@@ -8,15 +9,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      # - name: Install Gon
-      #   run: |
-      #     brew tap mitchellh/gon
-      #     brew install mitchellh/gon/gon
-      # - name: Import Signing Certificates
-      #   uses: Apple-Actions/import-codesign-certs@v1
-      #   with:
-      #     p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
-      #     p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
+      - name: Install Gon
+        run: |
+          brew tap mitchellh/gon
+          brew install mitchellh/gon/gon
+      - name: Import Signing Certificates
+        uses: Apple-Actions/import-codesign-certs@v1
+        with:
+          p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
+          p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
       - name: Build Release Assets
         run: ./ci/steps/build.sh
         env:
@@ -30,10 +31,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
-          body: |
-            Changes in this Release
-            - First Change
-            - Second Change
+          body: ""
           draft: true
           prerelease: false
       - name: Upload Windows Release
