@@ -3,19 +3,24 @@ package coder
 import (
 	"context"
 	"net/http"
+	"time"
 )
 
 // Image describes a Coder Image.
 type Image struct {
-	ID              string  `json:"id"`
-	OrganizationID  string  `json:"organization_id"`
-	Repository      string  `json:"repository"`
-	Description     string  `json:"description"`
-	URL             string  `json:"url"` // User-supplied URL for image.
-	DefaultCPUCores float32 `json:"default_cpu_cores"`
-	DefaultMemoryGB float32 `json:"default_memory_gb"`
-	DefaultDiskGB   int     `json:"default_disk_gb"`
-	Deprecated      bool    `json:"deprecated"`
+	ID              string    `json:"id"`
+	OrganizationID  string    `json:"organization_id"`
+	Repository      string    `json:"repository"`
+	Description     string    `json:"description"`
+	URL             string    `json:"url"` // User-supplied URL for image.
+	Registry        *Registry `json:"registry"`
+	DefaultTag      *ImageTag `json:"default_tag"`
+	DefaultCPUCores float32   `json:"default_cpu_cores"`
+	DefaultMemoryGB float32   `json:"default_memory_gb"`
+	DefaultDiskGB   int       `json:"default_disk_gb"`
+	Deprecated      bool      `json:"deprecated"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 // NewRegistryRequest describes a docker registry used in importing an image.
