@@ -1,7 +1,7 @@
 on:
-  push:
+  create:
     tags: "v*"
-name: Create Github Release
+name: create_github_release
 jobs:
   build:
     name: Create Release
