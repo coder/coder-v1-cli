@@ -106,7 +106,7 @@ func regenTokenCmd() *cobra.Command {
 			}
 			token, err := client.RegenerateAPIToken(ctx, coder.Me, args[0])
 			if err != nil {
-				return nil
+				return err
 			}
 			fmt.Println(token)
 			return nil
