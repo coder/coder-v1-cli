@@ -44,6 +44,16 @@ type ImportImageReq struct {
 	URL             string              `json:"url"`
 }
 
+// UpdateImageReq defines the requests parameters for a partial update of an image resource.
+type UpdateImageReq struct {
+	DefaultCPUCores *float32 `json:"default_cpu_cores"`
+	DefaultMemoryGB *int     `json:"default_memory_gb"`
+	DefaultDiskGB   *int     `json:"default_disk_gb"`
+	Description     *string  `json:"description"`
+	URL             *string  `json:"url"`
+	Deprecated      *bool    `json:"deprecated"`
+}
+
 // ImportImage creates a new image and optionally a new registry.
 func (c Client) ImportImage(ctx context.Context, orgID string, req ImportImageReq) (*Image, error) {
 	var img Image
@@ -60,4 +70,9 @@ func (c Client) OrganizationImages(ctx context.Context, orgID string) ([]Image, 
 		return nil, err
 	}
 	return imgs, nil
+}
+
+// UpdateImage applies a partial update to an image resource.
+func (c Client) UpdateImage(ctx context.Context, imageID string, req UpdateImageReq) error {
+	return c.requestBody(ctx, http.MethodPatch, "/api/images/"+imageID, req, nil)
 }
