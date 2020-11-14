@@ -35,6 +35,11 @@ type CreateImageTagReq struct {
 	Default bool   `json:"default"`
 }
 
+// SetDefaultTagReq is used to set the default tag for an image.
+type SetDefaultTagReq struct {
+	DefaultTag string `json:"default_tag"`
+}
+
 // CreateImageTag creates a new image tag resource.
 func (c Client) CreateImageTag(ctx context.Context, imageID string, req CreateImageTagReq) (*ImageTag, error) {
 	var tag ImageTag
@@ -65,4 +70,9 @@ func (c Client) ImageTagByID(ctx context.Context, imageID, tagID string) (*Image
 		return nil, err
 	}
 	return &tag, nil
+}
+
+// SetDefaultImageTag sets the default tag for an image. The tag must exist before calling this method.
+func (c Client) SetDefaultImageTag(ctx context.Context, imageID string, req SetDefaultTagReq) error {
+	return c.requestBody(ctx, http.MethodPatch, "/api/images/"+imageID, req, nil)
 }
