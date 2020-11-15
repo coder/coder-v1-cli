@@ -18,6 +18,10 @@ type ImageTag struct {
 	CreatedAt         time.Time      `json:"created_at"           table:"-"`
 }
 
+func (i ImageTag) String() string {
+	return i.Tag
+}
+
 // OSRelease is the marshalled /etc/os-release file.
 type OSRelease struct {
 	ID         string `json:"id"`

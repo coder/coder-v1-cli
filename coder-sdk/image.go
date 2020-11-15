@@ -8,19 +8,19 @@ import (
 
 // Image describes a Coder Image.
 type Image struct {
-	ID              string    `json:"id"`
-	OrganizationID  string    `json:"organization_id"`
-	Repository      string    `json:"repository"`
-	Description     string    `json:"description"`
-	URL             string    `json:"url"` // User-supplied URL for image.
-	Registry        *Registry `json:"registry"`
-	DefaultTag      *ImageTag `json:"default_tag"`
-	DefaultCPUCores float32   `json:"default_cpu_cores"`
-	DefaultMemoryGB float32   `json:"default_memory_gb"`
-	DefaultDiskGB   int       `json:"default_disk_gb"`
-	Deprecated      bool      `json:"deprecated"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID              string    `json:"id"                    table:"-"`
+	OrganizationID  string    `json:"organization_id"       table:"-"`
+	Repository      string    `json:"repository"            table:"Repository"`
+	Description     string    `json:"description"           table:"-"`
+	URL             string    `json:"url"                   table:"-"` // User-supplied URL for image.
+	Registry        *Registry `json:"registry"              table:"-"`
+	DefaultTag      *ImageTag `json:"default_tag"           table:"DefaultTag"`
+	DefaultCPUCores float32   `json:"default_cpu_cores"     table:"DefaultCPUCores"`
+	DefaultMemoryGB float32   `json:"default_memory_gb"     table:"DefaultMemoryGB"`
+	DefaultDiskGB   int       `json:"default_disk_gb"       table:"DefaultDiskGB"`
+	Deprecated      bool      `json:"deprecated"            table:"-"`
+	CreatedAt       time.Time `json:"created_at"            table:"-"`
+	UpdatedAt       time.Time `json:"updated_at"            table:"-"`
 }
 
 // NewRegistryRequest describes a docker registry used in importing an image.
