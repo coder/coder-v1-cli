@@ -47,7 +47,7 @@ type ImportImageReq struct {
 // UpdateImageReq defines the requests parameters for a partial update of an image resource.
 type UpdateImageReq struct {
 	DefaultCPUCores *float32 `json:"default_cpu_cores"`
-	DefaultMemoryGB *int     `json:"default_memory_gb"`
+	DefaultMemoryGB *float32 `json:"default_memory_gb"`
 	DefaultDiskGB   *int     `json:"default_disk_gb"`
 	Description     *string  `json:"description"`
 	URL             *string  `json:"url"`
