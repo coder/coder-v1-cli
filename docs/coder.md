@@ -14,6 +14,7 @@ coder provides a CLI for working with an existing Coder Enterprise installation
 * [coder completion](coder_completion.md)	 - Generate completion script
 * [coder config-ssh](coder_config-ssh.md)	 - Configure SSH to access Coder environments
 * [coder envs](coder_envs.md)	 - Interact with Coder environments
+* [coder images](coder_images.md)	 - Manage Coder images
 * [coder login](coder_login.md)	 - Authenticate this client for future operations
 * [coder logout](coder_logout.md)	 - Remove local authentication credentials if any exist
 * [coder sh](coder_sh.md)	 - Open a shell and execute commands in a Coder environment
