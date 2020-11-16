@@ -27,7 +27,7 @@ build() {
 			;;
 		"linux")
 			artifact="coder-cli-$GOOS-$GOARCH.tar.gz"
-			tar -czf "$artifact" coder	
+			tar --mtime='1970-01-01' -czf "$artifact" coder	
 			;;
 		"darwin")
 		if [[ ${CI-} ]]; then
@@ -36,7 +36,7 @@ build() {
 			mv coder.zip $artifact
 		else
 			artifact="coder-cli-$GOOS-$GOARCH.tar.gz"
-			tar -czf "$artifact" coder	
+			tar --mtime='1970-01-01' -czf "$artifact" coder	
 			echo "--- warning: not in ci, skipping signed release of darwin"
 		fi
 			;;
