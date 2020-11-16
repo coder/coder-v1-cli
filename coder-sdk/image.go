@@ -52,6 +52,7 @@ type UpdateImageReq struct {
 	Description     *string  `json:"description"`
 	URL             *string  `json:"url"`
 	Deprecated      *bool    `json:"deprecated"`
+	DefaultTag      *string  `json:"default_tag"`
 }
 
 // ImportImage creates a new image and optionally a new registry.
