@@ -10,6 +10,11 @@ import (
 
 const structFieldTagKey = "table"
 
+// Column defines an interface for formatting a type as a column.
+type Column interface {
+	Column() string
+}
+
 // StructValues tab delimits the values of a given struct.
 //
 // Tag a field `table:"-"` to hide it from output.
@@ -20,7 +25,12 @@ func StructValues(data interface{}) string {
 		if shouldHideField(v.Type().Field(i)) {
 			continue
 		}
-		fmt.Fprintf(s, "%v\t", v.Field(i).Interface())
+		value := v.Field(i).Interface()
+		if column, ok := value.(Column); ok {
+			fmt.Fprintf(s, "%s\t", column.Column())
+		} else {
+			fmt.Fprintf(s, "%v\t", value)
+		}
 	}
 	return s.String()
 }

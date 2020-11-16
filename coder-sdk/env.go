@@ -54,7 +54,8 @@ type EnvironmentStat struct {
 	DiskUsed        int64             `json:"disk_used"`
 }
 
-func (e EnvironmentStat) String() string { return string(e.ContainerStatus) }
+// Column defines how EnvironmentStat should format in as a table column.
+func (e EnvironmentStat) Column() string { return string(e.ContainerStatus) }
 
 // EnvironmentStatus refers to the states of an environment.
 type EnvironmentStatus string

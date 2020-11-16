@@ -18,7 +18,8 @@ type ImageTag struct {
 	CreatedAt         time.Time      `json:"created_at"           table:"-"`
 }
 
-func (i ImageTag) String() string {
+// Column defines how ImageTag should format in as a table column.
+func (i ImageTag) Column() string {
 	return i.Tag
 }
 
@@ -29,9 +30,8 @@ type OSRelease struct {
 	HomeURL    string `json:"home_url"`
 }
 
-func (o OSRelease) String() string {
-	return o.PrettyName
-}
+// Column defines how OSRelease should format in as a table column.
+func (o OSRelease) Column() string { return o.PrettyName }
 
 // CreateImageTagReq defines the request parameters for creating a new image tag.
 type CreateImageTagReq struct {
