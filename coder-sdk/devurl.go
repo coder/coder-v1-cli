@@ -23,7 +23,7 @@ type delDevURLRequest struct {
 
 // DeleteDevURL deletes the specified devurl.
 func (c Client) DeleteDevURL(ctx context.Context, envID, urlID string) error {
-	reqURL := fmt.Sprintf("/api/environments/%s/devurls/%s", envID, urlID)
+	reqURL := fmt.Sprintf("/api/private/environments/%s/devurls/%s", envID, urlID)
 
 	return c.requestBody(ctx, http.MethodDelete, reqURL, delDevURLRequest{
 		EnvID:    envID,
@@ -42,7 +42,7 @@ type CreateDevURLReq struct {
 
 // CreateDevURL inserts a new devurl for the authenticated user.
 func (c Client) CreateDevURL(ctx context.Context, envID string, req CreateDevURLReq) error {
-	return c.requestBody(ctx, http.MethodPost, "/api/environments/"+envID+"/devurls", req, nil)
+	return c.requestBody(ctx, http.MethodPost, "/api/private/environments/"+envID+"/devurls", req, nil)
 }
 
 // PutDevURLReq defines the request parameters for overwriting a DevURL.
@@ -50,5 +50,5 @@ type PutDevURLReq CreateDevURLReq
 
 // PutDevURL updates an existing devurl for the authenticated user.
 func (c Client) PutDevURL(ctx context.Context, envID, urlID string, req PutDevURLReq) error {
-	return c.requestBody(ctx, http.MethodPut, "/api/environments/"+envID+"/devurls/"+urlID, req, nil)
+	return c.requestBody(ctx, http.MethodPut, "/api/private/environments/"+envID+"/devurls/"+urlID, req, nil)
 }
