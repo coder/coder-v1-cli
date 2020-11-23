@@ -180,6 +180,7 @@ func createDevURLCmd() *cobra.Command {
 					Name:   urlname,
 					Access: access,
 					EnvID:  env.ID,
+					Scheme: "http",
 				})
 				if err != nil {
 					return xerrors.Errorf("update DevURL: %w", err)
@@ -191,6 +192,7 @@ func createDevURLCmd() *cobra.Command {
 					Name:   urlname,
 					Access: access,
 					EnvID:  env.ID,
+					Scheme: "http",
 				})
 				if err != nil {
 					return xerrors.Errorf("insert DevURL: %w", err)
