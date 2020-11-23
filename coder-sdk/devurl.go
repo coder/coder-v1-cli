@@ -13,6 +13,7 @@ type DevURL struct {
 	Port   int    `json:"port"   table:"Port"`
 	Access string `json:"access" table:"Access"`
 	Name   string `json:"name"   table:"Name"`
+	Scheme string `json:"scheme" table:"-"`
 }
 
 type delDevURLRequest struct {
@@ -36,6 +37,7 @@ type CreateDevURLReq struct {
 	Port   int    `json:"port"`
 	Access string `json:"access"`
 	Name   string `json:"name"`
+	Scheme string `json:"scheme"`
 }
 
 // CreateDevURL inserts a new devurl for the authenticated user.
