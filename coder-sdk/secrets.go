@@ -23,7 +23,7 @@ type Secret struct {
 // Deprecated: Coder Secrets will be removed from Coder Enterprise in a future release.
 func (c Client) Secrets(ctx context.Context, userID string) ([]Secret, error) {
 	var secrets []Secret
-	if err := c.requestBody(ctx, http.MethodGet, "/api/users/"+userID+"/secrets", nil, &secrets); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/users/"+userID+"/secrets", nil, &secrets); err != nil {
 		return nil, err
 	}
 	return secrets, nil
@@ -42,7 +42,7 @@ func (c Client) SecretWithValueByName(ctx context.Context, name, userID string) 
 	// NOTE: This is racy, but acceptable. If the secret is gone or the permission changed since we looked up the id,
 	//       the call will simply fail and surface the error to the user.
 	var secret Secret
-	if err := c.requestBody(ctx, http.MethodGet, "/api/users/"+userID+"/secrets/"+s.ID, nil, &secret); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/users/"+userID+"/secrets/"+s.ID, nil, &secret); err != nil {
 		return nil, err
 	}
 	return &secret, nil
@@ -53,7 +53,7 @@ func (c Client) SecretWithValueByName(ctx context.Context, name, userID string) 
 // Deprecated: Coder Secrets will be removed from Coder Enterprise in a future release.
 func (c Client) SecretWithValueByID(ctx context.Context, id, userID string) (*Secret, error) {
 	var secret Secret
-	if err := c.requestBody(ctx, http.MethodGet, "/api/users/"+userID+"/secrets/"+id, nil, &secret); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/users/"+userID+"/secrets/"+id, nil, &secret); err != nil {
 		return nil, err
 	}
 	return &secret, nil
@@ -88,7 +88,7 @@ type InsertSecretReq struct {
 //
 // Deprecated: Coder Secrets will be removed from Coder Enterprise in a future release.
 func (c Client) InsertSecret(ctx context.Context, userID string, req InsertSecretReq) error {
-	return c.requestBody(ctx, http.MethodPost, "/api/users/"+userID+"/secrets", req, nil)
+	return c.requestBody(ctx, http.MethodPost, "/api/private/users/"+userID+"/secrets", req, nil)
 }
 
 // DeleteSecretByName deletes the authenticated users secret with the given name.
@@ -103,7 +103,7 @@ func (c Client) DeleteSecretByName(ctx context.Context, name, userID string) err
 	// Delete the secret.
 	// NOTE: This is racy, but acceptable. If the secret is gone or the permission changed since we looked up the id,
 	//       the call will simply fail and surface the error to the user.
-	resp, err := c.request(ctx, http.MethodDelete, "/api/users/"+userID+"/secrets/"+secret.ID, nil)
+	resp, err := c.request(ctx, http.MethodDelete, "/api/private/users/"+userID+"/secrets/"+secret.ID, nil)
 	if err != nil {
 		return err
 	}

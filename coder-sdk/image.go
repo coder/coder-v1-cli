@@ -58,7 +58,7 @@ type UpdateImageReq struct {
 // ImportImage creates a new image and optionally a new registry.
 func (c Client) ImportImage(ctx context.Context, orgID string, req ImportImageReq) (*Image, error) {
 	var img Image
-	if err := c.requestBody(ctx, http.MethodPost, "/api/orgs/"+orgID+"/images", req, &img); err != nil {
+	if err := c.requestBody(ctx, http.MethodPost, "/api/private/orgs/"+orgID+"/images", req, &img); err != nil {
 		return nil, err
 	}
 	return &img, nil
@@ -67,7 +67,7 @@ func (c Client) ImportImage(ctx context.Context, orgID string, req ImportImageRe
 // OrganizationImages returns all of the images imported for orgID.
 func (c Client) OrganizationImages(ctx context.Context, orgID string) ([]Image, error) {
 	var imgs []Image
-	if err := c.requestBody(ctx, http.MethodGet, "/api/orgs/"+orgID+"/images", nil, &imgs); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/orgs/"+orgID+"/images", nil, &imgs); err != nil {
 		return nil, err
 	}
 	return imgs, nil
@@ -75,5 +75,5 @@ func (c Client) OrganizationImages(ctx context.Context, orgID string) ([]Image, 
 
 // UpdateImage applies a partial update to an image resource.
 func (c Client) UpdateImage(ctx context.Context, imageID string, req UpdateImageReq) error {
-	return c.requestBody(ctx, http.MethodPatch, "/api/images/"+imageID, req, nil)
+	return c.requestBody(ctx, http.MethodPatch, "/api/private/images/"+imageID, req, nil)
 }

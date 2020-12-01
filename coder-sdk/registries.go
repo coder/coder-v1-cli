@@ -19,7 +19,7 @@ type Registry struct {
 // Registries fetches all registries in an organization.
 func (c Client) Registries(ctx context.Context, orgID string) ([]Registry, error) {
 	var r []Registry
-	if err := c.requestBody(ctx, http.MethodGet, "/api/orgs/"+orgID+"/registries", nil, &r); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/orgs/"+orgID+"/registries", nil, &r); err != nil {
 		return nil, err
 	}
 	return r, nil
@@ -28,7 +28,7 @@ func (c Client) Registries(ctx context.Context, orgID string) ([]Registry, error
 // RegistryByID fetches a registry resource by its ID.
 func (c Client) RegistryByID(ctx context.Context, orgID, registryID string) (*Registry, error) {
 	var r Registry
-	if err := c.requestBody(ctx, http.MethodGet, "/api/orgs/"+orgID+"/registries/"+registryID, nil, &r); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/orgs/"+orgID+"/registries/"+registryID, nil, &r); err != nil {
 		return nil, err
 	}
 	return &r, nil
@@ -44,10 +44,10 @@ type UpdateRegistryReq struct {
 
 // UpdateRegistry applies a partial update to a registry resource.
 func (c Client) UpdateRegistry(ctx context.Context, orgID, registryID string, req UpdateRegistryReq) error {
-	return c.requestBody(ctx, http.MethodPatch, "/api/orgs/"+orgID+"/registries/"+registryID, req, nil)
+	return c.requestBody(ctx, http.MethodPatch, "/api/private/orgs/"+orgID+"/registries/"+registryID, req, nil)
 }
 
 // DeleteRegistry deletes a registry resource by its ID.
 func (c Client) DeleteRegistry(ctx context.Context, orgID, registryID string) error {
-	return c.requestBody(ctx, http.MethodDelete, "/api/orgs/"+orgID+"/registries/"+registryID, nil, nil)
+	return c.requestBody(ctx, http.MethodDelete, "/api/private/orgs/"+orgID+"/registries/"+registryID, nil, nil)
 }

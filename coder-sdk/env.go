@@ -83,7 +83,7 @@ type CreateEnvironmentRequest struct {
 // CreateEnvironment sends a request to create an environment.
 func (c Client) CreateEnvironment(ctx context.Context, orgID string, req CreateEnvironmentRequest) (*Environment, error) {
 	var env Environment
-	if err := c.requestBody(ctx, http.MethodPost, "/api/orgs/"+orgID+"/environments", req, &env); err != nil {
+	if err := c.requestBody(ctx, http.MethodPost, "/api/private/orgs/"+orgID+"/environments", req, &env); err != nil {
 		return nil, err
 	}
 	return &env, nil
@@ -93,7 +93,7 @@ func (c Client) CreateEnvironment(ctx context.Context, orgID string, req CreateE
 // TODO: add the filter options, explore performance issue.
 func (c Client) Environments(ctx context.Context) ([]Environment, error) {
 	var envs []Environment
-	if err := c.requestBody(ctx, http.MethodGet, "/api/environments", nil, &envs); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/environments", nil, &envs); err != nil {
 		return nil, err
 	}
 	return envs, nil
@@ -102,7 +102,7 @@ func (c Client) Environments(ctx context.Context) ([]Environment, error) {
 // EnvironmentsByOrganization gets the list of environments owned by the given user.
 func (c Client) EnvironmentsByOrganization(ctx context.Context, userID, orgID string) ([]Environment, error) {
 	var envs []Environment
-	if err := c.requestBody(ctx, http.MethodGet, "/api/orgs/"+orgID+"/members/"+userID+"/environments", nil, &envs); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/orgs/"+orgID+"/members/"+userID+"/environments", nil, &envs); err != nil {
 		return nil, err
 	}
 	return envs, nil
@@ -110,12 +110,12 @@ func (c Client) EnvironmentsByOrganization(ctx context.Context, userID, orgID st
 
 // DeleteEnvironment deletes the environment.
 func (c Client) DeleteEnvironment(ctx context.Context, envID string) error {
-	return c.requestBody(ctx, http.MethodDelete, "/api/environments/"+envID, nil, nil)
+	return c.requestBody(ctx, http.MethodDelete, "/api/private/environments/"+envID, nil, nil)
 }
 
 // StopEnvironment stops the stops.
 func (c Client) StopEnvironment(ctx context.Context, envID string) error {
-	return c.requestBody(ctx, http.MethodPut, "/api/environments/"+envID+"/stop", nil, nil)
+	return c.requestBody(ctx, http.MethodPut, "/api/private/environments/"+envID+"/stop", nil, nil)
 }
 
 // UpdateEnvironmentReq defines the update operation, only setting
@@ -133,12 +133,12 @@ type UpdateEnvironmentReq struct {
 
 // RebuildEnvironment requests that the given envID is rebuilt with no changes to its specification.
 func (c Client) RebuildEnvironment(ctx context.Context, envID string) error {
-	return c.requestBody(ctx, http.MethodPatch, "/api/environments/"+envID, UpdateEnvironmentReq{}, nil)
+	return c.requestBody(ctx, http.MethodPatch, "/api/private/environments/"+envID, UpdateEnvironmentReq{}, nil)
 }
 
 // EditEnvironment modifies the environment specification and initiates a rebuild.
 func (c Client) EditEnvironment(ctx context.Context, envID string, req UpdateEnvironmentReq) error {
-	return c.requestBody(ctx, http.MethodPatch, "/api/environments/"+envID, req, nil)
+	return c.requestBody(ctx, http.MethodPatch, "/api/private/environments/"+envID, req, nil)
 }
 
 // DialWsep dials an environments command execution interface
@@ -163,7 +163,7 @@ func (c Client) DialIDEStatus(ctx context.Context, envID string) (*websocket.Con
 
 // DialEnvironmentBuildLog opens a websocket connection for the environment build log messages.
 func (c Client) DialEnvironmentBuildLog(ctx context.Context, envID string) (*websocket.Conn, error) {
-	return c.dialWebsocket(ctx, "/api/environments/"+envID+"/watch-update")
+	return c.dialWebsocket(ctx, "/api/private/environments/"+envID+"/watch-update")
 }
 
 // BuildLog defines a build log record for a Coder environment.
@@ -211,12 +211,12 @@ func (c Client) FollowEnvironmentBuildLog(ctx context.Context, envID string) (<-
 
 // DialEnvironmentStats opens a websocket connection for environment stats.
 func (c Client) DialEnvironmentStats(ctx context.Context, envID string) (*websocket.Conn, error) {
-	return c.dialWebsocket(ctx, "/api/environments/"+envID+"/watch-stats")
+	return c.dialWebsocket(ctx, "/api/private/environments/"+envID+"/watch-stats")
 }
 
 // DialResourceLoad opens a websocket connection for cpu load metrics on the environment.
 func (c Client) DialResourceLoad(ctx context.Context, envID string) (*websocket.Conn, error) {
-	return c.dialWebsocket(ctx, "/api/environments/"+envID+"/watch-resource-load")
+	return c.dialWebsocket(ctx, "/api/private/environments/"+envID+"/watch-resource-load")
 }
 
 // BuildLogType describes the type of an event.
