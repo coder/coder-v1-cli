@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"cdr.dev/coder-cli/pkg/clog"
+
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/config"
 	"github.com/spf13/cobra"
@@ -135,6 +137,7 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			fmt.Printf("Your private ssh key was written to \"%s\"\n", privateKeyFilepath)
 		}
 
+		writeSSHUXState(ctx, client, user.ID)
 		fmt.Printf("An auto-generated ssh config was written to \"%s\"\n", *configpath)
 		fmt.Println("You should now be able to ssh into your environment")
 		fmt.Printf("For example, try running\n\n\t$ ssh coder.%s\n\n", envs[0].Name)
@@ -214,4 +217,13 @@ func readStr(filename string) (string, error) {
 		return "", err
 	}
 	return string(contents), nil
+}
+
+func writeSSHUXState(ctx context.Context, client *coder.Client, userID string) {
+	// Update UXState that coder config-ssh has been run by the currently
+	// authenticated user
+	err := client.UpdateUXState(ctx, userID, map[string]interface{}{"cliSSHConfigured": true})
+	if err != nil {
+		clog.LogWarn("The Coder web client may not recognize that you've configured SSH.")
+	}
 }

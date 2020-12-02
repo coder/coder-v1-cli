@@ -114,6 +114,14 @@ func (c Client) UpdateUser(ctx context.Context, userID string, req UpdateUserReq
 	return c.requestBody(ctx, http.MethodPatch, "/api/private/users/"+userID, req, nil)
 }
 
+// UpdateUXState applies a partial update of the user's UX State.
+func (c Client) UpdateUXState(ctx context.Context, userID string, uxsPartial map[string]interface{}) error {
+	if err := c.requestBody(ctx, http.MethodPut, "/api/private/users/"+userID+"/ux-state", uxsPartial, nil); err != nil {
+		return err
+	}
+	return nil
+}
+
 // CreateUserReq defines the request parameters for creating a new user resource.
 type CreateUserReq struct {
 	Name              string    `json:"name"`
