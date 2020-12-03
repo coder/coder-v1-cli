@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -47,15 +46,6 @@ func urlCmd() *cobra.Command {
 	)
 
 	return cmd
-}
-
-// DevURL is the parsed json response record for a devURL from cemanager.
-type DevURL struct {
-	ID     string `json:"id"     table:"-"`
-	URL    string `json:"url"    table:"URL"`
-	Port   int    `json:"port"   table:"Port"`
-	Name   string `json:"name"   table:"-"`
-	Access string `json:"access" table:"Access"`
 }
 
 var urlAccessLevel = map[string]string{
@@ -130,9 +120,10 @@ func createDevURLCmd() *cobra.Command {
 	var (
 		access  string
 		urlname string
+		scheme  string
 	)
 	cmd := &cobra.Command{
-		Use:     "create [env_name] [port] [--access <level>] [--name <name>]",
+		Use:     "create [env_name] [port]",
 		Short:   "Create a new devurl for an environment",
 		Aliases: []string{"edit"},
 		Args:    cobra.ExactArgs(2),
@@ -174,29 +165,29 @@ func createDevURLCmd() *cobra.Command {
 
 			urlID, found := devURLID(portNum, urls)
 			if found {
-				clog.LogInfo(fmt.Sprintf("updating devurl for port %v", port))
 				err := client.PutDevURL(ctx, env.ID, urlID, coder.PutDevURLReq{
 					Port:   portNum,
 					Name:   urlname,
 					Access: access,
 					EnvID:  env.ID,
-					Scheme: "http",
+					Scheme: scheme,
 				})
 				if err != nil {
 					return xerrors.Errorf("update DevURL: %w", err)
 				}
+				clog.LogSuccess(fmt.Sprintf("patched devurl for port %s", port))
 			} else {
-				clog.LogInfo(fmt.Sprintf("Adding devurl for port %v", port))
 				err := client.CreateDevURL(ctx, env.ID, coder.CreateDevURLReq{
 					Port:   portNum,
 					Name:   urlname,
 					Access: access,
 					EnvID:  env.ID,
-					Scheme: "http",
+					Scheme: scheme,
 				})
 				if err != nil {
 					return xerrors.Errorf("insert DevURL: %w", err)
 				}
+				clog.LogSuccess(fmt.Sprintf("created devurl for port %s", port))
 			}
 			return nil
 		},
@@ -204,6 +195,7 @@ func createDevURLCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&access, "access", "private", "Set DevURL access to [private | org | authed | public]")
 	cmd.Flags().StringVar(&urlname, "name", "", "DevURL name")
+	cmd.Flags().StringVar(&scheme, "scheme", "http", "Server scheme (http|https)")
 	_ = cmd.MarkFlagRequired("name")
 
 	return cmd
@@ -217,7 +209,7 @@ var devURLNameValidRx = regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9]{0,63}$")
 // devURLID returns the ID of a devURL, given the env name and port
 // from a list of DevURL records.
 // ("", false) is returned if no match is found.
-func devURLID(port int, urls []DevURL) (string, bool) {
+func devURLID(port int, urls []coder.DevURL) (string, bool) {
 	for _, url := range urls {
 		if url.Port == port {
 			return url.ID, true
@@ -267,36 +259,10 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 }
 
 // urlList returns the list of active devURLs from the cemanager.
-func urlList(ctx context.Context, client *coder.Client, envName string) ([]DevURL, error) {
+func urlList(ctx context.Context, client *coder.Client, envName string) ([]coder.DevURL, error) {
 	env, err := findEnv(ctx, client, envName, coder.Me)
 	if err != nil {
 		return nil, err
 	}
-
-	reqString := "%s/api/environments/%s/devurls?session_token=%s"
-	reqURL := fmt.Sprintf(reqString, client.BaseURL, env.ID, client.Token)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }() // Best effort.
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, xerrors.Errorf("non-success status code: %d", resp.StatusCode)
-	}
-
-	dec := json.NewDecoder(resp.Body)
-
-	var devURLs []DevURL
-	if err := dec.Decode(&devURLs); err != nil {
-		return nil, err
-	}
-
-	return devURLs, nil
+	return client.DevURLs(ctx, env.ID)
 }
