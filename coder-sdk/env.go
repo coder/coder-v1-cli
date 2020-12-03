@@ -32,6 +32,7 @@ type Environment struct {
 	LastOpenedAt     time.Time        `json:"last_opened_at"     table:"-"`
 	LastConnectionAt time.Time        `json:"last_connection_at" table:"-"`
 	AutoOffThreshold Duration         `json:"auto_off_threshold" table:"-"`
+	SSHAvailable     bool             `json:"ssh_available"      table:"-"`
 }
 
 // RebuildMessage defines the message shown when an Environment requires a rebuild for it can be accessed.
