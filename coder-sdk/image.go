@@ -80,5 +80,5 @@ func (c Client) UpdateImage(ctx context.Context, imageID string, req UpdateImage
 
 // UpdateImageTags refreshes the latest digests for all tags of the image.
 func (c Client) UpdateImageTags(ctx context.Context, imageID string) error {
-	return c.requestBody(ctx, http.MethodPost, "api/images/"+imageID+"/tags/update", nil, nil)
+	return c.requestBody(ctx, http.MethodPost, "/api/images/"+imageID+"/tags/update", nil, nil)
 }
