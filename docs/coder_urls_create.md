@@ -3,7 +3,7 @@
 Create a new devurl for an environment
 
 ```
-coder urls create [env_name] [port] [--access <level>] [--name <name>] [flags]
+coder urls create [env_name] [port] [flags]
 ```
 
 ### Options
@@ -12,6 +12,7 @@ coder urls create [env_name] [port] [--access <level>] [--name <name>] [flags]
       --access string   Set DevURL access to [private | org | authed | public] (default "private")
   -h, --help            help for create
       --name string     DevURL name
+      --scheme string   Server scheme (http|https) (default "http")
 ```
 
 ### Options inherited from parent commands
