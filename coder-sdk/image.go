@@ -77,3 +77,8 @@ func (c Client) OrganizationImages(ctx context.Context, orgID string) ([]Image, 
 func (c Client) UpdateImage(ctx context.Context, imageID string, req UpdateImageReq) error {
 	return c.requestBody(ctx, http.MethodPatch, "/api/images/"+imageID, req, nil)
 }
+
+// UpdateImageTags refreshes the latest digests for all tags of the image.
+func (c Client) UpdateImageTags(ctx context.Context, imageID string) error {
+	return c.requestBody(ctx, http.MethodPost, "api/images/"+imageID+"/tags/update", nil, nil)
+}
