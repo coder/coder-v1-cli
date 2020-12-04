@@ -259,10 +259,8 @@ func readStr(filename string) (string, error) {
 }
 
 func writeSSHUXState(ctx context.Context, client *coder.Client, userID string, envs []coder.Environment) {
-	// Create a map of env.ID -> true to indicate to the web client that as of
-	// all their current environments have SSH configured. This command needs
-	// to be re-run each time new environments are created in order for them
-	// to have access.
+	// Create a map of env.ID -> true to indicate to the web client that all
+	// current environments have SSH configured
 	cliSSHConfigured := make(map[string]bool)
 	for _, env := range envs {
 		cliSSHConfigured[env.ID] = true
