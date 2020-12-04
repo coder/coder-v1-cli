@@ -135,7 +135,7 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			fmt.Printf("Your private ssh key was written to \"%s\"\n", privateKeyFilepath)
 		}
 
-		writeSSHUXState(ctx, client, user.ID)
+		writeSSHUXState(ctx, client, user.ID, envs)
 		fmt.Printf("An auto-generated ssh config was written to \"%s\"\n", *configpath)
 		fmt.Println("You should now be able to ssh into your environment")
 		fmt.Printf("For example, try running\n\n\t$ ssh coder.%s\n\n", envs[0].Name)
@@ -258,10 +258,16 @@ func readStr(filename string) (string, error) {
 	return string(contents), nil
 }
 
-func writeSSHUXState(ctx context.Context, client *coder.Client, userID string) {
+func writeSSHUXState(ctx context.Context, client *coder.Client, userID string, envs []coder.Environment) {
+	// Create a map of env.ID -> true to indicate to the web client that all
+	// current environments have SSH configured
+	cliSSHConfigured := make(map[string]bool)
+	for _, env := range envs {
+		cliSSHConfigured[env.ID] = true
+	}
 	// Update UXState that coder config-ssh has been run by the currently
 	// authenticated user
-	err := client.UpdateUXState(ctx, userID, map[string]interface{}{"cliSSHConfigured": true})
+	err := client.UpdateUXState(ctx, userID, map[string]interface{}{"cliSSHConfigured": cliSSHConfigured})
 	if err != nil {
 		clog.LogWarn("The Coder web client may not recognize that you've configured SSH.")
 	}
