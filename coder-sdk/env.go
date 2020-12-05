@@ -33,6 +33,7 @@ type Environment struct {
 	LastConnectionAt time.Time        `json:"last_connection_at" table:"-"`
 	AutoOffThreshold Duration         `json:"auto_off_threshold" table:"-"`
 	SSHAvailable     bool             `json:"ssh_available"      table:"-"`
+	UseContainerVM   bool             `json:"use_container_vm"   table:"CVM"`
 }
 
 // RebuildMessage defines the message shown when an Environment requires a rebuild for it can be accessed.
@@ -71,14 +72,15 @@ const (
 
 // CreateEnvironmentRequest is used to configure a new environment.
 type CreateEnvironmentRequest struct {
-	Name     string   `json:"name"`
-	ImageID  string   `json:"image_id"`
-	ImageTag string   `json:"image_tag"`
-	CPUCores float32  `json:"cpu_cores"`
-	MemoryGB float32  `json:"memory_gb"`
-	DiskGB   int      `json:"disk_gb"`
-	GPUs     int      `json:"gpus"`
-	Services []string `json:"services"`
+	Name           string   `json:"name"`
+	ImageID        string   `json:"image_id"`
+	ImageTag       string   `json:"image_tag"`
+	CPUCores       float32  `json:"cpu_cores"`
+	MemoryGB       float32  `json:"memory_gb"`
+	DiskGB         int      `json:"disk_gb"`
+	GPUs           int      `json:"gpus"`
+	Services       []string `json:"services"`
+	UseContainerVM bool     `json:"use_container_vm"`
 }
 
 // CreateEnvironment sends a request to create an environment.
@@ -130,6 +132,7 @@ type UpdateEnvironmentReq struct {
 	GPUs                 *int      `json:"gpus"`
 	Services             *[]string `json:"services"`
 	CodeServerReleaseURL *string   `json:"code_server_release_url"`
+	UseContainerVM       *bool     `json:"use_container_vm"`
 }
 
 // RebuildEnvironment requests that the given envID is rebuilt with no changes to its specification.
