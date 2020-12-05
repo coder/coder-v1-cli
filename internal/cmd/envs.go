@@ -256,7 +256,7 @@ func editEnvCmd(user *string) *cobra.Command {
 		gpus   int
 		follow bool
 		useCVM bool
-		notCVM  bool
+		notCVM bool
 	)
 
 	cmd := &cobra.Command{
