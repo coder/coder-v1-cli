@@ -301,6 +301,8 @@ coder envs edit back-end-env --disk 20`,
 				image:       img,
 				imageTag:    tag,
 				orgName:     org,
+				useCVM:      useCVM,
+				notCVM:      notCVM,
 			})
 			if err != nil {
 				return err
@@ -399,7 +401,7 @@ type updateConf struct {
 	imageTag    string
 	orgName     string
 	useCVM      bool
-	noCVM       bool
+	notCVM      bool
 }
 
 func boolP(a bool) *bool { return &a }
@@ -412,13 +414,13 @@ func buildUpdateReq(ctx context.Context, client *coder.Client, conf updateConf) 
 		defaultDiskGB   int
 	)
 
-	if conf.useCVM && conf.noCVM {
+	if conf.useCVM && conf.notCVM {
 		return nil, xerrors.New("--container-vm and --not-container-vm flags conflict")
 	}
 	if conf.useCVM {
 		updateReq.UseContainerVM = boolP(true)
 	}
-	if conf.noCVM {
+	if conf.notCVM {
 		updateReq.UseContainerVM = boolP(false)
 	}
 
