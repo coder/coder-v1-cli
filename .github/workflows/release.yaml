@@ -19,8 +19,8 @@ jobs:
       - name: Upload windows
         uses: actions/upload-artifact@v2
         with:
-          name: coder-cli-windows-386.tar.gz
-          path: ./ci/bin/coder-cli-windows-386.tar.gz
+          name: coder-cli-windows-386.zip
+          path: ./ci/bin/coder-cli-windows-386.zip
   build_darwin:
     name: Build darwin binary
     runs-on: macos-latest
@@ -44,8 +44,8 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
-          name: coder-cli-darwin-amd64.tar.gz
-          path: ./ci/bin/coder-cli-darwin-amd64.tar.gz
+          name: coder-cli-darwin-amd64.zip
+          path: ./ci/bin/coder-cli-darwin-amd64.zip
   draft_release:
     name: Create Release
     runs-on: macos-latest
