@@ -53,11 +53,7 @@ jobs:
       - build_darwin
       - build
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
-        with:
-          path: ./ci/bin
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -76,7 +72,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./ci/bin/coder-cli-linux-amd64.tar.gz
+          asset_path: coder-cli-linux-amd64.tar.gz
           asset_name: coder-cli-linux-amd64.tar.gz
           asset_content_type: application/tar+gzip
       - name: Upload MacOS Release
@@ -86,7 +82,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./ci/bin/coder-cli-darwin-amd64.zip
+          asset_path: coder-cli-darwin-amd64.zip
           asset_name: coder-cli-darwin-amd64.zip
           asset_content_type: application/zip
       - name: Upload Windows Release
@@ -96,6 +92,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./ci/bin/coder-cli-windows-386.zip
+          asset_path: coder-cli-windows-386.zip
           asset_name: coder-cli-windows-386.zip
           asset_content_type: application/zip
