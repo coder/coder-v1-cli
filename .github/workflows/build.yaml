@@ -2,7 +2,19 @@ name: build
 on: [push]
 
 jobs:
-  build:
+  build_linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Build
+        run: ./ci/steps/build.sh
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          name: coder-cli-linuxbuild
+          path: ./ci/bin/coder-cli-*
+  build_macos:
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -24,5 +36,5 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
-          name: coder-cli
+          name: coder-cli-macosbuild
           path: ./ci/bin/coder-cli-*
