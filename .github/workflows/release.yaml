@@ -4,7 +4,25 @@ on:
 name: create_github_release
 jobs:
   build:
-    name: Create Release
+    name: Build binaries
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build
+        run: make -j build/linux build/windows
+      - name: Upload linux
+        uses: actions/upload-artifact@v2
+        with:
+          name: coder-cli-linux-amd64.tar.gz
+          path: ./ci/bin/coder-cli-linux-amd64.tar.gz
+      - name: Upload windows
+        uses: actions/upload-artifact@v2
+        with:
+          name: coder-cli-windows-386.tar.gz
+          path: ./ci/bin/coder-cli-windows-386.tar.gz
+  build_darwin:
+    name: Build darwin binary
     runs-on: macos-latest
     steps:
       - name: Checkout code
@@ -19,10 +37,25 @@ jobs:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
       - name: Build Release Assets
-        run: ./ci/steps/build.sh
+        run: make build/macos
         env:
           AC_USERNAME: ${{ secrets.AC_USERNAME }}
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          name: coder-cli-darwin-amd64.tar.gz
+          path: ./ci/bin/coder-cli-darwin-amd64.tar.gz
+  draft_release:
+    name: Create Release
+    runs-on: macos-latest
+    needs:
+      - build_darwin
+      - build
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          path: ./ci/bin
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
