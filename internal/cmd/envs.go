@@ -148,6 +148,7 @@ func createEnvCmd(user *string) *cobra.Command {
 		img    string
 		tag    string
 		follow bool
+		useCVM bool
 	)
 
 	cmd := &cobra.Command{
@@ -189,13 +190,14 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 
 			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
 			createReq := &coder.CreateEnvironmentRequest{
-				Name:     args[0],
-				ImageID:  importedImg.ID,
-				ImageTag: tag,
-				CPUCores: cpu,
-				MemoryGB: memory,
-				DiskGB:   disk,
-				GPUs:     gpus,
+				Name:           args[0],
+				ImageID:        importedImg.ID,
+				ImageTag:       tag,
+				CPUCores:       cpu,
+				MemoryGB:       memory,
+				DiskGB:         disk,
+				GPUs:           gpus,
+				UseContainerVM: useCVM,
 			}
 
 			// if any of these defaulted to their zero value we provision
@@ -238,6 +240,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 	cmd.Flags().IntVarP(&gpus, "gpus", "g", 0, "number GPUs an environment should be provisioned with.")
 	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image to base the environment off of.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
+	cmd.Flags().BoolVar(&useCVM, "container-vm", false, "deploy the environment as a Container-based VM")
 	_ = cmd.MarkFlagRequired("image")
 	return cmd
 }
@@ -252,6 +255,8 @@ func editEnvCmd(user *string) *cobra.Command {
 		disk   int
 		gpus   int
 		follow bool
+		useCVM bool
+		notCVM bool
 	)
 
 	cmd := &cobra.Command{
@@ -296,6 +301,8 @@ coder envs edit back-end-env --disk 20`,
 				image:       img,
 				imageTag:    tag,
 				orgName:     org,
+				useCVM:      useCVM,
+				notCVM:      notCVM,
 			})
 			if err != nil {
 				return err
@@ -328,6 +335,8 @@ coder envs edit back-end-env --disk 20`,
 	cmd.Flags().IntVarP(&disk, "disk", "d", 0, "The amount of disk storage an environment should be provisioned with.")
 	cmd.Flags().IntVarP(&gpus, "gpu", "g", 0, "The amount of disk storage to provision the environment with.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
+	cmd.Flags().BoolVar(&useCVM, "container-vm", false, "deploy the environment as a Container-based VM")
+	cmd.Flags().BoolVar(&notCVM, "not-container-vm", false, "do not deploy the environment as a Container-based VM")
 	return cmd
 }
 
@@ -391,7 +400,11 @@ type updateConf struct {
 	image       string
 	imageTag    string
 	orgName     string
+	useCVM      bool
+	notCVM      bool
 }
+
+func boolP(a bool) *bool { return &a }
 
 func buildUpdateReq(ctx context.Context, client *coder.Client, conf updateConf) (*coder.UpdateEnvironmentReq, error) {
 	var (
@@ -400,6 +413,16 @@ func buildUpdateReq(ctx context.Context, client *coder.Client, conf updateConf) 
 		defaultMemGB    float32
 		defaultDiskGB   int
 	)
+
+	if conf.useCVM && conf.notCVM {
+		return nil, xerrors.New("--container-vm and --not-container-vm flags conflict")
+	}
+	if conf.useCVM {
+		updateReq.UseContainerVM = boolP(true)
+	}
+	if conf.notCVM {
+		updateReq.UseContainerVM = boolP(false)
+	}
 
 	// If this is not empty it means the user is requesting to change the environment image.
 	if conf.image != "" {
