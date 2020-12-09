@@ -48,7 +48,7 @@ jobs:
           path: ./ci/bin/coder-cli-darwin-amd64.zip
   draft_release:
     name: Create Release
-    runs-on: macos-latest
+    runs-on: ubuntu-20.04
     needs:
       - build_darwin
       - build
