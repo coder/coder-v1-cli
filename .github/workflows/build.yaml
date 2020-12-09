@@ -3,7 +3,7 @@ on: [push]
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -20,15 +20,10 @@ jobs:
       #     p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
       #     p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
       - name: Build
-        # run: ./ci/steps/build.sh
-        run: |
-          go build -ldflags "-X cdr.dev/coder-cli/internal/version.Version=vdean" -o ./ci/bin/coder-cli-windows.exe ./cmd/coder
+        run: ./ci/steps/build.sh
         env:
           AC_USERNAME: ${{ secrets.AC_USERNAME }}
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
-          GOOS: windows
-          GOARCH: '386'
-          CGO_ENABLED: '0'
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
