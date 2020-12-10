@@ -3,6 +3,18 @@ on: [push]
 
 jobs:
   build:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Build
+        run: make -j build/linux build/windows
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          name: coder-cli
+          path: ./ci/bin/coder-cli-*
+  build_darwin:
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -17,7 +29,7 @@ jobs:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
       - name: Build
-        run: ./ci/steps/build.sh
+        run: make build/macos
         env:
           AC_USERNAME: ${{ secrets.AC_USERNAME }}
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}

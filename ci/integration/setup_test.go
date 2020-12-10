@@ -37,7 +37,7 @@ func build(path string) error {
 	cmd := exec.Command(
 		"sh", "-c",
 		fmt.Sprintf(
-			"cd ../../ && mkdir -p %s && ./ci/steps/build.sh && cp ./ci/bin/%s %s/ && tar -xzf %s -C %s",
+			"cd ../../ && mkdir -p %s && make build/linux && cp ./ci/bin/%s %s/ && tar -xzf %s -C %s",
 			dir, tar, dir, filepath.Join(dir, tar), dir),
 	)
 

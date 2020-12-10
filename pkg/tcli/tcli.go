@@ -67,7 +67,7 @@ func NewContainerRunner(ctx context.Context, config *ContainerConfig) (*Containe
 		"run",
 		"--name", config.Name,
 		"--network", "host",
-		"-it", "-d",
+		"--rm", "-it", "-d",
 	}
 	args = append(args, mountArgs(config.BindMounts)...)
 	args = append(args, config.Image)
