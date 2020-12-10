@@ -17,9 +17,10 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func rebuildEnvCommand(user *string) *cobra.Command {
+func rebuildEnvCommand() *cobra.Command {
 	var follow bool
 	var force bool
+	var user string
 	cmd := &cobra.Command{
 		Use:   "rebuild [environment_name]",
 		Short: "rebuild a Coder environment",
@@ -32,7 +33,7 @@ coder envs rebuild backend-env --force`,
 			if err != nil {
 				return err
 			}
-			env, err := findEnv(ctx, client, args[0], *user)
+			env, err := findEnv(ctx, client, args[0], user)
 			if err != nil {
 				return err
 			}
@@ -67,6 +68,7 @@ coder envs rebuild backend-env --force`,
 		},
 	}
 
+	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow build log after initiating rebuild")
 	cmd.Flags().BoolVar(&force, "force", false, "force rebuild without showing a confirmation prompt")
 	return cmd
@@ -136,7 +138,8 @@ func trailBuildLogs(ctx context.Context, client *coder.Client, envID string) err
 	return nil
 }
 
-func watchBuildLogCommand(user *string) *cobra.Command {
+func watchBuildLogCommand() *cobra.Command {
+	var user string
 	cmd := &cobra.Command{
 		Use:     "watch-build [environment_name]",
 		Example: "coder envs watch-build front-end-env",
@@ -148,7 +151,7 @@ func watchBuildLogCommand(user *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			env, err := findEnv(ctx, client, args[0], *user)
+			env, err := findEnv(ctx, client, args[0], user)
 			if err != nil {
 				return err
 			}
@@ -159,5 +162,6 @@ func watchBuildLogCommand(user *string) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	return cmd
 }

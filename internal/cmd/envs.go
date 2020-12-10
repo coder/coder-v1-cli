@@ -18,22 +18,20 @@ import (
 const defaultImgTag = "latest"
 
 func envsCmd() *cobra.Command {
-	var user string
 	cmd := &cobra.Command{
 		Use:   "envs",
 		Short: "Interact with Coder environments",
 		Long:  "Perform operations on the Coder environments owned by the active user.",
 	}
-	cmd.PersistentFlags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 
 	cmd.AddCommand(
-		lsEnvsCommand(&user),
-		stopEnvsCmd(&user),
-		rmEnvsCmd(&user),
-		watchBuildLogCommand(&user),
-		rebuildEnvCommand(&user),
-		createEnvCmd(&user),
-		editEnvCmd(&user),
+		lsEnvsCommand(),
+		stopEnvsCmd(),
+		rmEnvsCmd(),
+		watchBuildLogCommand(),
+		rebuildEnvCommand(),
+		createEnvCmd(),
+		editEnvCmd(),
 	)
 	return cmd
 }
@@ -43,8 +41,11 @@ const (
 	jsonOutput  = "json"
 )
 
-func lsEnvsCommand(user *string) *cobra.Command {
-	var outputFmt string
+func lsEnvsCommand() *cobra.Command {
+	var (
+		outputFmt string
+		user      string
+	)
 
 	cmd := &cobra.Command{
 		Use:   "ls",
@@ -56,7 +57,7 @@ func lsEnvsCommand(user *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			envs, err := getEnvs(ctx, client, *user)
+			envs, err := getEnvs(ctx, client, user)
 			if err != nil {
 				return err
 			}
@@ -85,13 +86,15 @@ func lsEnvsCommand(user *string) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	cmd.Flags().StringVarP(&outputFmt, "output", "o", humanOutput, "human | json")
 
 	return cmd
 }
 
-func stopEnvsCmd(user *string) *cobra.Command {
-	return &cobra.Command{
+func stopEnvsCmd() *cobra.Command {
+	var user string
+	cmd := &cobra.Command{
 		Use:   "stop [...environment_names]",
 		Short: "stop Coder environments by name",
 		Long:  "Stop Coder environments by name",
@@ -117,7 +120,7 @@ coder envs --user charlie@coder.com ls -o json \
 			for _, envName := range args {
 				envName := envName
 				egroup.Go(func() error {
-					env, err := findEnv(ctx, client, envName, *user)
+					env, err := findEnv(ctx, client, envName, user)
 					if err != nil {
 						return err
 					}
@@ -136,9 +139,11 @@ coder envs --user charlie@coder.com ls -o json \
 			return egroup.Wait()
 		},
 	}
+	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
+	return cmd
 }
 
-func createEnvCmd(user *string) *cobra.Command {
+func createEnvCmd() *cobra.Command {
 	var (
 		org    string
 		cpu    float32
@@ -170,7 +175,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 				return err
 			}
 
-			multiOrgMember, err := isMultiOrgMember(ctx, client, *user)
+			multiOrgMember, err := isMultiOrgMember(ctx, client, coder.Me)
 			if err != nil {
 				return err
 			}
@@ -180,7 +185,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 			}
 
 			importedImg, err := findImg(ctx, client, findImgConf{
-				email:   *user,
+				email:   coder.Me,
 				imgName: img,
 				orgName: org,
 			})
@@ -245,7 +250,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 	return cmd
 }
 
-func editEnvCmd(user *string) *cobra.Command {
+func editEnvCmd() *cobra.Command {
 	var (
 		org    string
 		img    string
@@ -257,6 +262,7 @@ func editEnvCmd(user *string) *cobra.Command {
 		follow bool
 		useCVM bool
 		notCVM bool
+		user   string
 	)
 
 	cmd := &cobra.Command{
@@ -276,12 +282,12 @@ coder envs edit back-end-env --disk 20`,
 
 			envName := args[0]
 
-			env, err := findEnv(ctx, client, envName, *user)
+			env, err := findEnv(ctx, client, envName, user)
 			if err != nil {
 				return err
 			}
 
-			multiOrgMember, err := isMultiOrgMember(ctx, client, *user)
+			multiOrgMember, err := isMultiOrgMember(ctx, client, user)
 			if err != nil {
 				return err
 			}
@@ -337,11 +343,16 @@ coder envs edit back-end-env --disk 20`,
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.Flags().BoolVar(&useCVM, "container-vm", false, "deploy the environment as a Container-based VM")
 	cmd.Flags().BoolVar(&notCVM, "not-container-vm", false, "do not deploy the environment as a Container-based VM")
+	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	return cmd
 }
 
-func rmEnvsCmd(user *string) *cobra.Command {
-	var force bool
+func rmEnvsCmd() *cobra.Command {
+	var (
+		force bool
+		user  string
+	)
+
 	cmd := &cobra.Command{
 		Use:   "rm [...environment_names]",
 		Short: "remove Coder environments by name",
@@ -369,7 +380,7 @@ func rmEnvsCmd(user *string) *cobra.Command {
 			for _, envName := range args {
 				envName := envName
 				egroup.Go(func() error {
-					env, err := findEnv(ctx, client, envName, *user)
+					env, err := findEnv(ctx, client, envName, user)
 					if err != nil {
 						return err
 					}
@@ -387,6 +398,7 @@ func rmEnvsCmd(user *string) *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "force remove the specified environments without prompting first")
+	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	return cmd
 }
 
@@ -396,7 +408,7 @@ type updateConf struct {
 	diskGB      int
 	gpus        int
 	environment *coder.Environment
-	user        *string
+	user        string
 	image       string
 	imageTag    string
 	orgName     string
@@ -427,7 +439,7 @@ func buildUpdateReq(ctx context.Context, client *coder.Client, conf updateConf) 
 	// If this is not empty it means the user is requesting to change the environment image.
 	if conf.image != "" {
 		importedImg, err := findImg(ctx, client, findImgConf{
-			email:   *conf.user,
+			email:   conf.user,
 			imgName: conf.image,
 			orgName: conf.orgName,
 		})
