@@ -16,16 +16,16 @@ coder envs rebuild backend-env --force
 ### Options
 
 ```
-      --follow   follow build log after initiating rebuild
-      --force    force rebuild without showing a confirmation prompt
-  -h, --help     help for rebuild
+      --follow        follow build log after initiating rebuild
+      --force         force rebuild without showing a confirmation prompt
+  -h, --help          help for rebuild
+      --user string   Specify the user whose resources to target (default "me")
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --user string   Specify the user whose resources to target (default "me")
-  -v, --verbose       show verbose output
+  -v, --verbose   show verbose output
 ```
 
 ### SEE ALSO

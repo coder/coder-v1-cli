@@ -32,13 +32,13 @@ coder envs edit back-end-env --disk 20
       --not-container-vm   do not deploy the environment as a Container-based VM
   -o, --org string         name of the organization the environment should be created under.
   -t, --tag string         image tag of the image you want to base the environment off of. (default "latest")
+      --user string        Specify the user whose resources to target (default "me")
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --user string   Specify the user whose resources to target (default "me")
-  -v, --verbose       show verbose output
+  -v, --verbose   show verbose output
 ```
 
 ### SEE ALSO
