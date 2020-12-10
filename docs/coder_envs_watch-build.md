@@ -15,14 +15,14 @@ coder envs watch-build front-end-env
 ### Options
 
 ```
-  -h, --help   help for watch-build
+  -h, --help          help for watch-build
+      --user string   Specify the user whose resources to target (default "me")
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --user string   Specify the user whose resources to target (default "me")
-  -v, --verbose       show verbose output
+  -v, --verbose   show verbose output
 ```
 
 ### SEE ALSO

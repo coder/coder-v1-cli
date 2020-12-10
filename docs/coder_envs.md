@@ -9,8 +9,7 @@ Perform operations on the Coder environments owned by the active user.
 ### Options
 
 ```
-  -h, --help          help for envs
-      --user string   Specify the user whose resources to target (default "me")
+  -h, --help   help for envs
 ```
 
 ### Options inherited from parent commands

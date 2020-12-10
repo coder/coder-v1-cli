@@ -9,15 +9,15 @@ coder envs rm [...environment_names] [flags]
 ### Options
 
 ```
-  -f, --force   force remove the specified environments without prompting first
-  -h, --help    help for rm
+  -f, --force         force remove the specified environments without prompting first
+  -h, --help          help for rm
+      --user string   Specify the user whose resources to target (default "me")
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --user string   Specify the user whose resources to target (default "me")
-  -v, --verbose       show verbose output
+  -v, --verbose   show verbose output
 ```
 
 ### SEE ALSO
