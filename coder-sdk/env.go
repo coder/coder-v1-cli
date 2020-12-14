@@ -132,7 +132,6 @@ type UpdateEnvironmentReq struct {
 	GPUs                 *int      `json:"gpus"`
 	Services             *[]string `json:"services"`
 	CodeServerReleaseURL *string   `json:"code_server_release_url"`
-	UseContainerVM       *bool     `json:"use_container_vm"`
 }
 
 // RebuildEnvironment requests that the given envID is rebuilt with no changes to its specification.
