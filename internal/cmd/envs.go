@@ -245,7 +245,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 	cmd.Flags().IntVarP(&gpus, "gpus", "g", 0, "number GPUs an environment should be provisioned with.")
 	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image to base the environment off of.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
-	cmd.Flags().BoolVar(&useCVM, "container-vm", false, "deploy the environment as a Container-based VM")
+	cmd.Flags().BoolVar(&useCVM, "container-based-vm", false, "deploy the environment as a Container-based VM")
 	_ = cmd.MarkFlagRequired("image")
 	return cmd
 }
