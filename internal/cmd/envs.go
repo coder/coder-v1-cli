@@ -408,8 +408,6 @@ type updateConf struct {
 	orgName     string
 }
 
-func boolP(a bool) *bool { return &a }
-
 func buildUpdateReq(ctx context.Context, client *coder.Client, conf updateConf) (*coder.UpdateEnvironmentReq, error) {
 	var (
 		updateReq       coder.UpdateEnvironmentReq
