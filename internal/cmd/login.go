@@ -11,6 +11,7 @@ import (
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/loginsrv"
+	"cdr.dev/coder-cli/internal/version"
 	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -64,7 +65,13 @@ func newLocalListener() (net.Listener, error) {
 // Not using the SDK as we want to verify the url/token pair before storing the config files.
 func pingAPI(ctx context.Context, envURL *url.URL, token string) error {
 	client := &coder.Client{BaseURL: envURL, Token: token}
-	if _, err := client.Me(ctx); err != nil {
+	if apiVersion, err := client.APIVersion(ctx); err == nil {
+		if apiVersion != "" && !version.VersionsMatch(apiVersion) {
+			logVersionMismatchError(apiVersion)
+		}
+	}
+	_, err := client.Me(ctx)
+	if err != nil {
 		return xerrors.Errorf("call api: %w", err)
 	}
 	return nil
