@@ -70,10 +70,10 @@ func newClient(ctx context.Context) (*coder.Client, error) {
 }
 
 func logVersionMismatchError(apiVersion string) {
-		clog.LogWarn(
-			"version mismatch detected",
-			fmt.Sprintf("Coder CLI version: %s", version.Version),
-			fmt.Sprintf("Coder API version: %s", apiVersion), clog.BlankLine,
-			clog.Tipf("download the appropriate version here: https://github.com/cdr/coder-cli/releases"),
-		)
+	clog.LogWarn(
+		"version mismatch detected",
+		fmt.Sprintf("Coder CLI version: %s", version.Version),
+		fmt.Sprintf("Coder API version: %s", apiVersion), clog.BlankLine,
+		clog.Tipf("download the appropriate version here: https://github.com/cdr/coder-cli/releases"),
+	)
 }
