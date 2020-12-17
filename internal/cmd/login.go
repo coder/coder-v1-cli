@@ -67,12 +67,7 @@ func pingAPI(ctx context.Context, envURL *url.URL, token string) error {
 	client := &coder.Client{BaseURL: envURL, Token: token}
 	if apiVersion, err := client.APIVersion(ctx); err == nil {
 		if apiVersion != "" && !version.VersionsMatch(apiVersion) {
-			clog.LogWarn(
-				"version mismatch detected",
-				fmt.Sprintf("Coder CLI version: %s", version.Version),
-				fmt.Sprintf("Coder API version: %s", apiVersion), clog.BlankLine,
-				clog.Tipf("download the appropriate version here: https://github.com/cdr/coder-cli/releases"),
-			)
+			logVersionMismatchError(apiVersion)
 		}
 	}
 	_, err := client.Me(ctx)
