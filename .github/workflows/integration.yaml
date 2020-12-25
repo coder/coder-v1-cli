@@ -12,9 +12,6 @@ jobs:
       CODER_EMAIL: ${{ secrets.CODER_EMAIL }}
       CODER_PASSWORD: ${{ secrets.CODER_PASSWORD }}
     steps:
-      - uses: denolib/setup-deno@v2
-        with:
-          deno-version: v1.x
       - uses: actions/checkout@v1
       - uses: actions/cache@v1
         with:
@@ -25,5 +22,8 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: '^1.14'
+      - uses: denolib/setup-deno@v2
+        with:
+          deno-version: v1.5.x
       - name: integration tests
         run: ./ci/steps/integration.ts
