@@ -48,7 +48,6 @@ const packageLinux = async (goos: string, goarch: string, tag: string) => {
 }
 
 const packageMacOS = async (goos: string, goarch: string, tag: string) => {
-  // cp ../gon.json $tmpdir/gon.json
   const artifact = `coder-cli-${goos}-${goarch}-${tag}.zip`
   await execInherit("gon -log-level debug ./gon.json")
   await Deno.rename("coder.zip", artifact)
