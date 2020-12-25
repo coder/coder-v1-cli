@@ -9,7 +9,7 @@ interface Params {
 }
 
 const template = ({ sha, version }: Params) => `class Coder < Formula
-  desc "a command line tool for the Coder remote development platorm"
+  desc "A command-line tool for the Coder remote development platform"
   homepage "https://github.com/cdr/coder-cli"
   url "https://github.com/cdr/coder-cli/releases/download/${version}/coder-cli-darwin-amd64-${version}.zip"
   sha256 "${sha}"

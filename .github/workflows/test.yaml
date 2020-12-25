@@ -5,6 +5,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
+      - run: apt-get update && apt-get install deno
       - uses: actions/checkout@v1
       - uses: actions/cache@v1
         with:
@@ -15,10 +16,11 @@ jobs:
       - name: fmt
         uses: ./ci/image
         with:
-          args: ./ci/steps/fmt.sh
+          args: ./ci/steps/fmt.ts
   lint:
     runs-on: ubuntu-latest
     steps:
+      - run: apt-get update && apt-get install deno
       - uses: actions/checkout@v2
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
@@ -28,6 +30,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - run: apt-get update && apt-get install deno
       - uses: actions/checkout@v1
       - uses: actions/cache@v1
         with:
@@ -38,10 +41,11 @@ jobs:
       - name: test
         uses: ./ci/image
         with:
-          args: ./ci/steps/unit_test.sh
+          args: ./ci/steps/unit_test.ts
   gendocs:
     runs-on: ubuntu-latest
     steps:
+      - run: apt-get update && apt-get install deno
       - uses: actions/checkout@v1
       - uses: actions/cache@v1
         with:
@@ -52,4 +56,4 @@ jobs:
       - name: generate-docs
         uses: ./ci/image
         with:
-          args: ./ci/steps/gendocs.sh
+          args: ./ci/steps/gendocs.ts
