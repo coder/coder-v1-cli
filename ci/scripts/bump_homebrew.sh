@@ -21,6 +21,10 @@ pushd homebrew-coder
 branch="coder-cli-release-$tag"
 git checkout -b "$branch"
 
+if [[ "$GITHUB_TOKEN" != "" ]]; then
+  git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/cdr/homebrew-coder"
+fi
+
 new_formula="$(cat <<EOF
 class Coder < Formula
   desc "Command-line tool for the Coder remote development platform"
