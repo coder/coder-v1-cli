@@ -53,8 +53,10 @@ jobs:
       - build_darwin
       - build
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
-      - name: content
+      - name: Debug downloaded artifacts
         run: sh -c "ls -al"
       - name: Create Release
         id: create_release
