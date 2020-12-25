@@ -97,3 +97,5 @@ jobs:
           asset_path: coder-cli-windows-386/coder-cli-windows-386.zip
           asset_name: coder-cli-windows-386.zip
           asset_content_type: application/zip
+      - name: Open PR to cdr/homebrew-coder
+        run: ./ci/scripts/update_homebrew.sh $(pwd)/coder-cli-darwin-amd64/coder-cli-darwin-amd64.zip
