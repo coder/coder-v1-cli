@@ -25,5 +25,6 @@ jobs:
       - uses: denolib/setup-deno@v2
         with:
           deno-version: v1.5.x
+      - run: sudo apt-get update && sudo apt-get install coreutils
       - name: integration tests
         run: ./ci/steps/integration.ts
