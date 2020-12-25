@@ -14,7 +14,7 @@ To report bugs and request features, please [open an issue](https://github.com/c
 ### Homebrew (Mac, Linux)
 
 ```sh
-brew install cdr/coder/coder  
+brew install cdr/coder/coder-cli
 ```
 
 ### Download (Windows, Linux, Mac)
