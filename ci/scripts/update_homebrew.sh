@@ -2,9 +2,14 @@
 
 set -e
 
-asset="$1"
-sha="$(sha256sum "$asset" | awk '{ print $1 }')"
+macos_asset="$1"
+linux_asset="$2"
+
+sha() {
+  sha256sum "$1" | awk '{ print $1 }'
+}
 tag="$(git describe --tags)"
+trimmed_tag="${tag#"v"}"
 
 tmpdir=$(mktemp -d)
 
@@ -18,12 +23,19 @@ git checkout -b "$branch"
 
 new_formula="$(cat <<EOF
 class Coder < Formula
-  desc "A command-line tool for the Coder remote development platform"
+  desc "Command-line tool for the Coder remote development platform"
   homepage "https://github.com/cdr/coder-cli"
-  url "https://github.com/cdr/coder-cli/releases/download/$tag/coder-cli-darwin-amd64.zip"
-  version "$tag"
-  sha256 "$sha"
+  version "$trimmed_tag"
   bottle :unneeded
+
+  if OS.mac?
+    url "https://github.com/cdr/coder-cli/releases/download/$tag/coder-cli-darwin-amd64.zip"
+    sha256 "$(sha "$macos_asset")"
+  else
+    url "https://github.com/cdr/coder-cli/releases/download/$tag/coder-cli-linux-amd64.tar.gz"
+    sha256 "$(sha "$linux_asset")"
+  end
+
   def install
     bin.install "coder"
   end
@@ -36,8 +48,9 @@ EOF
 
 echo "$new_formula" > coder.rb
 
+git diff
 git add coder.rb
-git commit -m "chore: update Coder CLI to $tag"
+git commit -m "chore: bump Coder CLI to $tag"
 git push --set-upstream origin "$branch"
 
 gh pr create --fill
