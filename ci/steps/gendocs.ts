@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno run --allow-all
-import { root, execInherit, requireNoFilesChanged, isCI } from "./lib.ts"
+import { cdProjectRoot, execInherit, requireNoFilesChanged, isCI } from "./lib.ts"
 
-await root()
+await cdProjectRoot()
 
 console.log("--- regenerating documentation")
 await Deno.remove("./docs", { recursive: true })

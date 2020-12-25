@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno run --allow-all
-import { root, write } from "./lib.ts"
+import { cdProjectRoot, write } from "./lib.ts"
 
-await root()
+await cdProjectRoot()
 
 interface Params {
   sha: string
