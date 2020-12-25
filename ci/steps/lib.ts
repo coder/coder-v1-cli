@@ -1,5 +1,8 @@
-export const root = async () =>
+export const cdProjectRoot = async () =>
   Deno.chdir(await exec("git rev-parse --show-toplevel"))
+
+export const cdCurrent = () =>
+  Deno.chdir(`${new URL(".", import.meta.url).pathname}/../`)
 
 export const string = (a: Uint8Array): string => new TextDecoder().decode(a)
 
