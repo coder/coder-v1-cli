@@ -1,4 +1,5 @@
 on:
+  workflow_dispatch:
   create:
     tags: "v*"
 name: create_github_release
