@@ -20,21 +20,21 @@ cp ../gon.json $tmpdir/gon.json
 pushd "$tmpdir"
 case "$GOOS" in
 "windows")
-	artifact="coder-cli-$GOOS-$GOARCH.zip"
+	artifact="coder-cli-$GOOS-$GOARCH-$tag.zip"
 	mv coder coder.exe
 	zip "$artifact" coder.exe
 	;;
 "linux")
-	artifact="coder-cli-$GOOS-$GOARCH.tar.gz"
+	artifact="coder-cli-$GOOS-$GOARCH-$tag.tar.gz"
 	tar -czf "$artifact" coder
 	;;
 "darwin")
 	if [[ ${CI-} ]]; then
-		artifact="coder-cli-$GOOS-$GOARCH.zip"
+		artifact="coder-cli-$GOOS-$GOARCH-$tag.zip"
 		gon -log-level debug ./gon.json
 		mv coder.zip $artifact
 	else
-		artifact="coder-cli-$GOOS-$GOARCH.tar.gz"
+		artifact="coder-cli-$GOOS-$GOARCH-$tag.tar.gz"
 		tar -czf "$artifact" coder
 		echo "--- warning: not in ci, skipping signed release of darwin"
 	fi
