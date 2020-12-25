@@ -11,13 +11,13 @@ To report bugs and request features, please [open an issue](https://github.com/c
 
 ## Installation
 
-### macOS
+### Homebrew (Mac, Linux)
 
-```text
+```sh
 brew install cdr/coder/coder  
 ```
 
-### Windows / Linux
+### Download (Windows, Linux, Mac)
 
 Download the latest [release](https://github.com/cdr/coder-cli/releases):
 
