@@ -5,9 +5,6 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: denolib/setup-deno@v2
-        with:
-          deno-version: v1.x
       - uses: actions/checkout@v1
       - uses: actions/cache@v1
         with:
@@ -22,9 +19,6 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: denolib/setup-deno@v2
-        with:
-          deno-version: v1.x
       - uses: actions/checkout@v2
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
@@ -34,9 +28,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: denolib/setup-deno@v2
-        with:
-          deno-version: v1.x
       - uses: actions/checkout@v1
       - uses: actions/cache@v1
         with:
@@ -51,9 +42,6 @@ jobs:
   gendocs:
     runs-on: ubuntu-latest
     steps:
-      - uses: denolib/setup-deno@v2
-        with:
-          deno-version: v1.x
       - uses: actions/checkout@v1
       - uses: actions/cache@v1
         with:
