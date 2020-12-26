@@ -18,7 +18,7 @@ git clone https://github.com/cdr/homebrew-coder
 
 pushd homebrew-coder
 
-branch="coder-cli-release-$tag"
+branch="bump-coder-cli-$tag"
 git checkout -b "$branch"
 
 if [[ "$GITHUB_TOKEN" != "" ]]; then
@@ -26,7 +26,7 @@ if [[ "$GITHUB_TOKEN" != "" ]]; then
 fi
 
 new_formula="$(cat <<EOF
-class Coder < Formula
+class CoderCli < Formula
   desc "Command-line tool for the Coder remote development platform"
   homepage "https://github.com/cdr/coder-cli"
   version "$trimmed_tag"
@@ -50,11 +50,11 @@ end
 EOF
 )"
 
-echo "$new_formula" > coder.rb
+echo "$new_formula" > coder-cli.rb
 
 git diff
-git add coder.rb
-git commit -m "chore: bump Coder CLI to $tag"
+git add coder-cli.rb
+git commit -m "chore: bump coder-cli to $tag"
 git push --set-upstream origin "$branch"
 
 gh pr create --fill
