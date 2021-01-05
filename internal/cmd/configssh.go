@@ -152,9 +152,10 @@ func removeOldConfig(config string) (string, bool) {
 	if startIndex == -1 || endIndex == -1 {
 		return config, false
 	}
-	config = config[:startIndex-1] + config[endIndex+len(sshEndToken)+1:]
-
-	return config, true
+	if startIndex == 0 {
+		return config[endIndex+len(sshEndToken)+1:], true
+	}
+	return config[:startIndex-1] + config[endIndex+len(sshEndToken)+1:], true
 }
 
 // sshAvailable returns true if SSH is available for at least one environment.
