@@ -58,29 +58,37 @@ func getEnvs(ctx context.Context, client *coder.Client, email string) ([]coder.E
 	return allEnvs, nil
 }
 
-// findEnv returns a single environment by name (if it exists.).
-func findEnv(ctx context.Context, client *coder.Client, envName, userEmail string) (*coder.Environment, error) {
+// searchForEnv searches a user's environments to find the specified envName. If none is found, the haystack of
+// environment names is returned.
+func searchForEnv(ctx context.Context, client *coder.Client, envName, userEmail string) (_ *coder.Environment, haystack []string, _ error) {
 	envs, err := getEnvs(ctx, client, userEmail)
 	if err != nil {
-		return nil, xerrors.Errorf("get environments: %w", err)
+		return nil, nil, xerrors.Errorf("get environments: %w", err)
 	}
 
 	// NOTE: We don't know in advance where we will find the env, so we can't pre-alloc.
-	var found []string
 	for _, env := range envs {
 		if env.Name == envName {
-			return &env, nil
+			return &env, nil, nil
 		}
 		// Keep track of what we found for the logs.
-		found = append(found, env.Name)
+		haystack = append(haystack, env.Name)
 	}
+	return nil, haystack, coder.ErrNotFound
+}
 
-	return nil, clog.Fatal(
-		"failed to find environment",
-		fmt.Sprintf("environment %q not found in %q", envName, found),
-		clog.BlankLine,
-		clog.Tipf("run \"coder envs ls\" to view your environments"),
-	)
+// findEnv returns a single environment by name (if it exists.).
+func findEnv(ctx context.Context, client *coder.Client, envName, userEmail string) (*coder.Environment, error) {
+	env, haystack, err := searchForEnv(ctx, client, envName, userEmail)
+	if err != nil {
+		return nil, clog.Fatal(
+			"failed to find environment",
+			fmt.Sprintf("environment %q not found in %q", envName, haystack),
+			clog.BlankLine,
+			clog.Tipf("run \"coder envs ls\" to view your environments"),
+		)
+	}
+	return env, nil
 }
 
 type findImgConf struct {
