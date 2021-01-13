@@ -41,7 +41,7 @@ func getEnvsForCompletion(user string) func(cmd *cobra.Command, args []string, t
 	}
 }
 
-// special handling for he common case of "coder sh" input without a positional argument.
+// special handling for the common case of "coder sh" input without a positional argument.
 func shValidArgs(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	if err := cobra.MinimumNArgs(1)(cmd, args); err != nil {
