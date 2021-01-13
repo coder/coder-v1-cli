@@ -41,12 +41,33 @@ func getEnvsForCompletion(user string) func(cmd *cobra.Command, args []string, t
 	}
 }
 
+// special handling for the common case of "coder sh" input without a positional argument.
+func shValidArgs(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	if err := cobra.MinimumNArgs(1)(cmd, args); err != nil {
+		client, err := newClient(ctx)
+		if err != nil {
+			return clog.Error("missing [environment_name] argument")
+		}
+		_, haystack, err := searchForEnv(ctx, client, "", coder.Me)
+		if err != nil {
+			return clog.Error("missing [environment_name] argument",
+				fmt.Sprintf("specify one of %q", haystack),
+				clog.BlankLine,
+				clog.Tipf("run \"coder envs ls\" to view your environments"),
+			)
+		}
+		return clog.Error("missing [environment_name] argument")
+	}
+	return nil
+}
+
 func shCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:                "sh [environment_name] [<command [args...]>]",
 		Short:              "Open a shell and execute commands in a Coder environment",
 		Long:               "Execute a remote command on the environment\\nIf no command is specified, the default shell is opened.",
-		Args:               cobra.MinimumNArgs(1),
+		Args:               shValidArgs,
 		DisableFlagParsing: true,
 		ValidArgsFunction:  getEnvsForCompletion(coder.Me),
 		RunE:               shell,
