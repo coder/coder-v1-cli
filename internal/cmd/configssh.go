@@ -176,7 +176,7 @@ func makeNewConfigs(userName string, envs []coderutil.EnvWithPool, privateKeyFil
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", sshStartToken, sshStartMessage)
 	for _, env := range envs {
 		if !env.Pool.SSHEnabled {
-			clog.LogWarn(fmt.Sprintf("SSH access is not enabled for pool %q", env.Pool.Name),
+			clog.LogWarn(fmt.Sprintf("SSH is not enabled for pool %q", env.Pool.Name),
 				clog.BlankLine,
 				clog.Tipf("ask an infrastructure administrator to enable SSH for this resource pool"),
 			)
