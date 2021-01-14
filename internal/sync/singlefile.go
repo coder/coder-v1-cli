@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/wsep"
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
@@ -17,7 +18,7 @@ import (
 
 // SingleFile copies the given file into the remote dir or remote path of the given coder.Environment.
 func SingleFile(ctx context.Context, local, remoteDir string, env *coder.Environment, client *coder.Client) error {
-	conn, err := client.DialWsep(ctx, env.ID)
+	conn, err := coderutil.DialEnvWsep(ctx, client, env)
 	if err != nil {
 		return xerrors.Errorf("dial remote execer: %w", err)
 	}

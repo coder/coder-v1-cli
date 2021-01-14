@@ -3,6 +3,7 @@ package coder
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"time"
 
 	"cdr.dev/wsep"
@@ -147,13 +148,13 @@ func (c Client) EditEnvironment(ctx context.Context, envID string, req UpdateEnv
 
 // DialWsep dials an environments command execution interface
 // See https://github.com/cdr/wsep for details.
-func (c Client) DialWsep(ctx context.Context, envID string) (*websocket.Conn, error) {
-	return c.dialWebsocket(ctx, "/proxy/environments/"+envID+"/wsep")
+func (c Client) DialWsep(ctx context.Context, accessURL *url.URL, envID string) (*websocket.Conn, error) {
+	return c.dialWebsocket(ctx, "/proxy/environments/"+envID+"/wsep", withBaseURL(accessURL))
 }
 
 // DialExecutor gives a remote execution interface for performing commands inside an environment.
-func (c Client) DialExecutor(ctx context.Context, envID string) (wsep.Execer, error) {
-	ws, err := c.DialWsep(ctx, envID)
+func (c Client) DialExecutor(ctx context.Context, accessURL *url.URL, envID string) (wsep.Execer, error) {
+	ws, err := c.DialWsep(ctx, accessURL, envID)
 	if err != nil {
 		return nil, err
 	}
@@ -161,8 +162,8 @@ func (c Client) DialExecutor(ctx context.Context, envID string) (wsep.Execer, er
 }
 
 // DialIDEStatus opens a websocket connection for cpu load metrics on the environment.
-func (c Client) DialIDEStatus(ctx context.Context, envID string) (*websocket.Conn, error) {
-	return c.dialWebsocket(ctx, "/proxy/environments/"+envID+"/ide/api/status")
+func (c Client) DialIDEStatus(ctx context.Context, accessURL *url.URL, envID string) (*websocket.Conn, error) {
+	return c.dialWebsocket(ctx, "/proxy/environments/"+envID+"/ide/api/status", withBaseURL(accessURL))
 }
 
 // DialEnvironmentBuildLog opens a websocket connection for the environment build log messages.

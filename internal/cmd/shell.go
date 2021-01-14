@@ -16,6 +16,7 @@ import (
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/activity"
+	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/coder-cli/internal/x/xterminal"
 	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/wsep"
@@ -161,9 +162,9 @@ func runCommand(ctx context.Context, envName, command string, args []string) err
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	conn, err := client.DialWsep(ctx, env.ID)
+	conn, err := coderutil.DialEnvWsep(ctx, client, env)
 	if err != nil {
-		return xerrors.Errorf("dial websocket: %w", err)
+		return xerrors.Errorf("dial executor: %w", err)
 	}
 	go heartbeat(ctx, conn, 15*time.Second)
 

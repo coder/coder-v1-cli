@@ -15,6 +15,7 @@ import (
 	"cdr.dev/coder-cli/pkg/clog"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/coder-cli/internal/config"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -112,10 +113,12 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			return xerrors.Errorf("check if SSH is available: unable to connect to SSH endpoint: %w", err)
 		}
 
-		newConfig, err := makeNewConfigs(user.Username, envs, privateKeyFilepath)
+		envsWithPools, err := coderutil.EnvsWithPool(ctx, client, envs)
 		if err != nil {
-			return xerrors.Errorf("make new ssh configurations: %w", err)
+			return xerrors.Errorf("resolve env pools: %w", err)
 		}
+
+		newConfig := makeNewConfigs(user.Username, envsWithPools, privateKeyFilepath)
 
 		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
 		if err != nil {
@@ -203,23 +206,22 @@ func writeSSHKey(ctx context.Context, client *coder.Client, privateKeyPath strin
 	return ioutil.WriteFile(privateKeyPath, []byte(key.PrivateKey), 0400)
 }
 
-func makeNewConfigs(userName string, envs []coder.Environment, privateKeyFilepath string) (string, error) {
-	hostname, err := configuredHostname()
-	if err != nil {
-		return "", err
-	}
-
+func makeNewConfigs(userName string, envs []coderutil.EnvWithPool, privateKeyFilepath string) string {
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", sshStartToken, sshStartMessage)
 	for _, env := range envs {
-		if !env.SSHAvailable {
+		if !env.Env.SSHAvailable {
 			continue
 		}
-
-		newConfig += makeSSHConfig(hostname, userName, env.Name, privateKeyFilepath)
+		u, err := url.Parse(env.Pool.AccessURL)
+		if err != nil {
+			clog.LogWarn("invalid access url", clog.Causef("malformed url: %q", env.Pool.AccessURL))
+			continue
+		}
+		newConfig += makeSSHConfig(u.Host, userName, env.Env.Name, privateKeyFilepath)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", sshEndToken)
 
-	return newConfig, nil
+	return newConfig
 }
 
 func makeSSHConfig(host, userName, envName, privateKeyFilepath string) string {

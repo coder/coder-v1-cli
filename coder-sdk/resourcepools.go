@@ -17,6 +17,9 @@ type ResourcePool struct {
 	DevurlHost          string   `json:"devurl_host"`
 	NamespaceWhitelist  []string `json:"namespace_whitelist"`
 	OrgWhitelist        []string `json:"org_whitelist"`
+
+	// TODO@cmoog wait for this to merge
+	AccessURL string `json:"access_url"`
 }
 
 // ResourcePoolByID fetches a resource pool entity by its unique ID.
@@ -38,6 +41,11 @@ func (c *Client) ResourcePools(ctx context.Context) ([]ResourcePool, error) {
 	var pools []ResourcePool
 	if err := c.requestBody(ctx, http.MethodGet, "/api/private/resource-pools", nil, &pools); err != nil {
 		return nil, err
+	}
+
+	// TODO@cmoog remove this shim
+	for ix := range pools {
+		pools[ix].AccessURL = "https://us.cdr.cmoog.dev"
 	}
 	return pools, nil
 }

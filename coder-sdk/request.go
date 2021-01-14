@@ -12,11 +12,20 @@ import (
 )
 
 // request is a helper to set the cookie, marshal the payload and execute the request.
-func (c Client) request(ctx context.Context, method, path string, in interface{}) (*http.Response, error) {
+func (c Client) request(ctx context.Context, method, path string, in interface{}, options ...requestOption) (*http.Response, error) {
 	// Create a default http client with the auth in the cookie.
 	client, err := c.newHTTPClient()
 	if err != nil {
 		return nil, xerrors.Errorf("new http client: %w", err)
+	}
+	url := *c.BaseURL
+
+	var config requestOptions
+	for _, o := range options {
+		o(&config)
+	}
+	if config.BaseURLOverride != nil {
+		url = *config.BaseURLOverride
 	}
 
 	// If we have incoming data, encode it as json.
@@ -30,7 +39,7 @@ func (c Client) request(ctx context.Context, method, path string, in interface{}
 	}
 
 	// Create the http request.
-	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL.String()+path, payload)
+	req, err := http.NewRequestWithContext(ctx, method, url.String()+path, payload)
 	if err != nil {
 		return nil, xerrors.Errorf("create request: %w", err)
 	}
