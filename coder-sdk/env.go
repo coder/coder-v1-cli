@@ -33,7 +33,6 @@ type Environment struct {
 	LastOpenedAt     time.Time        `json:"last_opened_at"     table:"-"`
 	LastConnectionAt time.Time        `json:"last_connection_at" table:"-"`
 	AutoOffThreshold Duration         `json:"auto_off_threshold" table:"-"`
-	SSHAvailable     bool             `json:"ssh_available"      table:"-"`
 	UseContainerVM   bool             `json:"use_container_vm"   table:"CVM"`
 	ResourcePoolID   string           `json:"resource_pool_id"   table:"-"`
 }
