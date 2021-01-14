@@ -203,6 +203,7 @@ func makeSSHConfig(host, userName, envName, privateKeyFilepath string) string {
 `, envName, host, userName, envName, privateKeyFilepath)
 }
 
+//nolint:deadcode,unused
 func configuredHostname() (string, error) {
 	u, err := config.URL.Read()
 	if err != nil {
