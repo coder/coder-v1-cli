@@ -41,3 +41,23 @@ func (c *Client) ResourcePools(ctx context.Context) ([]ResourcePool, error) {
 	}
 	return pools, nil
 }
+
+// CreateResourcePoolReq defines the request parameters for creating a new resource pool entity.
+type CreateResourcePoolReq struct {
+	Name                string   `json:"name"`
+	Local               bool     `json:"local"`
+	ClusterCA           string   `json:"cluster_ca"`
+	ClusterAddress      string   `json:"cluster_address"`
+	SAToken             string   `json:"sa_token"`
+	DefaultNamespace    string   `json:"default_namespace"`
+	StorageClass        string   `json:"storage_class"`
+	ClusterDomainSuffix string   `json:"cluster_domain_suffix"`
+	DevurlHost          string   `json:"devurl_host"`
+	NamespaceWhitelist  []string `json:"namespace_whitelist"`
+	OrgWhitelist        []string `json:"org_whitelist"`
+}
+
+// CreateResourcePool creates a new ResourcePool entity.
+func (c *Client) CreateResourcePool(ctx context.Context, req CreateResourcePoolReq) error {
+	return c.requestBody(ctx, http.MethodPost, "/api/private/resource-pools", req, nil)
+}
