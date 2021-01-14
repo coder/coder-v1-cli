@@ -162,8 +162,8 @@ func (c Client) DialExecutor(ctx context.Context, baseURL *url.URL, envID string
 }
 
 // DialIDEStatus opens a websocket connection for cpu load metrics on the environment.
-func (c Client) DialIDEStatus(ctx context.Context, baseURl *url.URL, envID string) (*websocket.Conn, error) {
-	return c.dialWebsocket(ctx, "/proxy/environments/"+envID+"/ide/api/status", withBaseURL(baseURl))
+func (c Client) DialIDEStatus(ctx context.Context, baseURL *url.URL, envID string) (*websocket.Conn, error) {
+	return c.dialWebsocket(ctx, "/proxy/environments/"+envID+"/ide/api/status", withBaseURL(baseURL))
 }
 
 // DialEnvironmentBuildLog opens a websocket connection for the environment build log messages.
