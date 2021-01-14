@@ -9,6 +9,8 @@ import (
 	"nhooyr.io/websocket"
 )
 
+// DialEnvWsep dials the executor endpoint using the https://github.com/cdr/wsep message protocol.
+// The proper resource pool access URL is used.
 func DialEnvWsep(ctx context.Context, client *coder.Client, env *coder.Environment) (*websocket.Conn, error) {
 	resourcePool, err := client.ResourcePoolByID(ctx, env.ResourcePoolID)
 	if err != nil {
@@ -26,11 +28,13 @@ func DialEnvWsep(ctx context.Context, client *coder.Client, env *coder.Environme
 	return conn, nil
 }
 
+// EnvWithPool composes an Environment entity with its associated ResourcePool.
 type EnvWithPool struct {
 	Env  coder.Environment
 	Pool coder.ResourcePool
 }
 
+// EnvsWithPool performs the composition of each Environment with its associated ResourcePool.
 func EnvsWithPool(ctx context.Context, client *coder.Client, envs []coder.Environment) ([]EnvWithPool, error) {
 	pooledEnvs := make([]EnvWithPool, len(envs))
 	pools, err := client.ResourcePools(ctx)
