@@ -27,7 +27,7 @@ func DialEnvWsep(ctx context.Context, client *coder.Client, env *coder.Environme
 }
 
 type EnvWithPool struct {
-	Env coder.Environment
+	Env  coder.Environment
 	Pool coder.ResourcePool
 }
 
