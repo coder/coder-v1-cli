@@ -34,6 +34,7 @@ type Environment struct {
 	AutoOffThreshold Duration         `json:"auto_off_threshold" table:"-"`
 	SSHAvailable     bool             `json:"ssh_available"      table:"-"`
 	UseContainerVM   bool             `json:"use_container_vm"   table:"CVM"`
+	ResourcePoolID   string           `json:"resource_pool_id"   table:"-"`
 }
 
 // RebuildMessage defines the message shown when an Environment requires a rebuild for it can be accessed.
