@@ -49,7 +49,7 @@ func (c Client) Me(ctx context.Context) (*User, error) {
 // UserByID get the details of a user by their id.
 func (c Client) UserByID(ctx context.Context, id string) (*User, error) {
 	var u User
-	if err := c.requestBody(ctx, http.MethodGet, "/api/private/users/"+id, nil, &u); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/users/"+id, nil, &u); err != nil {
 		return nil, err
 	}
 	return &u, nil
