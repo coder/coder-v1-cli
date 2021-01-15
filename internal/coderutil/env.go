@@ -36,7 +36,7 @@ type EnvWithPool struct {
 
 // EnvsWithPool performs the composition of each Environment with its associated ResourcePool.
 func EnvsWithPool(ctx context.Context, client *coder.Client, envs []coder.Environment) ([]EnvWithPool, error) {
-	pooledEnvs := make([]EnvWithPool, len(envs))
+	pooledEnvs := make([]EnvWithPool, 0, len(envs))
 	pools, err := client.ResourcePools(ctx)
 	if err != nil {
 		return nil, err
