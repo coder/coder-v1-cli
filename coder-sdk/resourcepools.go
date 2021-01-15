@@ -17,6 +17,8 @@ type ResourcePool struct {
 	DevurlHost          string   `json:"devurl_host"`
 	NamespaceWhitelist  []string `json:"namespace_whitelist"`
 	OrgWhitelist        []string `json:"org_whitelist"`
+	SSHEnabled          bool     `json:"ssh_enabled"`
+	AccessURL           string   `json:"envproxy_access_url"`
 }
 
 // ResourcePoolByID fetches a resource pool entity by its unique ID.

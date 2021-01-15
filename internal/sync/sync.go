@@ -24,6 +24,7 @@ import (
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/activity"
+	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/wsep"
 )
@@ -89,9 +90,9 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 }
 
 func (s Sync) remoteCmd(ctx context.Context, prog string, args ...string) error {
-	conn, err := s.Client.DialWsep(ctx, s.Env.ID)
+	conn, err := coderutil.DialEnvWsep(ctx, s.Client, &s.Env)
 	if err != nil {
-		return xerrors.Errorf("dial websocket: %w", err)
+		return xerrors.Errorf("dial executor: %w", err)
 	}
 	defer func() { _ = conn.Close(websocket.CloseNormalClosure, "") }() // Best effort.
 
@@ -270,9 +271,9 @@ func (s Sync) Version() (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	conn, err := s.Client.DialWsep(ctx, s.Env.ID)
+	conn, err := coderutil.DialEnvWsep(ctx, s.Client, &s.Env)
 	if err != nil {
-		return "", err
+		return "", xerrors.Errorf("dial env executor: %w", err)
 	}
 	defer func() { _ = conn.Close(websocket.CloseNormalClosure, "") }() // Best effort.
 

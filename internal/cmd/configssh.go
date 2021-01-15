@@ -4,17 +4,16 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/url"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"cdr.dev/coder-cli/pkg/clog"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/coder-cli/internal/config"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -103,19 +102,16 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			return xerrors.New("no environments found")
 		}
 
-		if !sshAvailable(envs) {
+		envsWithPools, err := coderutil.EnvsWithPool(ctx, client, envs)
+		if err != nil {
+			return xerrors.Errorf("resolve env pools: %w", err)
+		}
+
+		if !sshAvailable(envsWithPools) {
 			return xerrors.New("SSH is disabled or not available for any environments in your Coder Enterprise deployment.")
 		}
 
-		err = canConnectSSH(ctx)
-		if err != nil {
-			return xerrors.Errorf("check if SSH is available: unable to connect to SSH endpoint: %w", err)
-		}
-
-		newConfig, err := makeNewConfigs(user.Username, envs, privateKeyFilepath)
-		if err != nil {
-			return xerrors.Errorf("make new ssh configurations: %w", err)
-		}
+		newConfig := makeNewConfigs(user.Username, envsWithPools, privateKeyFilepath)
 
 		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
 		if err != nil {
@@ -159,40 +155,13 @@ func removeOldConfig(config string) (string, bool) {
 }
 
 // sshAvailable returns true if SSH is available for at least one environment.
-func sshAvailable(envs []coder.Environment) bool {
+func sshAvailable(envs []coderutil.EnvWithPool) bool {
 	for _, env := range envs {
-		if env.SSHAvailable {
+		if env.Pool.SSHEnabled {
 			return true
 		}
 	}
-
 	return false
-}
-
-// canConnectSSH returns an error if we cannot dial the SSH port.
-func canConnectSSH(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-
-	host, err := configuredHostname()
-	if err != nil {
-		return xerrors.Errorf("get configured manager hostname: %w", err)
-	}
-
-	var (
-		dialer   net.Dialer
-		hostPort = net.JoinHostPort(host, "22")
-	)
-	conn, err := dialer.DialContext(ctx, "tcp", hostPort)
-	if err != nil {
-		if err == context.DeadlineExceeded {
-			err = xerrors.New("timed out after 3 seconds")
-		}
-		return xerrors.Errorf("dial tcp://%v: %w", hostPort, err)
-	}
-	conn.Close()
-
-	return nil
 }
 
 func writeSSHKey(ctx context.Context, client *coder.Client, privateKeyPath string) error {
@@ -203,23 +172,26 @@ func writeSSHKey(ctx context.Context, client *coder.Client, privateKeyPath strin
 	return ioutil.WriteFile(privateKeyPath, []byte(key.PrivateKey), 0400)
 }
 
-func makeNewConfigs(userName string, envs []coder.Environment, privateKeyFilepath string) (string, error) {
-	hostname, err := configuredHostname()
-	if err != nil {
-		return "", err
-	}
-
+func makeNewConfigs(userName string, envs []coderutil.EnvWithPool, privateKeyFilepath string) string {
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", sshStartToken, sshStartMessage)
 	for _, env := range envs {
-		if !env.SSHAvailable {
+		if !env.Pool.SSHEnabled {
+			clog.LogWarn(fmt.Sprintf("SSH is not enabled for pool %q", env.Pool.Name),
+				clog.BlankLine,
+				clog.Tipf("ask an infrastructure administrator to enable SSH for this resource pool"),
+			)
 			continue
 		}
-
-		newConfig += makeSSHConfig(hostname, userName, env.Name, privateKeyFilepath)
+		u, err := url.Parse(env.Pool.AccessURL)
+		if err != nil {
+			clog.LogWarn("invalid access url", clog.Causef("malformed url: %q", env.Pool.AccessURL))
+			continue
+		}
+		newConfig += makeSSHConfig(u.Host, userName, env.Env.Name, privateKeyFilepath)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", sshEndToken)
 
-	return newConfig, nil
+	return newConfig
 }
 
 func makeSSHConfig(host, userName, envName, privateKeyFilepath string) string {
@@ -235,6 +207,7 @@ func makeSSHConfig(host, userName, envName, privateKeyFilepath string) string {
 `, envName, host, userName, envName, privateKeyFilepath)
 }
 
+//nolint:deadcode,unused
 func configuredHostname() (string, error) {
 	u, err := config.URL.Read()
 	if err != nil {
