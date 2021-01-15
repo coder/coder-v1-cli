@@ -48,7 +48,7 @@ func getEnvs(ctx context.Context, client *coder.Client, email string) ([]coder.E
 	var allEnvs []coder.Environment
 
 	for _, org := range orgs {
-		envs, err := client.EnvironmentsByOrganization(ctx, user.ID, org.ID)
+		envs, err := client.UserEnvironmentsByOrganization(ctx, user.ID, org.ID)
 		if err != nil {
 			return nil, xerrors.Errorf("get envs for %s: %w", org.Name, err)
 		}

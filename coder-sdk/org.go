@@ -39,7 +39,7 @@ const (
 // Organizations gets all Organizations.
 func (c Client) Organizations(ctx context.Context) ([]Organization, error) {
 	var orgs []Organization
-	if err := c.requestBody(ctx, http.MethodGet, "/api/private/orgs", nil, &orgs); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/orgs", nil, &orgs); err != nil {
 		return nil, err
 	}
 	return orgs, nil
@@ -48,7 +48,7 @@ func (c Client) Organizations(ctx context.Context) ([]Organization, error) {
 // OrganizationByID get the Organization by its ID.
 func (c Client) OrganizationByID(ctx context.Context, orgID string) (*Organization, error) {
 	var org Organization
-	err := c.requestBody(ctx, http.MethodGet, "/api/private/orgs/"+orgID, nil, &org)
+	err := c.requestBody(ctx, http.MethodGet, "/api/v0/orgs/"+orgID, nil, &org)
 	if err != nil {
 		return nil, err
 	}

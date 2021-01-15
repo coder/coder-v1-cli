@@ -50,8 +50,8 @@ func (c Client) request(ctx context.Context, method, path string, in interface{}
 
 // requestBody is a helper extending the Client.request helper, checking the response code
 // and decoding the response payload.
-func (c Client) requestBody(ctx context.Context, method, path string, in, out interface{}) error {
-	resp, err := c.request(ctx, method, path, in)
+func (c Client) requestBody(ctx context.Context, method, path string, in, out interface{}, opts ...requestOption) error {
+	resp, err := c.request(ctx, method, path, in, opts...)
 	if err != nil {
 		return xerrors.Errorf("Execute request: %q", err)
 	}

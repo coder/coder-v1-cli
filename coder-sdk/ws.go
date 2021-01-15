@@ -10,9 +10,17 @@ import (
 
 type requestOptions struct {
 	BaseURLOverride *url.URL
+	Query           url.Values
 }
 
 type requestOption func(*requestOptions)
+
+// withQueryParams sets the provided query parameters on the request.
+func withQueryParams(q url.Values) func(o *requestOptions) {
+	return func(o *requestOptions) {
+		o.Query = q
+	}
+}
 
 func withBaseURL(base *url.URL) func(o *requestOptions) {
 	return func(o *requestOptions) {
@@ -30,12 +38,6 @@ func (c Client) dialWebsocket(ctx context.Context, path string, options ...reque
 	}
 	if config.BaseURLOverride != nil {
 		url = *config.BaseURLOverride
-	}
-
-	if url.Scheme == "https" {
-		url.Scheme = "wss"
-	} else {
-		url.Scheme = "ws"
 	}
 	url.Path = path
 

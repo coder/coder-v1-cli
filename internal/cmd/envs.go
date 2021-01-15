@@ -197,6 +197,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 			createReq := &coder.CreateEnvironmentRequest{
 				Name:           args[0],
 				ImageID:        importedImg.ID,
+				OrgID:          importedImg.OrganizationID,
 				ImageTag:       tag,
 				CPUCores:       cpu,
 				MemoryGB:       memory,
@@ -217,7 +218,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 				createReq.DiskGB = importedImg.DefaultDiskGB
 			}
 
-			env, err := client.CreateEnvironment(ctx, importedImg.OrganizationID, *createReq)
+			env, err := client.CreateEnvironment(ctx, *createReq)
 			if err != nil {
 				return xerrors.Errorf("create environment: %w", err)
 			}

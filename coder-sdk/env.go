@@ -75,6 +75,7 @@ const (
 type CreateEnvironmentRequest struct {
 	Name           string   `json:"name"`
 	ImageID        string   `json:"image_id"`
+	OrgID          string   `json:"org_id"`
 	ImageTag       string   `json:"image_tag"`
 	CPUCores       float32  `json:"cpu_cores"`
 	MemoryGB       float32  `json:"memory_gb"`
@@ -85,9 +86,9 @@ type CreateEnvironmentRequest struct {
 }
 
 // CreateEnvironment sends a request to create an environment.
-func (c Client) CreateEnvironment(ctx context.Context, orgID string, req CreateEnvironmentRequest) (*Environment, error) {
+func (c Client) CreateEnvironment(ctx context.Context, req CreateEnvironmentRequest) (*Environment, error) {
 	var env Environment
-	if err := c.requestBody(ctx, http.MethodPost, "/api/private/orgs/"+orgID+"/environments", req, &env); err != nil {
+	if err := c.requestBody(ctx, http.MethodPost, "/api/v0/environments", req, &env); err != nil {
 		return nil, err
 	}
 	return &env, nil
@@ -103,10 +104,17 @@ func (c Client) Environments(ctx context.Context) ([]Environment, error) {
 	return envs, nil
 }
 
-// EnvironmentsByOrganization gets the list of environments owned by the given user.
-func (c Client) EnvironmentsByOrganization(ctx context.Context, userID, orgID string) ([]Environment, error) {
-	var envs []Environment
-	if err := c.requestBody(ctx, http.MethodGet, "/api/private/orgs/"+orgID+"/members/"+userID+"/environments", nil, &envs); err != nil {
+// UserEnvironmentsByOrganization gets the list of environments owned by the given user.
+func (c Client) UserEnvironmentsByOrganization(ctx context.Context, userID, orgID string) ([]Environment, error) {
+	var (
+		envs  []Environment
+		query = url.Values{}
+	)
+
+	query.Add("orgs", orgID)
+	query.Add("users", userID)
+
+	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/environments", nil, &envs, withQueryParams(query)); err != nil {
 		return nil, err
 	}
 	return envs, nil
