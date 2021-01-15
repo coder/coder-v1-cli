@@ -27,6 +27,11 @@ func (c Client) request(ctx context.Context, method, path string, in interface{}
 	if config.BaseURLOverride != nil {
 		url = *config.BaseURLOverride
 	}
+	if config.Query != nil {
+		url.RawQuery = config.Query.Encode()
+	}
+
+	url.Path = path
 
 	// If we have incoming data, encode it as json.
 	var payload io.Reader
@@ -39,7 +44,7 @@ func (c Client) request(ctx context.Context, method, path string, in interface{}
 	}
 
 	// Create the http request.
-	req, err := http.NewRequestWithContext(ctx, method, url.String()+path, payload)
+	req, err := http.NewRequestWithContext(ctx, method, url.String(), payload)
 	if err != nil {
 		return nil, xerrors.Errorf("create request: %w", err)
 	}
