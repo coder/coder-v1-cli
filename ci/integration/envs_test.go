@@ -81,8 +81,9 @@ search:
 	}
 	if !found {
 		// ignore this error for now as it causes a race with other parallel tests
-		_, _ = client.ImportImage(ctx, org.ID, coder.ImportImageReq{
+		_, _ = client.ImportImage(ctx, coder.ImportImageReq{
 			RegistryID:      &dockerhubID,
+			OrgID:           org.ID,
 			Repository:      img,
 			Tag:             "latest",
 			DefaultCPUCores: 2.5,
