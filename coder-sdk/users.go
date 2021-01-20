@@ -64,7 +64,7 @@ type SSHKey struct {
 // SSHKey gets the current SSH kepair of the authenticated user.
 func (c Client) SSHKey(ctx context.Context) (*SSHKey, error) {
 	var key SSHKey
-	if err := c.requestBody(ctx, http.MethodGet, "/api/private/users/me/sshkey", nil, &key); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/users/me/sshkey", nil, &key); err != nil {
 		return nil, err
 	}
 	return &key, nil
@@ -73,7 +73,7 @@ func (c Client) SSHKey(ctx context.Context) (*SSHKey, error) {
 // Users gets the list of user accounts.
 func (c Client) Users(ctx context.Context) ([]User, error) {
 	var u []User
-	if err := c.requestBody(ctx, http.MethodGet, "/api/private/users", nil, &u); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/users", nil, &u); err != nil {
 		return nil, err
 	}
 	return u, nil
@@ -111,7 +111,7 @@ type UpdateUserReq struct {
 
 // UpdateUser applyes the partial update to the given user.
 func (c Client) UpdateUser(ctx context.Context, userID string, req UpdateUserReq) error {
-	return c.requestBody(ctx, http.MethodPatch, "/api/private/users/"+userID, req, nil)
+	return c.requestBody(ctx, http.MethodPatch, "/api/v0/users/"+userID, req, nil)
 }
 
 // UpdateUXState applies a partial update of the user's UX State.
@@ -135,10 +135,10 @@ type CreateUserReq struct {
 
 // CreateUser creates a new user account.
 func (c Client) CreateUser(ctx context.Context, req CreateUserReq) error {
-	return c.requestBody(ctx, http.MethodPost, "/api/private/users", req, nil)
+	return c.requestBody(ctx, http.MethodPost, "/api/v0/users", req, nil)
 }
 
 // DeleteUser deletes a user account.
 func (c Client) DeleteUser(ctx context.Context, userID string) error {
-	return c.requestBody(ctx, http.MethodDelete, "/api/private/users/"+userID, nil, nil)
+	return c.requestBody(ctx, http.MethodDelete, "/api/v0/users/"+userID, nil, nil)
 }
