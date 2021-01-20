@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -14,11 +13,11 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/clog"
-	"cdr.dev/coder-cli/internal/x/xtabwriter"
+	"cdr.dev/coder-cli/pkg/clog"
+	"cdr.dev/coder-cli/pkg/tablewriter"
 )
 
-func makeURLCmd() *cobra.Command {
+func urlCmd() *cobra.Command {
 	var outputFmt string
 	cmd := &cobra.Command{
 		Use:   "urls",
@@ -29,9 +28,9 @@ func makeURLCmd() *cobra.Command {
 		Short:             "List all DevURLs for an environment",
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: getEnvsForCompletion(coder.Me),
-		RunE:              makeListDevURLs(&outputFmt),
+		RunE:              listDevURLsCmd(&outputFmt),
 	}
-	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", "human", "human|json")
+	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", humanOutput, "human|json")
 
 	rmCmd := &cobra.Command{
 		Use:   "rm [environment_name] [port]",
@@ -43,19 +42,10 @@ func makeURLCmd() *cobra.Command {
 	cmd.AddCommand(
 		lsCmd,
 		rmCmd,
-		makeCreateDevURL(),
+		createDevURLCmd(),
 	)
 
 	return cmd
-}
-
-// DevURL is the parsed json response record for a devURL from cemanager
-type DevURL struct {
-	ID     string `json:"id"     tab:"-"`
-	URL    string `json:"url"    tab:"URL"`
-	Port   int    `json:"port"   tab:"Port"`
-	Name   string `json:"name"   tab:"-"`
-	Access string `json:"access" tab:"Access"`
 }
 
 var urlAccessLevel = map[string]string{
@@ -89,27 +79,33 @@ func accessLevelIsValid(level string) bool {
 
 // Run gets the list of active devURLs from the cemanager for the
 // specified environment and outputs info to stdout.
-func makeListDevURLs(outputFmt *string) func(cmd *cobra.Command, args []string) error {
+func listDevURLsCmd(outputFmt *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+		client, err := newClient(ctx)
+		if err != nil {
+			return err
+		}
 		envName := args[0]
-		devURLs, err := urlList(cmd.Context(), envName)
+
+		devURLs, err := urlList(ctx, client, envName)
 		if err != nil {
 			return err
 		}
 
 		switch *outputFmt {
-		case "human":
+		case humanOutput:
 			if len(devURLs) < 1 {
 				clog.LogInfo(fmt.Sprintf("no devURLs found for environment %q", envName))
 				return nil
 			}
-			err := xtabwriter.WriteTable(len(devURLs), func(i int) interface{} {
+			err := tablewriter.WriteTable(len(devURLs), func(i int) interface{} {
 				return devURLs[i]
 			})
 			if err != nil {
 				return xerrors.Errorf("write table: %w", err)
 			}
-		case "json":
+		case jsonOutput:
 			if err := json.NewEncoder(os.Stdout).Encode(devURLs); err != nil {
 				return xerrors.Errorf("encode DevURLs as json: %w", err)
 			}
@@ -120,13 +116,14 @@ func makeListDevURLs(outputFmt *string) func(cmd *cobra.Command, args []string) 
 	}
 }
 
-func makeCreateDevURL() *cobra.Command {
+func createDevURLCmd() *cobra.Command {
 	var (
 		access  string
 		urlname string
+		scheme  string
 	)
 	cmd := &cobra.Command{
-		Use:     "create [env_name] [port] [--access <level>] [--name <name>]",
+		Use:     "create [env_name] [port]",
 		Short:   "Create a new devurl for an environment",
 		Aliases: []string{"edit"},
 		Args:    cobra.ExactArgs(2),
@@ -135,6 +132,7 @@ func makeCreateDevURL() *cobra.Command {
 			var (
 				envName = args[0]
 				port    = args[1]
+				ctx     = cmd.Context()
 			)
 
 			portNum, err := validatePort(port)
@@ -150,34 +148,46 @@ func makeCreateDevURL() *cobra.Command {
 			if urlname != "" && !devURLNameValidRx.MatchString(urlname) {
 				return xerrors.New("update devurl: name must be < 64 chars in length, begin with a letter and only contain letters or digits.")
 			}
-			client, err := newClient()
+			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
 
-			env, err := findEnv(cmd.Context(), client, envName, coder.Me)
+			env, err := findEnv(ctx, client, envName, coder.Me)
 			if err != nil {
 				return err
 			}
 
-			urls, err := urlList(cmd.Context(), envName)
+			urls, err := urlList(ctx, client, envName)
 			if err != nil {
 				return err
 			}
 
 			urlID, found := devURLID(portNum, urls)
 			if found {
-				clog.LogInfo(fmt.Sprintf("updating devurl for port %v", port))
-				err := client.UpdateDevURL(cmd.Context(), env.ID, urlID, portNum, urlname, access)
+				err := client.PutDevURL(ctx, env.ID, urlID, coder.PutDevURLReq{
+					Port:   portNum,
+					Name:   urlname,
+					Access: access,
+					EnvID:  env.ID,
+					Scheme: scheme,
+				})
 				if err != nil {
 					return xerrors.Errorf("update DevURL: %w", err)
 				}
+				clog.LogSuccess(fmt.Sprintf("patched devurl for port %s", port))
 			} else {
-				clog.LogInfo(fmt.Sprintf("Adding devurl for port %v", port))
-				err := client.InsertDevURL(cmd.Context(), env.ID, portNum, urlname, access)
+				err := client.CreateDevURL(ctx, env.ID, coder.CreateDevURLReq{
+					Port:   portNum,
+					Name:   urlname,
+					Access: access,
+					EnvID:  env.ID,
+					Scheme: scheme,
+				})
 				if err != nil {
 					return xerrors.Errorf("insert DevURL: %w", err)
 				}
+				clog.LogSuccess(fmt.Sprintf("created devurl for port %s", port))
 			}
 			return nil
 		},
@@ -185,6 +195,7 @@ func makeCreateDevURL() *cobra.Command {
 
 	cmd.Flags().StringVar(&access, "access", "private", "Set DevURL access to [private | org | authed | public]")
 	cmd.Flags().StringVar(&urlname, "name", "", "DevURL name")
+	cmd.Flags().StringVar(&scheme, "scheme", "http", "Server scheme (http|https)")
 	_ = cmd.MarkFlagRequired("name")
 
 	return cmd
@@ -198,7 +209,7 @@ var devURLNameValidRx = regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9]{0,63}$")
 // devURLID returns the ID of a devURL, given the env name and port
 // from a list of DevURL records.
 // ("", false) is returned if no match is found.
-func devURLID(port int, urls []DevURL) (string, bool) {
+func devURLID(port int, urls []coder.DevURL) (string, bool) {
 	for _, url := range urls {
 		if url.Port == port {
 			return url.ID, true
@@ -212,6 +223,7 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 	var (
 		envName = args[0]
 		port    = args[1]
+		ctx     = cmd.Context()
 	)
 
 	portNum, err := validatePort(port)
@@ -219,16 +231,16 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 		return xerrors.Errorf("validate port: %w", err)
 	}
 
-	client, err := newClient()
+	client, err := newClient(ctx)
 	if err != nil {
 		return err
 	}
-	env, err := findEnv(cmd.Context(), client, envName, coder.Me)
+	env, err := findEnv(ctx, client, envName, coder.Me)
 	if err != nil {
 		return err
 	}
 
-	urls, err := urlList(cmd.Context(), envName)
+	urls, err := urlList(ctx, client, envName)
 	if err != nil {
 		return err
 	}
@@ -240,42 +252,17 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 		return xerrors.Errorf("No devurl found for port %v", port)
 	}
 
-	if err := client.DelDevURL(cmd.Context(), env.ID, urlID); err != nil {
+	if err := client.DeleteDevURL(ctx, env.ID, urlID); err != nil {
 		return xerrors.Errorf("delete DevURL: %w", err)
 	}
 	return nil
 }
 
 // urlList returns the list of active devURLs from the cemanager.
-func urlList(ctx context.Context, envName string) ([]DevURL, error) {
-	client, err := newClient()
-	if err != nil {
-		return nil, err
-	}
+func urlList(ctx context.Context, client *coder.Client, envName string) ([]coder.DevURL, error) {
 	env, err := findEnv(ctx, client, envName, coder.Me)
 	if err != nil {
 		return nil, err
 	}
-
-	reqString := "%s/api/environments/%s/devurls?session_token=%s"
-	reqURL := fmt.Sprintf(reqString, client.BaseURL, env.ID, client.Token)
-
-	resp, err := http.Get(reqURL)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }() // Best effort.
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, xerrors.Errorf("non-success status code: %d", resp.StatusCode)
-	}
-
-	dec := json.NewDecoder(resp.Body)
-
-	var devURLs []DevURL
-	if err := dec.Decode(&devURLs); err != nil {
-		return nil, err
-	}
-
-	return devURLs, nil
+	return client.DevURLs(ctx, env.ID)
 }

@@ -3,13 +3,13 @@ package cmd
 import (
 	"os"
 
-	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/config"
+	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
 
-func makeLogoutCmd() *cobra.Command {
+func logoutCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "logout",
 		Short: "Remove local authentication credentials if any exist",

@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/clog"
+	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
@@ -55,7 +55,7 @@ coder resources top --sort-by memory --show-empty`,
 func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
-		client, err := newClient()
+		client, err := newClient(ctx)
 		if err != nil {
 			return err
 		}
@@ -143,7 +143,7 @@ func aggregateByOrg(users []coder.User, orgs []coder.Organization, envs []coder.
 	return groups, userLabeler{userIDMap}
 }
 
-// groupable specifies a structure capable of being an aggregation group of environments (user, org, all)
+// groupable specifies a structure capable of being an aggregation group of environments (user, org, all).
 type groupable interface {
 	header() string
 	environments() []coder.Environment
@@ -214,7 +214,7 @@ func printResourceTop(writer io.Writer, groups []groupable, labeler envLabeler, 
 	if len(userResources) == 0 {
 		clog.LogInfo(
 			"no groups for the given filters exist with active environments",
-			clog.Tip("run \"--show-empty\" to see groups with no resources."),
+			clog.Tipf("run \"--show-empty\" to see groups with no resources."),
 		)
 	}
 	return nil
@@ -318,6 +318,7 @@ func (a resources) String() string {
 	// )
 }
 
+//nolint:unused
 func (a resources) cpuUtilPercentage() string {
 	if a.cpuAllocation == 0 {
 		return "N/A"
@@ -325,6 +326,7 @@ func (a resources) cpuUtilPercentage() string {
 	return fmt.Sprintf("%.1f%%", a.cpuUtilization/a.cpuAllocation*100)
 }
 
+//nolint:unused
 func (a resources) memUtilPercentage() string {
 	if a.memAllocation == 0 {
 		return "N/A"
@@ -332,7 +334,7 @@ func (a resources) memUtilPercentage() string {
 	return fmt.Sprintf("%.1f%%", a.memUtilization/a.memAllocation*100)
 }
 
-// truncate the given string and replace the removed chars with some replacement (ex: "...")
+// truncate the given string and replace the removed chars with some replacement (ex: "...").
 func truncate(str string, max int, replace string) string {
 	if len(str) <= max {
 		return str

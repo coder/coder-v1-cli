@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"cdr.dev/coder-cli/ci/tcli"
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/pkg/tcli"
 )
 
 func TestSSH(t *testing.T) {

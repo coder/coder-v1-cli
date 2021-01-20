@@ -9,16 +9,17 @@ import (
 	"strings"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/loginsrv"
+	"cdr.dev/coder-cli/internal/version"
+	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
 )
 
-func makeLoginCmd() *cobra.Command {
+func loginCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "login [Coder Enterprise URL eg. https://my.coder.domain/]",
 		Short: "Authenticate this client for future operations",
@@ -40,7 +41,7 @@ func makeLoginCmd() *cobra.Command {
 			// Don't return errors as it would print the usage.
 
 			if err := login(cmd, u, config.URL, config.Session); err != nil {
-				return xerrors.Errorf("Login error", err)
+				return xerrors.Errorf("login error: %w", err)
 			}
 			return nil
 		},
@@ -64,7 +65,13 @@ func newLocalListener() (net.Listener, error) {
 // Not using the SDK as we want to verify the url/token pair before storing the config files.
 func pingAPI(ctx context.Context, envURL *url.URL, token string) error {
 	client := &coder.Client{BaseURL: envURL, Token: token}
-	if _, err := client.Me(ctx); err != nil {
+	if apiVersion, err := client.APIVersion(ctx); err == nil {
+		if apiVersion != "" && !version.VersionsMatch(apiVersion) {
+			logVersionMismatchError(apiVersion)
+		}
+	}
+	_, err := client.Me(ctx)
+	if err != nil {
 		return xerrors.Errorf("call api: %w", err)
 	}
 	return nil

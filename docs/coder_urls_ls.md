@@ -2,10 +2,6 @@
 
 List all DevURLs for an environment
 
-### Synopsis
-
-List all DevURLs for an environment
-
 ```
 coder urls ls [environment_name] [flags]
 ```
@@ -26,3 +22,4 @@ coder urls ls [environment_name] [flags]
 ### SEE ALSO
 
 * [coder urls](coder_urls.md)	 - Interact with environment DevURLs
+

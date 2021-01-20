@@ -2,10 +2,6 @@
 
 Interact with environment DevURLs
 
-### Synopsis
-
-Interact with environment DevURLs
-
 ### Options
 
 ```
@@ -24,3 +20,4 @@ Interact with environment DevURLs
 * [coder urls create](coder_urls_create.md)	 - Create a new devurl for an environment
 * [coder urls ls](coder_urls_ls.md)	 - List all DevURLs for an environment
 * [coder urls rm](coder_urls_rm.md)	 - Remove a dev url
+

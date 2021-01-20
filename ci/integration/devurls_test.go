@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"cdr.dev/coder-cli/ci/tcli"
+	"cdr.dev/coder-cli/pkg/tcli"
 )
 
 func TestDevURLCLI(t *testing.T) {
@@ -12,7 +12,6 @@ func TestDevURLCLI(t *testing.T) {
 	run(t, "coder-cli-devurl-tests", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
 		c.Run(ctx, "which coder").Assert(t,
 			tcli.Success(),
-			tcli.StdoutMatches("/usr/sbin/coder"),
 			tcli.StderrEmpty(),
 		)
 
@@ -77,5 +76,4 @@ func TestDevURLCLI(t *testing.T) {
 	// c.Run(ctx, `coder urls ls env1 -o json | jq -c '.[] | select( .name == "foobar")'`).Assert(t,
 	// 	tcli.Error(),
 	// 	jsonUnmarshals(&durl))
-
 }

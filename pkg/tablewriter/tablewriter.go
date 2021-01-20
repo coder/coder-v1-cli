@@ -1,4 +1,4 @@
-package xtabwriter
+package tablewriter
 
 import (
 	"fmt"
@@ -8,16 +8,11 @@ import (
 	"text/tabwriter"
 )
 
-const structFieldTagKey = "tab"
-
-// NewWriter chooses reasonable defaults for a human readable output of tabular data.
-func NewWriter() *tabwriter.Writer {
-	return tabwriter.NewWriter(os.Stdout, 0, 0, 4, ' ', 0)
-}
+const structFieldTagKey = "table"
 
 // StructValues tab delimits the values of a given struct.
 //
-// Tag a field `tab:"-"` to hide it from output.
+// Tag a field `table:"-"` to hide it from output.
 func StructValues(data interface{}) string {
 	v := reflect.ValueOf(data)
 	s := &strings.Builder{}
@@ -32,7 +27,7 @@ func StructValues(data interface{}) string {
 
 // StructFieldNames tab delimits the field names of a given struct.
 //
-// Tag a field `tab:"-"` to hide it from output.
+// Tag a field `table:"-"` to hide it from output.
 func StructFieldNames(data interface{}) string {
 	v := reflect.ValueOf(data)
 	s := &strings.Builder{}
@@ -47,14 +42,14 @@ func StructFieldNames(data interface{}) string {
 }
 
 // WriteTable writes the given list elements to stdout in a human readable
-// tabular format. Headers abide by the `tab` struct tag.
+// tabular format. Headers abide by the `table` struct tag.
 //
-// `tab:"-"` omits the field and no tag defaults to the Go identifier.
+// `table:"-"` omits the field and no tag defaults to the Go identifier.
 func WriteTable(length int, each func(i int) interface{}) error {
 	if length < 1 {
 		return nil
 	}
-	w := NewWriter()
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 4, ' ', 0)
 	defer func() { _ = w.Flush() }() // Best effort.
 	for ix := 0; ix < length; ix++ {
 		item := each(ix)

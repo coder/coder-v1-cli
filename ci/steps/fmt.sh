@@ -2,8 +2,9 @@
 
 set -euo pipefail
 
-echo "Formatting..."
+cd "$(git rev-parse --show-toplevel)"
 
+echo "--- formatting"
 go mod tidy
 gofmt -w -s .
 goimports -w "-local=$$(go list -m)" .

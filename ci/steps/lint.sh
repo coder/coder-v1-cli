@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-echo "Linting..."
+cd "$(git rev-parse --show-toplevel)"
 
-go vet ./...
-golint -set_exit_status ./...
+echo "--- golangci-lint"
+golangci-lint run -c .golangci.yml

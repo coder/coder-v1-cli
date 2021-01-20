@@ -42,7 +42,7 @@ func ColorEnabled(fd uintptr) (bool, error) {
 	return terminal.IsTerminal(int(fd)), nil
 }
 
-// ResizeEvent describes the new terminal dimensions following a resize
+// ResizeEvent describes the new terminal dimensions following a resize.
 type ResizeEvent struct {
 	Height uint16
 	Width  uint16
@@ -62,7 +62,7 @@ func ResizeEvents(ctx context.Context, termFD uintptr) chan ResizeEvent {
 		signal.Notify(sigChan, unix.SIGWINCH)
 		defer signal.Stop(sigChan)
 
-		// Emit an inital signal event to make sure the server receives our current window size.
+		// Emit an initial signal event to make sure the server receives our current window size.
 		select {
 		case <-ctx.Done():
 			return
@@ -87,7 +87,6 @@ func ResizeEvents(ctx context.Context, termFD uintptr) chan ResizeEvent {
 					return
 				case events <- event:
 				}
-
 			}
 		}
 	}()

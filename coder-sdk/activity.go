@@ -12,7 +12,7 @@ type activityRequest struct {
 
 // PushActivity pushes CLI activity to Coder.
 func (c Client) PushActivity(ctx context.Context, source, envID string) error {
-	resp, err := c.request(ctx, http.MethodPost, "/api/metrics/usage/push", activityRequest{
+	resp, err := c.request(ctx, http.MethodPost, "/api/private/metrics/usage/push", activityRequest{
 		Source:        source,
 		EnvironmentID: envID,
 	})

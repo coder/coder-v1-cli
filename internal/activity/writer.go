@@ -1,3 +1,4 @@
+// Package activity defines the logic for tracking usage activity metrics.
 package activity
 
 import (
@@ -17,7 +18,7 @@ func (w *writer) Write(buf []byte) (int, error) {
 	return w.wr.Write(buf)
 }
 
-// Writer wraps the given writer such that all writes trigger an activity push
+// Writer wraps the given writer such that all writes trigger an activity push.
 func (p *Pusher) Writer(wr io.Writer) io.Writer {
 	return &writer{p: p, wr: wr}
 }

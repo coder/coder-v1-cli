@@ -9,13 +9,13 @@ import (
 	"strings"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/clog"
 	"cdr.dev/coder-cli/internal/sync"
+	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
 
-func makeSyncCmd() *cobra.Command {
+func syncCmd() *cobra.Command {
 	var init bool
 	cmd := &cobra.Command{
 		Use:   "sync [local directory] [<env name>:<remote directory>]",
@@ -47,11 +47,26 @@ func rsyncVersion() string {
 func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		var (
+			ctx    = cmd.Context()
 			local  = args[0]
 			remote = args[1]
 		)
 
-		client, err := newClient()
+		client, err := newClient(ctx)
+		if err != nil {
+			return err
+		}
+
+		remoteTokens := strings.SplitN(remote, ":", 2)
+		if len(remoteTokens) != 2 {
+			return xerrors.New("remote malformatted")
+		}
+		var (
+			envName   = remoteTokens[0]
+			remoteDir = remoteTokens[1]
+		)
+
+		env, err := findEnv(ctx, client, envName, coder.Me)
 		if err != nil {
 			return err
 		}
@@ -60,22 +75,11 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
+		if info.Mode().IsRegular() {
+			return sync.SingleFile(ctx, local, remoteDir, env, client)
+		}
 		if !info.IsDir() {
-			return xerrors.Errorf("%s must be a directory", local)
-		}
-
-		remoteTokens := strings.SplitN(remote, ":", 2)
-		if len(remoteTokens) != 2 {
-			return xerrors.New("remote misformatted")
-		}
-		var (
-			envName   = remoteTokens[0]
-			remoteDir = remoteTokens[1]
-		)
-
-		env, err := findEnv(cmd.Context(), client, envName, coder.Me)
-		if err != nil {
-			return err
+			return xerrors.Errorf("local path must lead to a regular file or directory: %w", err)
 		}
 
 		absLocal, err := filepath.Abs(local)

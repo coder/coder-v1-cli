@@ -17,9 +17,8 @@ type eventCache map[string]timedEvent
 func (cache eventCache) Add(ev timedEvent) {
 	lastEvent, ok := cache[ev.Path()]
 	if ok {
-		switch {
 		// If the file was quickly created and then destroyed, pretend nothing ever happened.
-		case lastEvent.Event() == notify.Create && ev.Event() == notify.Remove:
+		if lastEvent.Event() == notify.Create && ev.Event() == notify.Remove {
 			delete(cache, ev.Path())
 			return
 		}
@@ -40,7 +39,6 @@ func (cache eventCache) SequentialEvents() []timedEvent {
 		// Include files that have deleted here.
 		// It's unclear whether they're files or folders.
 		r = append(r, ev)
-
 	}
 	return r
 }
@@ -58,7 +56,6 @@ func (cache eventCache) ConcurrentEvents() []timedEvent {
 			continue
 		}
 		r = append(r, ev)
-
 	}
 	return r
 }

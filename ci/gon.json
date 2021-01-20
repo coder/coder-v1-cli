@@ -1,0 +1,10 @@
+{
+    "source": ["./coder"],
+    "bundle_id": "com.coder.cli",
+    "sign": {
+        "application_identity": "3C4F31D15F9D57461A8D7D0BD970D23CE1F7C2BE"
+    },
+    "zip": {
+        "output_path": "coder.zip"
+    }
+}

@@ -14,6 +14,7 @@ coder sh [environment_name] [<command [args...]>] [flags]
 
 ```
 coder sh backend-env
+coder sh front-end-dev cat ~/config.json
 ```
 
 ### Options
@@ -31,3 +32,4 @@ coder sh backend-env
 ### SEE ALSO
 
 * [coder](coder.md)	 - coder provides a CLI for working with an existing Coder Enterprise installation
+

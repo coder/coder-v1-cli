@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/coder-cli/ci/tcli"
+	"cdr.dev/coder-cli/pkg/tcli"
 	"cdr.dev/slog/sloggers/slogtest/assert"
 )
 
@@ -14,11 +14,11 @@ func run(t *testing.T, container string, execute func(t *testing.T, ctx context.
 	t.Run(container, func(t *testing.T) {
 		t.Parallel()
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 		defer cancel()
 
 		c, err := tcli.NewContainerRunner(ctx, &tcli.ContainerConfig{
-			Image: "codercom/enterprise-dev",
+			Image: "coder-cli-integration:latest",
 			Name:  container,
 			BindMounts: map[string]string{
 				binpath: "/bin/coder",
@@ -36,7 +36,6 @@ func TestCoderCLI(t *testing.T) {
 	run(t, "test-coder-cli", func(t *testing.T, ctx context.Context, c *tcli.ContainerRunner) {
 		c.Run(ctx, "which coder").Assert(t,
 			tcli.Success(),
-			tcli.StdoutMatches("/usr/sbin/coder"),
 			tcli.StderrEmpty(),
 		)
 
@@ -81,13 +80,12 @@ func TestCoderCLI(t *testing.T) {
 			tcli.Error(),
 		)
 	})
-
 }
 
 var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 func randString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	const charset = "abcdefghijklmnopqrstuvwxyz"
 	b := make([]byte, length)
 	for i := range b {
 		b[i] = charset[seededRand.Intn(len(charset))]

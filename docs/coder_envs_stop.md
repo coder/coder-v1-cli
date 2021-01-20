@@ -28,16 +28,17 @@ coder envs --user charlie@coder.com ls -o json \
 ### Options
 
 ```
-  -h, --help   help for stop
+  -h, --help          help for stop
+      --user string   Specify the user whose resources to target (default "me")
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --user string   Specify the user whose resources to target (default "me")
-  -v, --verbose       show verbose output
+  -v, --verbose   show verbose output
 ```
 
 ### SEE ALSO
 
 * [coder envs](coder_envs.md)	 - Interact with Coder environments
+

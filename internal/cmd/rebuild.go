@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/clog"
+	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
@@ -20,20 +20,20 @@ import (
 func rebuildEnvCommand() *cobra.Command {
 	var follow bool
 	var force bool
+	var user string
 	cmd := &cobra.Command{
 		Use:   "rebuild [environment_name]",
 		Short: "rebuild a Coder environment",
 		Args:  cobra.ExactArgs(1),
 		Example: `coder envs rebuild front-end-env --follow
 coder envs rebuild backend-env --force`,
-		Hidden: true, // TODO(@cmoog) un-hide
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient()
+			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
-			env, err := findEnv(ctx, client, args[0], coder.Me)
+			env, err := findEnv(ctx, client, args[0], user)
 			if err != nil {
 				return err
 			}
@@ -44,7 +44,10 @@ coder envs rebuild backend-env --force`,
 					IsConfirm: true,
 				}).Run()
 				if err != nil {
-					return err
+					return clog.Fatal(
+						"failed to confirm prompt", clog.BlankLine,
+						clog.Tipf(`use "--force" to rebuild without a confirmation prompt`),
+					)
 				}
 			}
 
@@ -58,24 +61,24 @@ coder envs rebuild backend-env --force`,
 			} else {
 				clog.LogSuccess(
 					"successfully started rebuild",
-					clog.Tip("run \"coder envs watch-build %s\" to follow the build logs", env.Name),
+					clog.Tipf("run \"coder envs watch-build %s\" to follow the build logs", env.Name),
 				)
 			}
 			return nil
 		},
 	}
 
-	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
+	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
+	cmd.Flags().BoolVar(&follow, "follow", false, "follow build log after initiating rebuild")
 	cmd.Flags().BoolVar(&force, "force", false, "force rebuild without showing a confirmation prompt")
 	return cmd
 }
 
 // trailBuildLogs follows the build log for a given environment and prints the staged
-// output with loaders and success/failure indicators for each stage
+// output with loaders and success/failure indicators for each stage.
 func trailBuildLogs(ctx context.Context, client *coder.Client, envID string) error {
 	const check = "✅"
 	const failure = "❌"
-	const loading = "⌛"
 
 	newSpinner := func() *spinner.Spinner { return spinner.New(spinner.CharSets[11], 100*time.Millisecond) }
 
@@ -136,19 +139,19 @@ func trailBuildLogs(ctx context.Context, client *coder.Client, envID string) err
 }
 
 func watchBuildLogCommand() *cobra.Command {
+	var user string
 	cmd := &cobra.Command{
 		Use:     "watch-build [environment_name]",
-		Example: "coder watch-build front-end-env",
+		Example: "coder envs watch-build front-end-env",
 		Short:   "trail the build log of a Coder environment",
 		Args:    cobra.ExactArgs(1),
-		Hidden:  true, // TODO(@cmoog) un-hide
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient()
+			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
-			env, err := findEnv(ctx, client, args[0], coder.Me)
+			env, err := findEnv(ctx, client, args[0], user)
 			if err != nil {
 				return err
 			}
@@ -159,5 +162,6 @@ func watchBuildLogCommand() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	return cmd
 }

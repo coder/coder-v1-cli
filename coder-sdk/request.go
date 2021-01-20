@@ -12,12 +12,26 @@ import (
 )
 
 // request is a helper to set the cookie, marshal the payload and execute the request.
-func (c Client) request(ctx context.Context, method, path string, in interface{}) (*http.Response, error) {
+func (c Client) request(ctx context.Context, method, path string, in interface{}, options ...requestOption) (*http.Response, error) {
 	// Create a default http client with the auth in the cookie.
 	client, err := c.newHTTPClient()
 	if err != nil {
 		return nil, xerrors.Errorf("new http client: %w", err)
 	}
+	url := *c.BaseURL
+
+	var config requestOptions
+	for _, o := range options {
+		o(&config)
+	}
+	if config.BaseURLOverride != nil {
+		url = *config.BaseURLOverride
+	}
+	if config.Query != nil {
+		url.RawQuery = config.Query.Encode()
+	}
+
+	url.Path = path
 
 	// If we have incoming data, encode it as json.
 	var payload io.Reader
@@ -30,7 +44,7 @@ func (c Client) request(ctx context.Context, method, path string, in interface{}
 	}
 
 	// Create the http request.
-	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL.String()+path, payload)
+	req, err := http.NewRequestWithContext(ctx, method, url.String(), payload)
 	if err != nil {
 		return nil, xerrors.Errorf("create request: %w", err)
 	}
@@ -41,8 +55,8 @@ func (c Client) request(ctx context.Context, method, path string, in interface{}
 
 // requestBody is a helper extending the Client.request helper, checking the response code
 // and decoding the response payload.
-func (c Client) requestBody(ctx context.Context, method, path string, in, out interface{}) error {
-	resp, err := c.request(ctx, method, path, in)
+func (c Client) requestBody(ctx context.Context, method, path string, in, out interface{}, opts ...requestOption) error {
+	resp, err := c.request(ctx, method, path, in, opts...)
 	if err != nil {
 		return xerrors.Errorf("Execute request: %q", err)
 	}
@@ -51,7 +65,7 @@ func (c Client) requestBody(ctx context.Context, method, path string, in, out in
 	// Responses in the 100 are handled by the http lib, in the 200 range, we have a success.
 	// Consider anything at or above 300 to be an error.
 	if resp.StatusCode > 299 {
-		return fmt.Errorf("unexpected status code: %w", bodyError(resp))
+		return fmt.Errorf("unexpected status code %d: %w", resp.StatusCode, bodyError(resp))
 	}
 
 	// If we expect a payload, process it as json.
