@@ -98,7 +98,7 @@ func (c Client) CreateEnvironment(ctx context.Context, req CreateEnvironmentRequ
 // TODO: add the filter options, explore performance issue.
 func (c Client) Environments(ctx context.Context) ([]Environment, error) {
 	var envs []Environment
-	if err := c.requestBody(ctx, http.MethodGet, "/api/private/environments", nil, &envs); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/environments", nil, &envs); err != nil {
 		return nil, err
 	}
 	return envs, nil
@@ -122,12 +122,12 @@ func (c Client) UserEnvironmentsByOrganization(ctx context.Context, userID, orgI
 
 // DeleteEnvironment deletes the environment.
 func (c Client) DeleteEnvironment(ctx context.Context, envID string) error {
-	return c.requestBody(ctx, http.MethodDelete, "/api/private/environments/"+envID, nil, nil)
+	return c.requestBody(ctx, http.MethodDelete, "/api/v0/environments/"+envID, nil, nil)
 }
 
 // StopEnvironment stops the stops.
 func (c Client) StopEnvironment(ctx context.Context, envID string) error {
-	return c.requestBody(ctx, http.MethodPut, "/api/private/environments/"+envID+"/stop", nil, nil)
+	return c.requestBody(ctx, http.MethodPut, "/api/v0/environments/"+envID+"/stop", nil, nil)
 }
 
 // UpdateEnvironmentReq defines the update operation, only setting
@@ -145,12 +145,12 @@ type UpdateEnvironmentReq struct {
 
 // RebuildEnvironment requests that the given envID is rebuilt with no changes to its specification.
 func (c Client) RebuildEnvironment(ctx context.Context, envID string) error {
-	return c.requestBody(ctx, http.MethodPatch, "/api/private/environments/"+envID, UpdateEnvironmentReq{}, nil)
+	return c.requestBody(ctx, http.MethodPatch, "/api/v0/environments/"+envID, UpdateEnvironmentReq{}, nil)
 }
 
 // EditEnvironment modifies the environment specification and initiates a rebuild.
 func (c Client) EditEnvironment(ctx context.Context, envID string, req UpdateEnvironmentReq) error {
-	return c.requestBody(ctx, http.MethodPatch, "/api/private/environments/"+envID, req, nil)
+	return c.requestBody(ctx, http.MethodPatch, "/api/v0/environments/"+envID, req, nil)
 }
 
 // DialWsep dials an environments command execution interface

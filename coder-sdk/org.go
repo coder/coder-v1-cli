@@ -58,7 +58,7 @@ func (c Client) OrganizationByID(ctx context.Context, orgID string) (*Organizati
 // OrganizationMembers get all members of the given organization.
 func (c Client) OrganizationMembers(ctx context.Context, orgID string) ([]OrganizationUser, error) {
 	var members []OrganizationUser
-	if err := c.requestBody(ctx, http.MethodGet, "/api/private/orgs/"+orgID+"/members", nil, &members); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/orgs/"+orgID+"/members", nil, &members); err != nil {
 		return nil, err
 	}
 	return members, nil
@@ -76,7 +76,7 @@ type UpdateOrganizationReq struct {
 
 // UpdateOrganization applys a partial update of an Organization resource.
 func (c Client) UpdateOrganization(ctx context.Context, orgID string, req UpdateOrganizationReq) error {
-	return c.requestBody(ctx, http.MethodPatch, "/api/private/orgs/"+orgID, req, nil)
+	return c.requestBody(ctx, http.MethodPatch, "/api/v0/orgs/"+orgID, req, nil)
 }
 
 // CreateOrganizationReq describes the request parameters to create a new Organization.
@@ -92,10 +92,10 @@ type CreateOrganizationReq struct {
 
 // CreateOrganization creates a new Organization in Coder Enterprise.
 func (c Client) CreateOrganization(ctx context.Context, req CreateOrganizationReq) error {
-	return c.requestBody(ctx, http.MethodPost, "/api/private/orgs", req, nil)
+	return c.requestBody(ctx, http.MethodPost, "/api/v0/orgs", req, nil)
 }
 
 // DeleteOrganization deletes an organization.
 func (c Client) DeleteOrganization(ctx context.Context, orgID string) error {
-	return c.requestBody(ctx, http.MethodDelete, "/api/private/orgs/"+orgID, nil, nil)
+	return c.requestBody(ctx, http.MethodDelete, "/api/v0/orgs/"+orgID, nil, nil)
 }
