@@ -274,3 +274,12 @@ func (c Client) WaitForEnvironmentReady(ctx context.Context, envID string) error
 		}
 	}
 }
+
+// EnvironmentByID get the details of an environment by its id.
+func (c Client) EnvironmentByID(ctx context.Context, id string) (*Environment, error) {
+	var env Environment
+	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/environments/"+id, nil, &env); err != nil {
+		return nil, err
+	}
+	return &env, nil
+}

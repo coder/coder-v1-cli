@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/time/rate"
@@ -65,9 +66,11 @@ func shValidArgs(cmd *cobra.Command, args []string) error {
 
 func shCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:                "sh [environment_name] [<command [args...]>]",
-		Short:              "Open a shell and execute commands in a Coder environment",
-		Long:               "Execute a remote command on the environment\\nIf no command is specified, the default shell is opened.",
+		Use:   "sh [environment_name] [<command [args...]>]",
+		Short: "Open a shell and execute commands in a Coder environment",
+		Long: `Execute a remote command on the environment
+If no command is specified, the default shell is opened.
+If the command is run in an interactive shell, a user prompt will occur if the environment needs to be rebuilt.`,
 		Args:               shValidArgs,
 		DisableFlagParsing: true,
 		ValidArgsFunction:  getEnvsForCompletion(coder.Me),
@@ -92,11 +95,158 @@ func shell(cmd *cobra.Command, cmdArgs []string) error {
 
 	envName := cmdArgs[0]
 
-	if err := runCommand(ctx, envName, command, args); err != nil {
+	// Before the command is run, ensure the workspace is on and ready to accept
+	// an ssh connection.
+	client, err := newClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	env, err := findEnv(ctx, client, envName, coder.Me)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Verify this is the correct behavior
+	isInteractive := terminal.IsTerminal(int(os.Stdout.Fd()))
+	if isInteractive { // checkAndRebuildEnvironment requires an interactive shell
+		// Checks & Rebuilds the environment if needed.
+		if err := checkAndRebuildEnvironment(ctx, client, env); err != nil {
+			return err
+		}
+	}
+
+	if err := runCommand(ctx, client, env, command, args); err != nil {
 		if exitErr, ok := err.(wsep.ExitError); ok {
 			os.Exit(exitErr.Code)
 		}
 		return xerrors.Errorf("run command: %w", err)
+	}
+	return nil
+}
+
+// rebuildPrompt returns function that prompts the user if they wish to
+// rebuild the selected environment if a rebuild is needed. The returned prompt function will
+// return an error if the user selects "no".
+// This functions returns `nil` if there is no reason to prompt the user to rebuild
+// the environment.
+func rebuildPrompt(env *coder.Environment) (prompt func() error) {
+	// Option 1: If the environment is off, the rebuild is needed
+	if env.LatestStat.ContainerStatus == coder.EnvironmentOff {
+		confirm := promptui.Prompt{
+			Label:     fmt.Sprintf("Environment %q is \"OFF\". Rebuild it now? (this can take several minutes", env.Name),
+			IsConfirm: true,
+		}
+		return func() (err error) {
+			_, err = confirm.Run()
+			return
+		}
+	}
+
+	// Option 2: If there are required rebuild messages, the rebuild is needed
+	var lines []string
+	for _, r := range env.RebuildMessages {
+		if r.Required {
+			lines = append(lines, clog.Causef(r.Text))
+		}
+	}
+
+	if len(lines) > 0 {
+		confirm := promptui.Prompt{
+			Label:     fmt.Sprintf("Environment %q requires a rebuild to work correctly. Do you wish to rebuild it now? (this will take a moment)", env.Name),
+			IsConfirm: true,
+		}
+		// This function also prints the reasons in a log statement.
+		// The confirm prompt does not handle new lines well in the label.
+		return func() (err error) {
+			clog.LogWarn("rebuild required", lines...)
+			_, err = confirm.Run()
+			return
+		}
+	}
+
+	// Environment looks good, no need to prompt the user.
+	return nil
+}
+
+// checkAndRebuildEnvironment will:
+//	1. Check if an environment needs to be rebuilt to be used
+// 	2. Prompt the user if they want to rebuild the environment (returns an error if they do not)
+//	3. Rebuilds the environment and waits for it to be 'ON'
+// Conditions for rebuilding are:
+//	- Environment is offline
+//	- Environment has rebuild messages requiring a rebuild
+func checkAndRebuildEnvironment(ctx context.Context, client *coder.Client, env *coder.Environment) error {
+	var err error
+	rebuildPrompt := rebuildPrompt(env) // Fetch the prompt for rebuilding envs w/ reason
+
+	switch {
+	// If this conditonal is true, a rebuild is **required** to make the sh command work.
+	case rebuildPrompt != nil:
+		// TODO: (@emyrk) I'd like to add a --force and --verbose flags to this command,
+		//					but currently DisableFlagParsing is set to true.
+		//					To enable force/verbose, we'd have to parse the flags ourselves,
+		//					or make the user `coder sh <env> -- [args]`
+		//
+		if err := rebuildPrompt(); err != nil {
+			// User selected not to rebuild :(
+			return clog.Fatal(
+				"environment is not ready for use",
+				"environment requires a rebuild",
+				fmt.Sprintf("its current status is %q", env.LatestStat.ContainerStatus),
+				clog.BlankLine,
+				clog.Tipf("run \"coder envs rebuild %s --follow\" to start the environment", env.Name),
+			)
+		}
+
+		// Start the rebuild
+		if err := client.RebuildEnvironment(ctx, env.ID); err != nil {
+			return err
+		}
+
+		fallthrough // Fallthrough to watching the logs
+	case env.LatestStat.ContainerStatus == coder.EnvironmentCreating:
+		// Environment is in the process of being created, just trail the logs
+		// and wait until it is done
+		clog.LogInfo(fmt.Sprintf("Rebuilding %q", env.Name))
+
+		// Watch the rebuild.
+		if err := trailBuildLogs(ctx, client, env.ID); err != nil {
+			return err
+		}
+
+		// newline after trailBuildLogs to place user on a fresh line for their shell
+		fmt.Println()
+
+		// At this point the buildlog is complete, and the status of the env should be 'ON'
+		env, err = client.EnvironmentByID(ctx, env.ID)
+		if err != nil {
+			// If this api call failed, it will likely fail again, no point to retry and make the user wait
+			return err
+		}
+
+		if env.LatestStat.ContainerStatus != coder.EnvironmentOn {
+			// This means we had a timeout
+			return clog.Fatal("the environment rebuild ran into an issue",
+				fmt.Sprintf("environment %q rebuild has failed and will not come online", env.Name),
+				fmt.Sprintf("its current status is %q", env.LatestStat.ContainerStatus),
+				clog.BlankLine,
+				// TODO: (@emyrk) can they check these logs from the cli? Isn't this the logs that
+				//			I just showed them? I'm trying to decide what exactly to tell a user.
+				clog.Tipf("take a look at the build logs to determine what went wrong"),
+			)
+		}
+
+	case env.LatestStat.ContainerStatus == coder.EnvironmentFailed:
+		// A failed container might just keep re-failing. I think it should be investigated by the user
+		return clog.Fatal("the environment has failed to come online",
+			fmt.Sprintf("environment %q is not running", env.Name),
+			fmt.Sprintf("its current status is %q", env.LatestStat.ContainerStatus),
+
+			clog.BlankLine,
+			clog.Tipf("take a look at the build logs to determine what went wrong"),
+			clog.Tipf("run \"coder envs rebuild %s --follow\" to attempt to rebuild the environment", env.Name),
+		)
 	}
 	return nil
 }
@@ -121,28 +271,7 @@ func sendResizeEvents(ctx context.Context, termFD uintptr, process wsep.Process)
 	}
 }
 
-func runCommand(ctx context.Context, envName, command string, args []string) error {
-	client, err := newClient(ctx)
-	if err != nil {
-		return err
-	}
-	env, err := findEnv(ctx, client, envName, coder.Me)
-	if err != nil {
-		return xerrors.Errorf("find environment: %w", err)
-	}
-
-	// check if a rebuild is required before attempting to open a shell
-	for _, r := range env.RebuildMessages {
-		// use the first rebuild message that is required
-		if r.Required {
-			return clog.Error(
-				fmt.Sprintf(`environment "%s" requires a rebuild`, env.Name),
-				clog.Causef(r.Text), clog.BlankLine,
-				clog.Tipf(`run "coder envs rebuild %s" to rebuild`, env.Name),
-			)
-		}
-	}
-
+func runCommand(ctx context.Context, client *coder.Client, env *coder.Environment, command string, args []string) error {
 	termFD := os.Stdout.Fd()
 
 	isInteractive := terminal.IsTerminal(int(termFD))
