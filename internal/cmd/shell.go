@@ -85,7 +85,9 @@ func shell(cmd *cobra.Command, cmdArgs []string) error {
 		args = append(args, strings.Join(cmdArgs[1:], " "))
 	} else {
 		// Bring user into shell if no command is specified.
-		args = append(args, "exec $(getent passwd $(whoami) | awk -F: '{ print $7 }')")
+		shell := "$(getent passwd $(id -u) | cut -d: -f 7)"
+		name := "-$(basename " + shell + ")"
+		args = append(args, fmt.Sprintf("exec -a %q %q", name, shell))
 	}
 
 	envName := cmdArgs[0]
