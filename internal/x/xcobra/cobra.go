@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"cdr.dev/coder-cli/pkg/clog"
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -15,7 +14,7 @@ func ExactArgs(n int) cobra.PositionalArgs {
 		if len(args) != n {
 			return clog.Error(
 				fmt.Sprintf("accepts %d arg(s), received %d", n, len(args)),
-				color.New(color.Bold).Sprintf("usage: ")+cmd.UseLine(),
+				clog.Bold("usage: ")+cmd.UseLine(),
 				clog.BlankLine,
 				clog.Tipf("use \"--help\" for more info"),
 			)
