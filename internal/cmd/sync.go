@@ -10,6 +10,7 @@ import (
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/sync"
+	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -20,7 +21,7 @@ func syncCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sync [local directory] [<env name>:<remote directory>]",
 		Short: "Establish a one way directory sync to a Coder environment",
-		Args:  cobra.ExactArgs(2),
+		Args:  xcobra.ExactArgs(2),
 		RunE:  makeRunSync(&init),
 	}
 	cmd.Flags().BoolVar(&init, "init", false, "do initial transfer and exit")

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/coder-cli/pkg/tablewriter"
 	"github.com/spf13/cobra"
@@ -37,7 +38,7 @@ func tagsCreateCmd() *cobra.Command {
 		Short:   "add an image tag",
 		Long:    "allow users to create environments with this image tag",
 		Example: `coder tags create latest --image ubuntu --org default`,
-		Args:    cobra.ExactArgs(1),
+		Args:    xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx)
@@ -139,7 +140,7 @@ func tagsRmCmd() *cobra.Command {
 		Use:     "rm [tag]",
 		Short:   "remove an image tag",
 		Example: `coder tags rm latest --image ubuntu --org default`,
-		Args:    cobra.ExactArgs(1),
+		Args:    xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx)

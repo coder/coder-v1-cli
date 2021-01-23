@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/coder-cli/pkg/tablewriter"
 
@@ -159,7 +160,7 @@ func createEnvCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [environment_name]",
 		Short: "create a new environment.",
-		Args:  cobra.ExactArgs(1),
+		Args:  xcobra.ExactArgs(1),
 		Long:  "Create a new Coder environment.",
 		Example: `# create a new environment using default resource amounts
 coder envs create my-new-env --image ubuntu
@@ -267,7 +268,7 @@ func editEnvCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "edit",
 		Short: "edit an existing environment and initiate a rebuild.",
-		Args:  cobra.ExactArgs(1),
+		Args:  xcobra.ExactArgs(1),
 		Long:  "Edit an existing environment and initate a rebuild.",
 		Example: `coder envs edit back-end-env --cpu 4
 

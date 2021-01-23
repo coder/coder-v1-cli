@@ -4,6 +4,7 @@ package cmd
 import (
 	"os"
 
+	"cdr.dev/coder-cli/internal/x/xcobra"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 )
@@ -45,8 +46,8 @@ func genDocsCmd(rootCmd *cobra.Command) *cobra.Command {
 	return &cobra.Command{
 		Use:     "gen-docs [dir_path]",
 		Short:   "Generate a markdown documentation tree for the root command.",
+		Args:    xcobra.ExactArgs(1),
 		Example: "coder gen-docs ./docs",
-		Args:    cobra.ExactArgs(1),
 		Hidden:  true,
 		RunE: func(_ *cobra.Command, args []string) error {
 			return doc.GenMarkdownTree(rootCmd, args[0])
