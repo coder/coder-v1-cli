@@ -24,7 +24,7 @@ func loginCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "login [Coder Enterprise URL eg. https://my.coder.domain/]",
 		Short: "Authenticate this client for future operations",
-		Args:  xcobra.ExactArgs(1, "access_url"),
+		Args:  xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Pull the URL from the args and do some sanity check.
 			rawURL := args[0]

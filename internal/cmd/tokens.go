@@ -56,7 +56,7 @@ func createTokensCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "create [token_name]",
 		Short: "create generates a new API token and prints it to stdout",
-		Args:  xcobra.ExactArgs(1, "token_name"),
+		Args:  xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx)
@@ -79,7 +79,7 @@ func rmTokenCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "rm [token_id]",
 		Short: "remove an API token by its unique ID",
-		Args:  xcobra.ExactArgs(1, "token_id"),
+		Args:  xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx)
@@ -98,7 +98,7 @@ func regenTokenCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "regen [token_id]",
 		Short: "regenerate an API token by its unique ID and print the new token to stdout",
-		Args:  xcobra.ExactArgs(1, "token_id"),
+		Args:  xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx)

@@ -25,7 +25,7 @@ func rebuildEnvCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "rebuild [environment_name]",
 		Short: "rebuild a Coder environment",
-		Args:  xcobra.ExactArgs(1, "environment_name"),
+		Args:  xcobra.ExactArgs(1),
 		Example: `coder envs rebuild front-end-env --follow
 coder envs rebuild backend-env --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -145,7 +145,7 @@ func watchBuildLogCommand() *cobra.Command {
 		Use:     "watch-build [environment_name]",
 		Example: "coder envs watch-build front-end-env",
 		Short:   "trail the build log of a Coder environment",
-		Args:    xcobra.ExactArgs(1, "environment_name"),
+		Args:    xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx)

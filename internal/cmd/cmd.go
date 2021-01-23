@@ -46,8 +46,8 @@ func genDocsCmd(rootCmd *cobra.Command) *cobra.Command {
 	return &cobra.Command{
 		Use:     "gen-docs [dir_path]",
 		Short:   "Generate a markdown documentation tree for the root command.",
+		Args:    xcobra.ExactArgs(1),
 		Example: "coder gen-docs ./docs",
-		Args:    xcobra.ExactArgs(1, "dir_path"),
 		Hidden:  true,
 		RunE: func(_ *cobra.Command, args []string) error {
 			return doc.GenMarkdownTree(rootCmd, args[0])

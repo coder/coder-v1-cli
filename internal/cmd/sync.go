@@ -21,7 +21,7 @@ func syncCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sync [local directory] [<env name>:<remote directory>]",
 		Short: "Establish a one way directory sync to a Coder environment",
-		Args:  xcobra.ExactArgs(2, "local_director", "<env_name>:<remote_dir>"),
+		Args:  xcobra.ExactArgs(2),
 		RunE:  makeRunSync(&init),
 	}
 	cmd.Flags().BoolVar(&init, "init", false, "do initial transfer and exit")

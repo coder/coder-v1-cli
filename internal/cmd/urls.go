@@ -27,7 +27,7 @@ func urlCmd() *cobra.Command {
 	lsCmd := &cobra.Command{
 		Use:               "ls [environment_name]",
 		Short:             "List all DevURLs for an environment",
-		Args:              xcobra.ExactArgs(1, "environment_name"),
+		Args:              xcobra.ExactArgs(1),
 		ValidArgsFunction: getEnvsForCompletion(coder.Me),
 		RunE:              listDevURLsCmd(&outputFmt),
 	}
@@ -127,7 +127,7 @@ func createDevURLCmd() *cobra.Command {
 		Use:     "create [env_name] [port]",
 		Short:   "Create a new devurl for an environment",
 		Aliases: []string{"edit"},
-		Args:    xcobra.ExactArgs(2, "environment_name", "port"),
+		Args:    xcobra.ExactArgs(2),
 		// Run creates or updates a devURL
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var (
