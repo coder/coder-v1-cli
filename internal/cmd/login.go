@@ -12,6 +12,7 @@ import (
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/loginsrv"
 	"cdr.dev/coder-cli/internal/version"
+	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -23,7 +24,7 @@ func loginCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "login [Coder Enterprise URL eg. https://my.coder.domain/]",
 		Short: "Authenticate this client for future operations",
-		Args:  cobra.ExactArgs(1),
+		Args:  xcobra.ExactArgs(1, "access_url"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Pull the URL from the args and do some sanity check.
 			rawURL := args[0]

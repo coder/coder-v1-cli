@@ -13,6 +13,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/coder-cli/pkg/tablewriter"
 )
@@ -26,7 +27,7 @@ func urlCmd() *cobra.Command {
 	lsCmd := &cobra.Command{
 		Use:               "ls [environment_name]",
 		Short:             "List all DevURLs for an environment",
-		Args:              cobra.ExactArgs(1),
+		Args:              xcobra.ExactArgs(1, "environment_name"),
 		ValidArgsFunction: getEnvsForCompletion(coder.Me),
 		RunE:              listDevURLsCmd(&outputFmt),
 	}
@@ -126,7 +127,7 @@ func createDevURLCmd() *cobra.Command {
 		Use:     "create [env_name] [port]",
 		Short:   "Create a new devurl for an environment",
 		Aliases: []string{"edit"},
-		Args:    cobra.ExactArgs(2),
+		Args:    xcobra.ExactArgs(2, "environment_name", "port"),
 		// Run creates or updates a devURL
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var (
