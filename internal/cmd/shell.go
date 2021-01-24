@@ -81,14 +81,46 @@ coder sh front-end-dev cat ~/config.json`,
 	}
 }
 
+// shellEscape escapes an argument so that we can pass it 'sh -c'
+// and have it do the right thing.
+//
+// Use this to ensure that the result of a command running in
+// the development environment behaves the same as the command
+// running via "coder sh".
+//
+// For example:
+//
+//   $ coder sh env
+//   $ go run ~/test.go 1 2 "3 4" '"abc def" \\abc' 5 6 "7 8 9"
+//
+// should produce the same output as:
+//
+//   $ coder sh go run ~/test.go 1 2 "3 4" '"abc def" \\abc' 5 6 "7 8 9"
+func shellEscape(arg string) string {
+	r := strings.NewReplacer(`\`, `\\`, `"`, `\"`, `'`, `\'`, ` `, `\ `)
+	return r.Replace(arg)
+}
+
 func shell(cmd *cobra.Command, cmdArgs []string) error {
 	ctx := cmd.Context()
+
 	var command string
 	var args []string
 	if len(cmdArgs) > 1 {
+		var escapedArgs strings.Builder
+
+		for i, arg := range cmdArgs[1:] {
+			escapedArgs.WriteString(shellEscape(arg))
+
+			// Add spaces between arguments, except the last argument
+			if i < len(cmdArgs)-2 {
+				escapedArgs.WriteByte(' ')
+			}
+		}
+
 		command = "/bin/sh"
 		args = []string{"-c"}
-		args = append(args, strings.Join(cmdArgs[1:], " "))
+		args = append(args, escapedArgs.String())
 	} else {
 		// Bring user into shell if no command is specified.
 		shell := "$(getent passwd $(id -u) | cut -d: -f 7)"
