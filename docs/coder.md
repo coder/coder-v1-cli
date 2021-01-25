@@ -19,6 +19,7 @@ coder provides a CLI for working with an existing Coder Enterprise installation
 * [coder logout](coder_logout.md)	 - Remove local authentication credentials if any exist
 * [coder sh](coder_sh.md)	 - Open a shell and execute commands in a Coder environment
 * [coder sync](coder_sync.md)	 - Establish a one way directory sync to a Coder environment
+* [coder tokens](coder_tokens.md)	 - manage Coder API tokens for the active user
 * [coder urls](coder_urls.md)	 - Interact with environment DevURLs
 * [coder users](coder_users.md)	 - Interact with Coder user accounts
 

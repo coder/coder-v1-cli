@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/x/xcobra"
@@ -12,9 +15,8 @@ import (
 
 func tokensCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:    "tokens",
-		Hidden: true,
-		Short:  "manage Coder API tokens for the active user",
+		Use:   "tokens",
+		Short: "manage Coder API tokens for the active user",
 		Long: "Create and manage API Tokens for authenticating the CLI.\n" +
 			"Statically authenticate using the token value with the " + "`" + "CODER_TOKEN" + "`" + " and " + "`" + "CODER_URL" + "`" + " environment variables.",
 	}
@@ -28,7 +30,9 @@ func tokensCmd() *cobra.Command {
 }
 
 func lsTokensCmd() *cobra.Command {
-	return &cobra.Command{
+	var outputFmt string
+
+	cmd := &cobra.Command{
 		Use:   "ls",
 		Short: "show the user's active API tokens",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -43,14 +47,30 @@ func lsTokensCmd() *cobra.Command {
 				return err
 			}
 
-			err = tablewriter.WriteTable(len(tokens), func(i int) interface{} { return tokens[i] })
-			if err != nil {
-				return err
+			switch outputFmt {
+			case humanOutput:
+				err := tablewriter.WriteTable(len(tokens), func(i int) interface{} {
+					return tokens[i]
+				})
+				if err != nil {
+					return xerrors.Errorf("write table: %w", err)
+				}
+			case jsonOutput:
+				err := json.NewEncoder(os.Stdout).Encode(tokens)
+				if err != nil {
+					return xerrors.Errorf("write tokens as JSON: %w", err)
+				}
+			default:
+				return xerrors.Errorf("unknown --output value %q", outputFmt)
 			}
 
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVarP(&outputFmt, "output", "o", humanOutput, "human | json")
+
+	return cmd
 }
 
 func createTokensCmd() *cobra.Command {
