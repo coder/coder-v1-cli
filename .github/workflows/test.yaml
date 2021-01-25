@@ -15,7 +15,7 @@ jobs:
       - name: fmt
         uses: ./ci/image
         with:
-          args: make -j fmt
+          args: make -j fmt && ./ci/scripts/files_changed.sh
   lint:
     runs-on: ubuntu-latest
     steps:
