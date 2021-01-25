@@ -61,6 +61,22 @@ func TestCoderCLI(t *testing.T) {
 			tcli.Success(),
 		)
 
+		c.Run(ctx, "coder envs ls -o json").Assert(t,
+			tcli.Success(),
+		)
+
+		c.Run(ctx, "coder tokens").Assert(t,
+			tcli.Success(),
+		)
+
+		c.Run(ctx, "coder tokens ls").Assert(t,
+			tcli.Success(),
+		)
+
+		c.Run(ctx, "coder tokens ls -o json").Assert(t,
+			tcli.Success(),
+		)
+
 		c.Run(ctx, "coder urls").Assert(t,
 			tcli.Success(),
 		)
@@ -78,6 +94,10 @@ func TestCoderCLI(t *testing.T) {
 		)
 
 		c.Run(ctx, "coder envs ls").Assert(t,
+			tcli.Error(),
+		)
+
+		c.Run(ctx, "coder tokens ls").Assert(t,
 			tcli.Error(),
 		)
 	})
