@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/coder-cli/internal/loginsrv"
 	"github.com/stretchr/testify/require"
+
+	"cdr.dev/coder-cli/internal/loginsrv"
 )
 
 // 500ms should be plenty enough, even on slow machine to perform the request/response cycle.

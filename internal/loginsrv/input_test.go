@@ -8,8 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/coder-cli/internal/loginsrv"
 	"github.com/stretchr/testify/require"
+
+	"cdr.dev/coder-cli/internal/loginsrv"
 )
 
 // 100ms is plenty of time as we are dealing with simple in-memory pipe.

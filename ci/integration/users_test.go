@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"cdr.dev/slog/sloggers/slogtest/assert"
+
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/pkg/tcli"
-	"cdr.dev/slog/sloggers/slogtest/assert"
 )
 
 func TestUsers(t *testing.T) {

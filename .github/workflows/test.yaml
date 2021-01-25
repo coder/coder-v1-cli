@@ -15,7 +15,7 @@ jobs:
       - name: fmt
         uses: ./ci/image
         with:
-          args: ./ci/steps/fmt.sh
+          args: make -j fmt
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -38,7 +38,7 @@ jobs:
       - name: test
         uses: ./ci/image
         with:
-          args: ./ci/steps/unit_test.sh
+          args: make -j test/go
   gendocs:
     runs-on: ubuntu-latest
     steps:
@@ -52,4 +52,4 @@ jobs:
       - name: generate-docs
         uses: ./ci/image
         with:
-          args: ./ci/steps/gendocs.sh
+          args: make -j gendocs && ./ci/scripts/files_changed.sh

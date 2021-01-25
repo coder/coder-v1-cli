@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/coder-cli/pkg/tcli"
 	"cdr.dev/slog/sloggers/slogtest/assert"
+
+	"cdr.dev/coder-cli/pkg/tcli"
 )
 
 func run(t *testing.T, container string, execute func(t *testing.T, ctx context.Context, runner *tcli.ContainerRunner)) {

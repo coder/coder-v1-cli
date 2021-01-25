@@ -10,12 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/pkg/tcli"
 	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/slogtest"
 	"cdr.dev/slog/sloggers/slogtest/assert"
 	"github.com/google/go-cmp/cmp"
+
+	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/pkg/tcli"
 )
 
 func cleanupClient(ctx context.Context, t *testing.T) *coder.Client {

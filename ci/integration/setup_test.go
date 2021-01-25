@@ -9,8 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"cdr.dev/coder-cli/pkg/tcli"
 	"golang.org/x/xerrors"
+
+	"cdr.dev/coder-cli/pkg/tcli"
 )
 
 // binpath is populated during package initialization with a path to the coder binary.

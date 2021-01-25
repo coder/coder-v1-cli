@@ -8,12 +8,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
+
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/sync"
 	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/pkg/clog"
-	"github.com/spf13/cobra"
-	"golang.org/x/xerrors"
 )
 
 func syncCmd() *cobra.Command {

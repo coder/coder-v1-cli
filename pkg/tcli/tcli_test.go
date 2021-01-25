@@ -8,8 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/coder-cli/pkg/tcli"
 	"cdr.dev/slog/sloggers/slogtest/assert"
+
+	"cdr.dev/coder-cli/pkg/tcli"
 )
 
 func TestTCli(t *testing.T) {

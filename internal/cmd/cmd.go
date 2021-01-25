@@ -4,9 +4,10 @@ package cmd
 import (
 	"os"
 
-	"cdr.dev/coder-cli/internal/x/xcobra"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
+
+	"cdr.dev/coder-cli/internal/x/xcobra"
 )
 
 // verbose is a global flag for specifying that a command should give verbose output.

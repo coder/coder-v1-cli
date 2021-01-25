@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
+
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/coder-cli/pkg/tablewriter"
-	"github.com/spf13/cobra"
-	"golang.org/x/xerrors"
 )
 
 func imgsCmd() *cobra.Command {

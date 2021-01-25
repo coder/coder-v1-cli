@@ -7,15 +7,16 @@ import (
 	"strings"
 	"time"
 
-	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/x/xcobra"
-	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/xerrors"
+
+	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/x/xcobra"
+	"cdr.dev/coder-cli/pkg/clog"
 )
 
 func rebuildEnvCommand() *cobra.Command {

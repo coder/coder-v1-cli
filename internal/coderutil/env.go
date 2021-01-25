@@ -4,9 +4,10 @@ import (
 	"context"
 	"net/url"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 // DialEnvWsep dials the executor endpoint using the https://github.com/cdr/wsep message protocol.
