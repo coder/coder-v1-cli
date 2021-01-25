@@ -83,15 +83,20 @@ coder sh front-end-dev cat ~/config.json`,
 
 func shell(cmd *cobra.Command, cmdArgs []string) error {
 	ctx := cmd.Context()
-	command := "sh"
-	args := []string{"-c"}
+	var command string
+	var args []string
 	if len(cmdArgs) > 1 {
+		command = "/bin/sh"
+		args = []string{"-c"}
 		args = append(args, strings.Join(cmdArgs[1:], " "))
 	} else {
 		// Bring user into shell if no command is specified.
 		shell := "$(getent passwd $(id -u) | cut -d: -f 7)"
-		name := "-$(basename " + shell + ")"
-		args = append(args, fmt.Sprintf("exec -a %q %q", name, shell))
+
+		// force bash for the '-l' flag to the exec built-in
+		command = "/bin/bash"
+		args = []string{"-c"}
+		args = append(args, fmt.Sprintf("exec -l %q", shell))
 	}
 
 	envName := cmdArgs[0]
