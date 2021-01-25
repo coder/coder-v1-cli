@@ -6,7 +6,7 @@ popd() { builtin popd >/dev/null; }
 
 set -euo pipefail
 
-cd "$(git rev-parse --show-toplevel)/ci/steps"
+cd "$(git rev-parse --show-toplevel)/ci/scripts"
 
 tag=$(git describe --tags)
 

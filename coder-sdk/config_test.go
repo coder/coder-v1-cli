@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/slogtest"
 	"cdr.dev/slog/sloggers/slogtest/assert"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 func newClient(t *testing.T) *coder.Client {

@@ -3,10 +3,11 @@ package cmd
 import (
 	"os"
 
-	"cdr.dev/coder-cli/internal/config"
-	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
+
+	"cdr.dev/coder-cli/internal/config"
+	"cdr.dev/coder-cli/pkg/clog"
 )
 
 func logoutCmd() *cobra.Command {

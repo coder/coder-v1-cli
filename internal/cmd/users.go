@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"os"
 
-	"cdr.dev/coder-cli/pkg/tablewriter"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
+
+	"cdr.dev/coder-cli/pkg/tablewriter"
 )
 
 func usersCmd() *cobra.Command {

@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	"golang.org/x/xerrors"
+
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/pkg/clog"
-	"golang.org/x/xerrors"
 )
 
 // Helpers for working with the Coder Enterprise API.

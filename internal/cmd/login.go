@@ -8,16 +8,17 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/pkg/browser"
+	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/xerrors"
+
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/loginsrv"
 	"cdr.dev/coder-cli/internal/version"
 	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/pkg/clog"
-	"github.com/pkg/browser"
-	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/xerrors"
 )
 
 func loginCmd() *cobra.Command {

@@ -15,12 +15,13 @@ import (
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 
+	"cdr.dev/wsep"
+
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/activity"
 	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/coder-cli/internal/x/xterminal"
 	"cdr.dev/coder-cli/pkg/clog"
-	"cdr.dev/wsep"
 )
 
 func getEnvsForCompletion(user string) func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

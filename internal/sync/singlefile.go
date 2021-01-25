@@ -9,11 +9,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/wsep"
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
+
+	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/coderutil"
 )
 
 // SingleFile copies the given file into the remote dir or remote path of the given coder.Environment.

@@ -4,8 +4,9 @@ package xcobra
 import (
 	"fmt"
 
-	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/spf13/cobra"
+
+	"cdr.dev/coder-cli/pkg/clog"
 )
 
 // ExactArgs returns an error if there are not exactly n args.
