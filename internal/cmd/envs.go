@@ -280,7 +280,7 @@ coder envs create-from-repo github.com/cdr/m --branch envs-as-code`,
 			createReq := &coder.Template{
 				RepositoryURL: args[0],
 				Branch:        branch,
-				Name:          name,
+				FileName:      name,
 			}
 
 			env, err := client.CreateEnvironment(ctx, coder.CreateEnvironmentRequest{
