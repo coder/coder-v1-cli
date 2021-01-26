@@ -32,6 +32,7 @@ func envsCmd() *cobra.Command {
 		watchBuildLogCommand(),
 		rebuildEnvCommand(),
 		createEnvCmd(),
+		createEnvFromRepoCmd(),
 		editEnvCmd(),
 	)
 	return cmd
@@ -184,7 +185,6 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 			if multiOrgMember && org == "" {
 				return xerrors.New("org is required for multi-org members")
 			}
-
 			importedImg, err := findImg(ctx, client, findImgConf{
 				email:   coder.Me,
 				imgName: img,
@@ -249,6 +249,65 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.Flags().BoolVar(&useCVM, "container-based-vm", false, "deploy the environment as a Container-based VM")
 	_ = cmd.MarkFlagRequired("image")
+	return cmd
+}
+
+func createEnvFromRepoCmd() *cobra.Command {
+	var (
+		branch string
+		name   string
+		follow bool
+	)
+
+	cmd := &cobra.Command{
+		Use:    "create-from-repo [environment_name]",
+		Short:  "create a new environment from a git repository.",
+		Args:   xcobra.ExactArgs(1),
+		Long:   "Create a new Coder environment from a Git repository.",
+		Hidden: true,
+		Example: `# create a new environment from git repository template
+coder envs create-from-repo github.com/cdr/m
+coder envs create-from-repo github.com/cdr/m --branch envs-as-code`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+
+			client, err := newClient(ctx)
+			if err != nil {
+				return err
+			}
+
+			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
+			createReq := &coder.Template{
+				RepositoryURL: args[0],
+				Branch:        branch,
+				Name:          name,
+			}
+
+			env, err := client.CreateEnvironment(ctx, coder.CreateEnvironmentRequest{
+				Template: createReq,
+			})
+			if err != nil {
+				return xerrors.Errorf("create environment: %w", err)
+			}
+
+			if follow {
+				clog.LogSuccess("creating environment...")
+				if err := trailBuildLogs(ctx, client, env.ID); err != nil {
+					return err
+				}
+				return nil
+			}
+
+			clog.LogSuccess("creating environment...",
+				clog.BlankLine,
+				clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, env.Name),
+			)
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&branch, "branch", "b", "master", "name of the branch to create the environment from.")
+	cmd.Flags().StringVarP(&name, "name", "n", "coder.yaml", "name of the config file.")
+	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	return cmd
 }
 

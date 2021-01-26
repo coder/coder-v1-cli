@@ -73,22 +73,42 @@ const (
 
 // CreateEnvironmentRequest is used to configure a new environment.
 type CreateEnvironmentRequest struct {
-	Name           string   `json:"name"`
-	ImageID        string   `json:"image_id"`
-	OrgID          string   `json:"org_id"`
-	ImageTag       string   `json:"image_tag"`
-	CPUCores       float32  `json:"cpu_cores"`
-	MemoryGB       float32  `json:"memory_gb"`
-	DiskGB         int      `json:"disk_gb"`
-	GPUs           int      `json:"gpus"`
-	Services       []string `json:"services"`
-	UseContainerVM bool     `json:"use_container_vm"`
+	Name           string    `json:"name"`
+	ImageID        string    `json:"image_id"`
+	OrgID          string    `json:"org_id"`
+	ImageTag       string    `json:"image_tag"`
+	CPUCores       float32   `json:"cpu_cores"`
+	MemoryGB       float32   `json:"memory_gb"`
+	DiskGB         int       `json:"disk_gb"`
+	GPUs           int       `json:"gpus"`
+	Services       []string  `json:"services"`
+	UseContainerVM bool      `json:"use_container_vm"`
+	Template       *Template `json:"template"`
 }
 
 // CreateEnvironment sends a request to create an environment.
 func (c Client) CreateEnvironment(ctx context.Context, req CreateEnvironmentRequest) (*Environment, error) {
 	var env Environment
 	if err := c.requestBody(ctx, http.MethodPost, "/api/v0/environments", req, &env); err != nil {
+		return nil, err
+	}
+	return &env, nil
+}
+
+// Template is used to configure a new environment from a repo.
+// It is currently in alpha and subject to API-breaking change.
+type Template struct {
+	RepositoryURL string `json:"repository_url"`
+	// Optional. The default branch will be used if not provided.
+	Branch string `json:"branch"`
+	// Optional. The template name will be used if not provided.
+	Name string `json:"name"`
+}
+
+// CreateEnvironmentFromRepo sends a request to create an environment from a repository.
+func (c Client) CreateEnvironmentFromRepo(ctx context.Context, orgID string, req Template) (*Environment, error) {
+	var env Environment
+	if err := c.requestBody(ctx, http.MethodPost, "/api/private/orgs/"+orgID+"/environments/from-repo", req, &env); err != nil {
 		return nil, err
 	}
 	return &env, nil
