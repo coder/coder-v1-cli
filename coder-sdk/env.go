@@ -102,7 +102,7 @@ type Template struct {
 	// Optional. The default branch will be used if not provided.
 	Branch string `json:"branch"`
 	// Optional. The template name will be used if not provided.
-	Name string `json:"name"`
+	FileName string `json:"file_name"`
 }
 
 // CreateEnvironmentFromRepo sends a request to create an environment from a repository.
