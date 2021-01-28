@@ -45,28 +45,34 @@ func (f File) WriteYAML(in interface{}) error {
 	return f.Write(string(encoded))
 }
 
+// The following files configure and authenticate the coder-cli in ~/.coder/.
 const (
 	CredentialsFile File = "credentials.yaml"
 	ConfigFile      File = "config.yaml"
 )
 
+// Credentials defines the schema for the ~/.coder/credentials.yaml file.
 type Credentials struct {
 	DashboardURL string `yaml:"url"`
 	SessionToken string `yaml:"session"`
 }
 
+// CoderConfig defines the schema for the ~/.coder/config.yaml file.
 type CoderConfig struct {
 	Version  string        `yaml:"version"`
 	Defaults CoderDefaults `yaml:"defaults"`
 }
 
+// CoderDefaults defines the schema for the default user configuration located in the global config file.
 type CoderDefaults struct {
 	Environment string `yaml:"environment"`
 	Editor      Editor `yaml:"editor"`
 }
 
+// Editor defines an editor which coder-cli can open.
 type Editor string
 
+// The following editors may be specified as targets of `coder open`.
 const (
 	EditorVSCode        Editor = "vscode"
 	EditorBrowserVSCode Editor = "browser-vscode"

@@ -17,6 +17,8 @@ func dir() (string, error) {
 	return filepath.Join(homedir, ".coder"), nil
 }
 
+// MigrateFromOld ensures that users of the CLI are properly authenticated with the new ~/.coder/credentials.yaml
+// authentication schema.
 func MigrateFromOld() error {
 	olddir := configdir.LocalConfig("coder")
 	_, err := os.Stat(olddir)
