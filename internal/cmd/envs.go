@@ -1,9 +1,13 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"net/url"
 	"os"
 
 	"cdr.dev/coder-cli/coder-sdk"
@@ -254,20 +258,21 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 
 func createEnvFromRepoCmd() *cobra.Command {
 	var (
-		branch string
-		name   string
-		follow bool
+		ref      string
+		repo     string
+		follow   bool
+		filepath string
+		org      string
 	)
 
 	cmd := &cobra.Command{
-		Use:    "create-from-repo [environment_name]",
-		Short:  "create a new environment from a git repository.",
-		Args:   xcobra.ExactArgs(1),
-		Long:   "Create a new Coder environment from a Git repository.",
+		Use:    "create-from-config",
+		Short:  "create a new environment from a config file.",
+		Long:   "Create a new Coder environment from a config file.",
 		Hidden: true,
 		Example: `# create a new environment from git repository template
-coder envs create-from-repo github.com/cdr/m
-coder envs create-from-repo github.com/cdr/m --branch envs-as-code`,
+coder envs create-from-repo --repo-url github.com/cdr/m --branch my-branch
+coder envs create-from-repo -f coder.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
@@ -276,15 +281,60 @@ coder envs create-from-repo github.com/cdr/m --branch envs-as-code`,
 				return err
 			}
 
-			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
-			createReq := &coder.Template{
-				RepositoryURL: args[0],
-				Branch:        branch,
-				FileName:      name,
+			if repo != "" {
+				_, err = url.Parse(repo)
+				if err != nil {
+					return xerrors.Errorf("'repo' must be a valid url: %w", err)
+				}
+			}
+
+			multiOrgMember, err := isMultiOrgMember(ctx, client, coder.Me)
+			if err != nil {
+				return err
+			}
+
+			if multiOrgMember && org == "" {
+				return xerrors.New("org is required for multi-org members")
+			}
+
+			var rd io.Reader
+			if filepath != "" {
+				b, err := ioutil.ReadFile(filepath)
+				if err != nil {
+					return xerrors.Errorf("read local file: %w", err)
+				}
+				rd = bytes.NewReader(b)
+			}
+
+			req := coder.ParseTemplateRequest{
+				RepoURL: repo,
+				Ref:     ref,
+				Local:   rd,
+			}
+
+			tpl, err := client.ParseTemplate(ctx, req)
+			if err != nil {
+				return xerrors.Errorf("parse environment template config: %w", err)
+			}
+
+			importedImg, err := findImg(ctx, client, findImgConf{
+				email:   coder.Me,
+				imgName: tpl.Workspace.Image,
+				orgName: org,
+			})
+			if err != nil {
+				return err
 			}
 
 			env, err := client.CreateEnvironment(ctx, coder.CreateEnvironmentRequest{
-				Template: createReq,
+				Name:           tpl.Workspace.Name,
+				ImageID:        importedImg.ID,
+				OrgID:          importedImg.OrganizationID,
+				ImageTag:       importedImg.DefaultTag.Tag,
+				CPUCores:       tpl.Workspace.Resources.CPU,
+				MemoryGB:       tpl.Workspace.Resources.Memory,
+				DiskGB:         tpl.Workspace.Resources.Disk,
+				UseContainerVM: tpl.Workspace.ContainerBasedVM,
 			})
 			if err != nil {
 				return xerrors.Errorf("create environment: %w", err)
@@ -305,8 +355,10 @@ coder envs create-from-repo github.com/cdr/m --branch envs-as-code`,
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&branch, "branch", "b", "master", "name of the branch to create the environment from.")
-	cmd.Flags().StringVarP(&name, "name", "n", "coder.yaml", "name of the config file.")
+	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the environment should be created under.")
+	cmd.Flags().StringVarP(&filepath, "filepath", "f", "", "path to local template file.")
+	cmd.Flags().StringVarP(&ref, "ref", "", "master", "git reference to pull template from. May be a branch, tag, or commit hash.")
+	cmd.Flags().StringVarP(&repo, "repo-url", "r", "", "URL of the git repository to pull the config from. Config file must live in '.coder/coder.yaml'.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	return cmd
 }

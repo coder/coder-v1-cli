@@ -2,6 +2,7 @@ package coder
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -73,17 +74,16 @@ const (
 
 // CreateEnvironmentRequest is used to configure a new environment.
 type CreateEnvironmentRequest struct {
-	Name           string    `json:"name"`
-	ImageID        string    `json:"image_id"`
-	OrgID          string    `json:"org_id"`
-	ImageTag       string    `json:"image_tag"`
-	CPUCores       float32   `json:"cpu_cores"`
-	MemoryGB       float32   `json:"memory_gb"`
-	DiskGB         int       `json:"disk_gb"`
-	GPUs           int       `json:"gpus"`
-	Services       []string  `json:"services"`
-	UseContainerVM bool      `json:"use_container_vm"`
-	Template       *Template `json:"template"`
+	Name           string   `json:"name"`
+	ImageID        string   `json:"image_id"`
+	OrgID          string   `json:"org_id"`
+	ImageTag       string   `json:"image_tag"`
+	CPUCores       float32  `json:"cpu_cores"`
+	MemoryGB       float32  `json:"memory_gb"`
+	DiskGB         int      `json:"disk_gb"`
+	GPUs           int      `json:"gpus"`
+	Services       []string `json:"services"`
+	UseContainerVM bool     `json:"use_container_vm"`
 }
 
 // CreateEnvironment sends a request to create an environment.
@@ -95,14 +95,60 @@ func (c Client) CreateEnvironment(ctx context.Context, req CreateEnvironmentRequ
 	return &env, nil
 }
 
-// Template is used to configure a new environment from a repo.
-// It is currently in alpha and subject to API-breaking change.
+// ParseTemplateRequest parses a template. If Local is a non-nil reader
+// it will obviate any other fields on the request.
+type ParseTemplateRequest struct {
+	RepoURL string    `json:"repo_url"`
+	Ref     string    `json:"ref"`
+	Local   io.Reader `json:"-"`
+}
+
+// Template is a Workspaces As Code (WAC) template.
 type Template struct {
-	RepositoryURL string `json:"repository_url"`
-	// Optional. The default branch will be used if not provided.
-	Branch string `json:"branch"`
-	// Optional. The template name will be used if not provided.
-	FileName string `json:"file_name"`
+	Workspace Workspace `json:"workspace"`
+}
+
+// Workspace defines values on the workspace that can be configured.
+type Workspace struct {
+	Name             string    `json:"name"`
+	Image            string    `json:"image"`
+	ContainerBasedVM bool      `json:"container-based-vm"`
+	Resources        Resources `json:"resources"`
+}
+
+// Resources defines compute values that can be configured for a workspace.
+type Resources struct {
+	CPU    float32 `json:"cpu" `
+	Memory float32 `json:"memory"`
+	Disk   int     `json:"disk"`
+}
+
+// ParseTemplate parses a template config. It support both remote repositories and local files.
+// If a local file is specified then all other values in the request are ignored.
+func (c Client) ParseTemplate(ctx context.Context, req ParseTemplateRequest) (Template, error) {
+	const path = "/api/private/environments/template/parse"
+	var (
+		tpl     Template
+		opts    []requestOption
+		headers = http.Header{}
+	)
+
+	if req.Local == nil {
+		if err := c.requestBody(ctx, http.MethodPost, path, req, &tpl); err != nil {
+			return tpl, err
+		}
+		return tpl, nil
+	}
+
+	headers.Set("Content-Type", "application/octet-stream")
+	opts = append(opts, withBody(req.Local), withHeaders(headers))
+
+	err := c.requestBody(ctx, http.MethodPost, path, nil, &tpl, opts...)
+	if err != nil {
+		return tpl, err
+	}
+
+	return tpl, nil
 }
 
 // CreateEnvironmentFromRepo sends a request to create an environment from a repository.
