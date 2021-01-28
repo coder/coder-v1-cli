@@ -19,7 +19,7 @@ func logoutCmd() *cobra.Command {
 }
 
 func logout(_ *cobra.Command, _ []string) error {
-	err := config.Session.Delete()
+	err := config.CredentialsFile.Delete()
 	if err != nil {
 		if os.IsNotExist(err) {
 			clog.LogInfo("no active session")

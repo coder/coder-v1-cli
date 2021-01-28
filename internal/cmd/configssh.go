@@ -210,11 +210,12 @@ func makeSSHConfig(host, userName, envName, privateKeyFilepath string) string {
 
 //nolint:deadcode,unused
 func configuredHostname() (string, error) {
-	u, err := config.URL.Read()
+	var creds config.Credentials
+	err := config.CredentialsFile.UnmarshalYAML(&creds)
 	if err != nil {
 		return "", err
 	}
-	url, err := url.Parse(u)
+	url, err := url.Parse(creds.DashboardURL)
 	if err != nil {
 		return "", err
 	}

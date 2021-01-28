@@ -10,6 +10,7 @@ import (
 	"runtime"
 
 	"cdr.dev/coder-cli/internal/cmd"
+	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/version"
 	"cdr.dev/coder-cli/internal/x/xterminal"
 	"cdr.dev/coder-cli/pkg/clog"
@@ -23,6 +24,11 @@ func main() {
 		go func() {
 			log.Println(http.ListenAndServe("localhost:6060", nil))
 		}()
+	}
+
+	err := config.MigrateFromOld()
+	if err != nil {
+		panic(err)
 	}
 
 	stdoutState, err := xterminal.MakeOutputRaw(os.Stdout.Fd())

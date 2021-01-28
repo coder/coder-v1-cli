@@ -31,15 +31,13 @@ func newClient(ctx context.Context) (*coder.Client, error) {
 	)
 
 	if sessionToken == "" || rawURL == "" {
-		sessionToken, err = config.Session.Read()
+		var creds config.Credentials
+		err := config.CredentialsFile.UnmarshalYAML(&creds)
 		if err != nil {
 			return nil, errNeedLogin
 		}
-
-		rawURL, err = config.URL.Read()
-		if err != nil {
-			return nil, errNeedLogin
-		}
+		sessionToken = creds.SessionToken
+		rawURL = creds.DashboardURL
 	}
 
 	u, err := url.Parse(rawURL)

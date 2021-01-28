@@ -42,7 +42,7 @@ func loginCmd() *cobra.Command {
 			// From this point, the commandline is correct.
 			// Don't return errors as it would print the usage.
 
-			if err := login(cmd, u, config.URL, config.Session); err != nil {
+			if err := login(cmd, u); err != nil {
 				return xerrors.Errorf("login error: %w", err)
 			}
 			return nil
@@ -81,17 +81,15 @@ func pingAPI(ctx context.Context, envURL *url.URL, token string) error {
 
 // storeConfig writes the env URL and session token to the local config directory.
 // The config lib will handle the local config path lookup and creation.
-func storeConfig(envURL *url.URL, sessionToken string, urlCfg, sessionCfg config.File) error {
-	if err := urlCfg.Write(envURL.String()); err != nil {
-		return xerrors.Errorf("store env url: %w", err)
+func storeConfig(envURL *url.URL, sessionToken string) error {
+	creds := config.Credentials{
+		DashboardURL: envURL.String(),
+		SessionToken: sessionToken,
 	}
-	if err := sessionCfg.Write(sessionToken); err != nil {
-		return xerrors.Errorf("store session token: %w", err)
-	}
-	return nil
+	return config.CredentialsFile.WriteYAML(&creds)
 }
 
-func login(cmd *cobra.Command, envURL *url.URL, urlCfg, sessionCfg config.File) error {
+func login(cmd *cobra.Command, envURL *url.URL) error {
 	ctx := cmd.Context()
 
 	// Start by creating the listener so we can prompt the user with the URL.
@@ -144,7 +142,7 @@ func login(cmd *cobra.Command, envURL *url.URL, urlCfg, sessionCfg config.File) 
 	}
 
 	// Success. Store the config only at this point so we don't override the local one in case of failure.
-	if err := storeConfig(envURL, token, urlCfg, sessionCfg); err != nil {
+	if err := storeConfig(envURL, token); err != nil {
 		return xerrors.Errorf("store config: %w", err)
 	}
 
