@@ -7,9 +7,44 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 
 	"golang.org/x/xerrors"
 )
+
+type requestOptions struct {
+	BaseURLOverride *url.URL
+	Query           url.Values
+	Headers         http.Header
+	Reader          io.Reader
+}
+
+type requestOption func(*requestOptions)
+
+// withQueryParams sets the provided query parameters on the request.
+func withQueryParams(q url.Values) func(o *requestOptions) {
+	return func(o *requestOptions) {
+		o.Query = q
+	}
+}
+
+func withHeaders(h http.Header) func(o *requestOptions) {
+	return func(o *requestOptions) {
+		o.Headers = h
+	}
+}
+
+func withBaseURL(base *url.URL) func(o *requestOptions) {
+	return func(o *requestOptions) {
+		o.BaseURLOverride = base
+	}
+}
+
+func withBody(w io.Reader) func(o *requestOptions) {
+	return func(o *requestOptions) {
+		o.Reader = w
+	}
+}
 
 // request is a helper to set the cookie, marshal the payload and execute the request.
 func (c Client) request(ctx context.Context, method, path string, in interface{}, options ...requestOption) (*http.Response, error) {
@@ -30,7 +65,6 @@ func (c Client) request(ctx context.Context, method, path string, in interface{}
 	if config.Query != nil {
 		url.RawQuery = config.Query.Encode()
 	}
-
 	url.Path = path
 
 	// If we have incoming data, encode it as json.
@@ -43,10 +77,18 @@ func (c Client) request(ctx context.Context, method, path string, in interface{}
 		payload = bytes.NewReader(body)
 	}
 
+	if config.Reader != nil {
+		payload = config.Reader
+	}
+
 	// Create the http request.
 	req, err := http.NewRequestWithContext(ctx, method, url.String(), payload)
 	if err != nil {
 		return nil, xerrors.Errorf("create request: %w", err)
+	}
+
+	if config.Headers != nil {
+		req.Header = config.Headers
 	}
 
 	// Execute the request.
