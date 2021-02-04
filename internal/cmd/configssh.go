@@ -81,6 +81,7 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			if err != nil {
 				return xerrors.Errorf("write to ssh config file %q: %s", *configpath, err)
 			}
+			_ = os.Remove(privateKeyFilepath)
 
 			return nil
 		}
@@ -170,7 +171,7 @@ func writeSSHKey(ctx context.Context, client *coder.Client, privateKeyPath strin
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(privateKeyPath, []byte(key.PrivateKey), 0400)
+	return ioutil.WriteFile(privateKeyPath, []byte(key.PrivateKey), 0600)
 }
 
 func makeNewConfigs(userName string, envs []coderutil.EnvWithPool, privateKeyFilepath string) string {
