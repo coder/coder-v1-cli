@@ -11,15 +11,15 @@ import (
 )
 
 // DialEnvWsep dials the executor endpoint using the https://github.com/cdr/wsep message protocol.
-// The proper resource pool access URL is used.
+// The proper workspace provider envproxy access URL is used.
 func DialEnvWsep(ctx context.Context, client *coder.Client, env *coder.Environment) (*websocket.Conn, error) {
-	resourcePool, err := client.ResourcePoolByID(ctx, env.ResourcePoolID)
+	workspaceProvider, err := client.WorkspaceProviderByID(ctx, env.ResourcePoolID)
 	if err != nil {
-		return nil, xerrors.Errorf("get env resource pool: %w", err)
+		return nil, xerrors.Errorf("get env workspace provider: %w", err)
 	}
-	accessURL, err := url.Parse(resourcePool.AccessURL)
+	accessURL, err := url.Parse(workspaceProvider.EnvproxyAccessURL)
 	if err != nil {
-		return nil, xerrors.Errorf("invalid resource pool access url: %w", err)
+		return nil, xerrors.Errorf("invalid workspace provider envproxy access url: %w", err)
 	}
 
 	conn, err := client.DialWsep(ctx, accessURL, env.ID)
@@ -29,31 +29,31 @@ func DialEnvWsep(ctx context.Context, client *coder.Client, env *coder.Environme
 	return conn, nil
 }
 
-// EnvWithPool composes an Environment entity with its associated ResourcePool.
-type EnvWithPool struct {
-	Env  coder.Environment
-	Pool coder.ResourcePool
+// EnvWithWorkspaceProvider composes an Environment entity with its associated WorkspaceProvider.
+type EnvWithWorkspaceProvider struct {
+	Env               coder.Environment
+	WorkspaceProvider coder.WorkspaceProvider
 }
 
-// EnvsWithPool performs the composition of each Environment with its associated ResourcePool.
-func EnvsWithPool(ctx context.Context, client *coder.Client, envs []coder.Environment) ([]EnvWithPool, error) {
-	pooledEnvs := make([]EnvWithPool, 0, len(envs))
-	pools, err := client.ResourcePools(ctx)
+// EnvsWithProvider performs the composition of each Environment with its associated WorkspaceProvider.
+func EnvsWithProvider(ctx context.Context, client *coder.Client, envs []coder.Environment) ([]EnvWithWorkspaceProvider, error) {
+	pooledEnvs := make([]EnvWithWorkspaceProvider, 0, len(envs))
+	providers, err := client.WorkspaceProviders(ctx)
 	if err != nil {
 		return nil, err
 	}
-	poolMap := make(map[string]coder.ResourcePool, len(pools))
-	for _, p := range pools {
-		poolMap[p.ID] = p
+	providerMap := make(map[string]coder.WorkspaceProvider, len(providers))
+	for _, p := range providers {
+		providerMap[p.ID] = p
 	}
 	for _, e := range envs {
-		envPool, ok := poolMap[e.ResourcePoolID]
+		envProvider, ok := providerMap[e.ResourcePoolID]
 		if !ok {
-			return nil, xerrors.Errorf("fetch env resource pool: %w", coder.ErrNotFound)
+			return nil, xerrors.Errorf("fetch env workspace provider: %w", coder.ErrNotFound)
 		}
-		pooledEnvs = append(pooledEnvs, EnvWithPool{
-			Env:  e,
-			Pool: envPool,
+		pooledEnvs = append(pooledEnvs, EnvWithWorkspaceProvider{
+			Env:               e,
+			WorkspaceProvider: envProvider,
 		})
 	}
 	return pooledEnvs, nil
