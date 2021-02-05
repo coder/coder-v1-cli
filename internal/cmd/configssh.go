@@ -104,16 +104,16 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			return xerrors.New("no environments found")
 		}
 
-		envsWithPools, err := coderutil.EnvsWithPool(ctx, client, envs)
+		envsWithProviders, err := coderutil.EnvsWithProvider(ctx, client, envs)
 		if err != nil {
-			return xerrors.Errorf("resolve env pools: %w", err)
+			return xerrors.Errorf("resolve env workspace providers: %w", err)
 		}
 
-		if !sshAvailable(envsWithPools) {
+		if !sshAvailable(envsWithProviders) {
 			return xerrors.New("SSH is disabled or not available for any environments in your Coder Enterprise deployment.")
 		}
 
-		newConfig := makeNewConfigs(user.Username, envsWithPools, privateKeyFilepath)
+		newConfig := makeNewConfigs(user.Username, envsWithProviders, privateKeyFilepath)
 
 		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
 		if err != nil {
@@ -157,9 +157,9 @@ func removeOldConfig(config string) (string, bool) {
 }
 
 // sshAvailable returns true if SSH is available for at least one environment.
-func sshAvailable(envs []coderutil.EnvWithPool) bool {
+func sshAvailable(envs []coderutil.EnvWithWorkspaceProvider) bool {
 	for _, env := range envs {
-		if env.Pool.SSHEnabled {
+		if env.WorkspaceProvider.SSHEnabled {
 			return true
 		}
 	}
@@ -174,19 +174,19 @@ func writeSSHKey(ctx context.Context, client *coder.Client, privateKeyPath strin
 	return ioutil.WriteFile(privateKeyPath, []byte(key.PrivateKey), 0600)
 }
 
-func makeNewConfigs(userName string, envs []coderutil.EnvWithPool, privateKeyFilepath string) string {
+func makeNewConfigs(userName string, envs []coderutil.EnvWithWorkspaceProvider, privateKeyFilepath string) string {
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", sshStartToken, sshStartMessage)
 	for _, env := range envs {
-		if !env.Pool.SSHEnabled {
-			clog.LogWarn(fmt.Sprintf("SSH is not enabled for pool %q", env.Pool.Name),
+		if !env.WorkspaceProvider.SSHEnabled {
+			clog.LogWarn(fmt.Sprintf("SSH is not enabled for workspace provider %q", env.WorkspaceProvider.Name),
 				clog.BlankLine,
-				clog.Tipf("ask an infrastructure administrator to enable SSH for this resource pool"),
+				clog.Tipf("ask an infrastructure administrator to enable SSH for this workspace provider"),
 			)
 			continue
 		}
-		u, err := url.Parse(env.Pool.AccessURL)
+		u, err := url.Parse(env.WorkspaceProvider.EnvproxyAccessURL)
 		if err != nil {
-			clog.LogWarn("invalid access url", clog.Causef("malformed url: %q", env.Pool.AccessURL))
+			clog.LogWarn("invalid access url", clog.Causef("malformed url: %q", env.WorkspaceProvider.EnvproxyAccessURL))
 			continue
 		}
 		newConfig += makeSSHConfig(u.Host, userName, env.Env.Name, privateKeyFilepath)

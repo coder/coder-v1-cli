@@ -39,7 +39,6 @@ linters:
     - structcheck
     - stylecheck
     - typecheck
-    - noctx
     - nolintlint
     - rowserrcheck
     - scopelint
