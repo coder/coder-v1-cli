@@ -1,6 +1,8 @@
 name: integration
 on:
   push:
+    branches:
+    - master
   schedule:
     - cron:  '*/180 * * * *'
 
@@ -12,8 +14,8 @@ jobs:
       CODER_EMAIL: ${{ secrets.CODER_EMAIL }}
       CODER_PASSWORD: ${{ secrets.CODER_PASSWORD }}
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/cache@v1
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -21,6 +23,6 @@ jobs:
             ${{ runner.os }}-go-
       - uses: actions/setup-go@v2
         with:
-          go-version: '^1.14'
+          go-version: '^1.15'
       - name: integration tests
         run: ./ci/scripts/integration.sh
