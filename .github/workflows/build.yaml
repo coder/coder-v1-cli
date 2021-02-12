@@ -29,6 +29,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Show git tags
+        run: git tag
+      - name: Show git tags
         run: git describe --tags
       - name: Build
         run: unset CI && make build/macos
