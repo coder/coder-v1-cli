@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
@@ -106,12 +105,7 @@ func login(cmd *cobra.Command, envURL *url.URL, urlCfg, sessionCfg config.File) 
 	authURL.Path = envURL.Path + "/internal-auth"
 	authURL.RawQuery = "local_service=http://" + listener.Addr().String()
 
-	// Try to open the browser on the local computer.
-	if err := browser.OpenURL(authURL.String()); err != nil {
-		// Discard the error as it is an expected one in non-X environments like over ssh.
-		// Tell the user to visit the URL instead.
-		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Visit the following URL in your browser:\n\n\t%s\n\n", &authURL) // Can't fail.
-	}
+	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Visit the following URL in your browser:\n\n\t%s\n\n", &authURL)
 
 	// Create our channel, it is going to be the central synchronization of the command.
 	tokenChan := make(chan string)
