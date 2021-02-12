@@ -91,47 +91,66 @@ func trailBuildLogs(ctx context.Context, client *coder.Client, envID string) err
 	if err != nil {
 		return err
 	}
+
 	var s *spinner.Spinner
 	for l := range logs {
 		if l.Err != nil {
 			return l.Err
 		}
+
+		logTime := l.BuildLog.Time.Local()
+		msg := fmt.Sprintf("%s %s", logTime.Format(time.RFC3339), l.BuildLog.Msg)
+
 		switch l.BuildLog.Type {
 		case coder.BuildLogTypeStart:
 			// the FE uses this to reset the UI
 			// the CLI doesn't need to do anything here given that we only append to the trail
+
 		case coder.BuildLogTypeStage:
-			msg := fmt.Sprintf("%s %s", l.BuildLog.Time.Format(time.RFC3339), l.BuildLog.Msg)
 			if !isTerminal {
 				fmt.Println(msg)
 				continue
 			}
+
 			if s != nil {
 				s.Stop()
 				fmt.Print("\n")
 			}
+
 			s = newSpinner()
 			s.Suffix = fmt.Sprintf("  -- %s", msg)
 			s.FinalMSG = fmt.Sprintf("%s -- %s", check, msg)
 			s.Start()
+
 		case coder.BuildLogTypeSubstage:
 			// TODO(@cmoog) add verbose substage printing
-		case coder.BuildLogTypeError:
-			errMsg := color.RedString("\t%s", l.BuildLog.Msg)
-			if !isTerminal {
-				fmt.Println(errMsg)
+			if !verbose {
 				continue
 			}
+
+		case coder.BuildLogTypeError:
+			if !isTerminal {
+				fmt.Println(msg)
+				continue
+			}
+
 			if s != nil {
 				s.FinalMSG = fmt.Sprintf("%s %s", failure, strings.TrimPrefix(s.Suffix, "  "))
 				s.Stop()
+				fmt.Print("\n")
 			}
-			fmt.Print(errMsg)
+
 			s = newSpinner()
+			s.Suffix = color.RedString("  -- %s", msg)
+			s.FinalMSG = color.RedString("%s -- %s", failure, msg)
+			s.Start()
+
 		case coder.BuildLogTypeDone:
 			if s != nil {
 				s.Stop()
+				fmt.Print("\n")
 			}
+
 			return nil
 		default:
 			return xerrors.Errorf("unknown buildlog type: %s", l.BuildLog.Type)
