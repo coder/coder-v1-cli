@@ -32,13 +32,13 @@ gendocs:
 	go run ./cmd/coder gen-docs ./docs
 
 test/go:
-	go test $$(go list ./... | grep -v pkg/tcli | grep -v ci/integration | grep -v coder-sdk)
+	go test $$(go list ./... | grep -v pkg/tcli | grep -v ci/integration)
 
 test/coverage:
 	go test \
 		-race \
 		-covermode atomic \
 		-coverprofile coverage \
-		$$(go list ./... | grep -v pkg/tcli | grep -v ci/integration | grep -v coder-sdk)
+		$$(go list ./... | grep -v pkg/tcli | grep -v ci/integration)
 
 	goveralls -coverprofile=coverage -service=github

@@ -1,4 +1,4 @@
-package coder_test
+package integration
 
 import (
 	"context"
