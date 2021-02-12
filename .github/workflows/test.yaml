@@ -3,10 +3,10 @@ on: [push]
 
 jobs:
   fmt:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/cache@v1
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -18,19 +18,19 @@ jobs:
           args: make -j fmt 
       - run: ./ci/scripts/files_changed.sh
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.29
+          version: v1.36
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/cache@v1
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -38,13 +38,15 @@ jobs:
             ${{ runner.os }}-go-
       - name: test
         uses: ./ci/image
+        env:
+          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: make -j test/go
+          args: make -j test/coverage
   gendocs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/cache@v1
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}

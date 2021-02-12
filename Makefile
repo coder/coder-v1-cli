@@ -33,3 +33,12 @@ gendocs:
 
 test/go:
 	go test $$(go list ./... | grep -v pkg/tcli | grep -v ci/integration | grep -v coder-sdk)
+
+test/coverage:
+	go test \
+		-race \
+		-covermode atomic \
+		-coverprofile coverage \
+		$$(go list ./... | grep -v pkg/tcli | grep -v ci/integration | grep -v coder-sdk)
+
+	goveralls -coverprofile=coverage -service=github
