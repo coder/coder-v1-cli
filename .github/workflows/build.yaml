@@ -14,6 +14,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
         with:
+          # Fetch depth 0 is needed for 'git describe --tag'
           fetch-depth: 0
 
       - name: Build
