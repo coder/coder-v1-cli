@@ -29,6 +29,9 @@ func rebuildEnvCommand() *cobra.Command {
 		Args:  xcobra.ExactArgs(1),
 		Example: `coder envs rebuild front-end-env --follow
 coder envs rebuild backend-env --force`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			autoStartInfo()
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx)
