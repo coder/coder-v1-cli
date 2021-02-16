@@ -152,16 +152,16 @@ coder envs --user charlie@coder.com ls -o json \
 
 func createEnvCmd() *cobra.Command {
 	var (
-		org    string
-		cpu    float32
-		memory float32
-		disk   int
-		gpus   int
-		img    string
-		tag    string
-		follow bool
-		useCVM bool
-		useAS  bool
+		org             string
+		cpu             float32
+		memory          float32
+		disk            int
+		gpus            int
+		img             string
+		tag             string
+		follow          bool
+		useCVM          bool
+		enableAutostart bool
 	)
 
 	cmd := &cobra.Command{
@@ -214,7 +214,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 				DiskGB:          disk,
 				GPUs:            gpus,
 				UseContainerVM:  useCVM,
-				EnableAutoStart: useAS,
+				EnableAutoStart: enableAutostart,
 			}
 
 			// if any of these defaulted to their zero value we provision
@@ -258,7 +258,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image to base the environment off of.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.Flags().BoolVar(&useCVM, "container-based-vm", false, "deploy the environment as a Container-based VM")
-	cmd.Flags().BoolVar(&useAS, "enable-autostart", false, "automatically start this environment at your preferred time.")
+	cmd.Flags().BoolVar(&enableAutostart, "enable-autostart", false, "automatically start this environment at your preferred time.")
 	_ = cmd.MarkFlagRequired("image")
 	return cmd
 }
