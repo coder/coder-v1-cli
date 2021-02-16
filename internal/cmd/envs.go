@@ -622,7 +622,7 @@ func buildUpdateReq(ctx context.Context, client *coder.Client, conf updateConf) 
 	return &updateReq, nil
 }
 
-// TODO (Grey): Remove education in a future non-patch release
+// TODO (Grey): Remove education in a future non-patch release.
 func autoStartInfo() {
 	var preferencesURI string
 
