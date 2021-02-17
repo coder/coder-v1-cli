@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"golang.org/x/xerrors"
 )
@@ -65,7 +66,7 @@ func (c Client) request(ctx context.Context, method, path string, in interface{}
 	if config.Query != nil {
 		url.RawQuery = config.Query.Encode()
 	}
-	url.Path = path
+	url.Path = fmt.Sprint(strings.TrimSuffix(url.Path, "/"), path)
 
 	// If we have incoming data, encode it as json.
 	var payload io.Reader
