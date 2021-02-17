@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"github.com/stretchr/testify/require"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 func TestPushActivity(t *testing.T) {
