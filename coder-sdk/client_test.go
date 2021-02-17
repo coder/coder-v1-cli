@@ -38,7 +38,7 @@ func TestPushActivity(t *testing.T) {
 	})
 
 	u, err := url.Parse(server.URL)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to parse test server URL")
 
 	client := coder.Client{
 		BaseURL: u,
@@ -53,7 +53,6 @@ func TestUsers(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodGet, r.Method, "Users is a GET")
 		require.Equal(t, "/api/v0/users", r.URL.Path)
-		r.Cookie("session_token")
 
 		users := []map[string]interface{}{
 			{
@@ -79,12 +78,13 @@ func TestUsers(t *testing.T) {
 	})
 
 	u, err := url.Parse(server.URL)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to parse test server URL")
 
 	client := coder.Client{
 		BaseURL: u,
 	}
 	users, err := client.Users(context.Background())
+	require.NoError(t, err, "error getting Users")
 	require.Len(t, users, 1, "users should return a single user")
 	require.Equal(t, "Charlie Root", users[0].Name)
 	require.Equal(t, "root", users[0].Username)
@@ -106,7 +106,7 @@ func TestAuthentication(t *testing.T) {
 	})
 
 	u, err := url.Parse(server.URL)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to parse test server URL")
 
 	client := coder.Client{
 		BaseURL: u,
@@ -134,7 +134,7 @@ func TestContextRoot(t *testing.T) {
 	}
 
 	u, err := url.Parse(server.URL)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to parse test server URL")
 
 	for _, prefix := range contextRoots {
 		u.Path = prefix
