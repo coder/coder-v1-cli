@@ -8,7 +8,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
       - name: Build
-        run: make -j build/linux build/windows
+        uses: ./ci/image
+        with:
+          args: make -j build/linux build/windows
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
