@@ -8,7 +8,6 @@ require (
 	github.com/briandowns/spinner v1.11.1
 	github.com/fatih/color v1.9.0
 	github.com/google/go-cmp v0.4.0
-	github.com/gorilla/websocket v1.4.2
 	github.com/kirsle/configdir v0.0.0-20170128060238-e45d2f54772f
 	github.com/klauspost/compress v1.10.8 // indirect
 	github.com/manifoldco/promptui v0.7.0

@@ -17,10 +17,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/rjeczalik/notify"
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/xerrors"
+	"nhooyr.io/websocket"
 
 	"cdr.dev/wsep"
 
@@ -95,7 +95,7 @@ func (s Sync) remoteCmd(ctx context.Context, prog string, args ...string) error 
 	if err != nil {
 		return xerrors.Errorf("dial executor: %w", err)
 	}
-	defer func() { _ = conn.Close(websocket.CloseNormalClosure, "") }() // Best effort.
+	defer func() { _ = conn.Close(websocket.StatusNormalClosure, "") }() // Best effort.
 
 	execer := wsep.RemoteExecer(conn)
 	process, err := execer.Start(ctx, wsep.Command{
@@ -276,7 +276,7 @@ func (s Sync) Version() (string, error) {
 	if err != nil {
 		return "", xerrors.Errorf("dial env executor: %w", err)
 	}
-	defer func() { _ = conn.Close(websocket.CloseNormalClosure, "") }() // Best effort.
+	defer func() { _ = conn.Close(websocket.StatusNormalClosure, "") }() // Best effort.
 
 	execer := wsep.RemoteExecer(conn)
 	process, err := execer.Start(ctx, wsep.Command{
