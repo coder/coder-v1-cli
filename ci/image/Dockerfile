@@ -5,4 +5,7 @@ ENV CI=true
 
 RUN go get golang.org/x/tools/cmd/goimports
 RUN go get github.com/mattn/goveralls
-RUN apt update && apt install grep zip tar
+RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get install -y \
+  grep \
+  zip \
+  tar
