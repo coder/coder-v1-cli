@@ -258,7 +258,6 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image to base the environment off of.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.Flags().BoolVar(&useCVM, "container-based-vm", false, "deploy the environment as a Container-based VM")
-	cmd.Flags().BoolVar(&enableAutostart, "enable-autostart", false, "automatically start this environment at your preferred time.")
 	_ = cmd.MarkFlagRequired("image")
 	return cmd
 }
