@@ -174,7 +174,7 @@ coder envs create my-new-env --image ubuntu
 coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ubuntu`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			// TODO: Enable this once we enable autostart.
-			autoStartInfo()
+			// autoStartInfo()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
