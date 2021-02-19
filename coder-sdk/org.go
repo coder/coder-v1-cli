@@ -37,7 +37,7 @@ const (
 )
 
 // Organizations gets all Organizations.
-func (c Client) Organizations(ctx context.Context) ([]Organization, error) {
+func (c *defaultClient) Organizations(ctx context.Context) ([]Organization, error) {
 	var orgs []Organization
 	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/orgs", nil, &orgs); err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (c Client) Organizations(ctx context.Context) ([]Organization, error) {
 }
 
 // OrganizationByID get the Organization by its ID.
-func (c Client) OrganizationByID(ctx context.Context, orgID string) (*Organization, error) {
+func (c *defaultClient) OrganizationByID(ctx context.Context, orgID string) (*Organization, error) {
 	var org Organization
 	err := c.requestBody(ctx, http.MethodGet, "/api/v0/orgs/"+orgID, nil, &org)
 	if err != nil {
@@ -56,7 +56,7 @@ func (c Client) OrganizationByID(ctx context.Context, orgID string) (*Organizati
 }
 
 // OrganizationMembers get all members of the given organization.
-func (c Client) OrganizationMembers(ctx context.Context, orgID string) ([]OrganizationUser, error) {
+func (c *defaultClient) OrganizationMembers(ctx context.Context, orgID string) ([]OrganizationUser, error) {
 	var members []OrganizationUser
 	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/orgs/"+orgID+"/members", nil, &members); err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ type UpdateOrganizationReq struct {
 }
 
 // UpdateOrganization applys a partial update of an Organization resource.
-func (c Client) UpdateOrganization(ctx context.Context, orgID string, req UpdateOrganizationReq) error {
+func (c *defaultClient) UpdateOrganization(ctx context.Context, orgID string, req UpdateOrganizationReq) error {
 	return c.requestBody(ctx, http.MethodPatch, "/api/v0/orgs/"+orgID, req, nil)
 }
 
@@ -91,11 +91,11 @@ type CreateOrganizationReq struct {
 }
 
 // CreateOrganization creates a new Organization in Coder Enterprise.
-func (c Client) CreateOrganization(ctx context.Context, req CreateOrganizationReq) error {
+func (c *defaultClient) CreateOrganization(ctx context.Context, req CreateOrganizationReq) error {
 	return c.requestBody(ctx, http.MethodPost, "/api/v0/orgs", req, nil)
 }
 
 // DeleteOrganization deletes an organization.
-func (c Client) DeleteOrganization(ctx context.Context, orgID string) error {
+func (c *defaultClient) DeleteOrganization(ctx context.Context, orgID string) error {
 	return c.requestBody(ctx, http.MethodDelete, "/api/v0/orgs/"+orgID, nil, nil)
 }

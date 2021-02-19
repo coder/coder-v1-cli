@@ -41,9 +41,12 @@ func TestPushActivity(t *testing.T) {
 	u, err := url.Parse(server.URL)
 	require.NoError(t, err, "failed to parse test server URL")
 
-	client := coder.Client{
+	client, err := coder.NewClient(coder.ClientOptions{
 		BaseURL: u,
-	}
+		Token:   "SwdcSoq5Jc-0C1r8wfwm7h6h9i0RDk7JT",
+	})
+	require.NoError(t, err, "failed to create coder.Client")
+
 	err = client.PushActivity(context.Background(), source, envID)
 	require.NoError(t, err)
 }
@@ -81,9 +84,12 @@ func TestUsers(t *testing.T) {
 	u, err := url.Parse(server.URL)
 	require.NoError(t, err, "failed to parse test server URL")
 
-	client := coder.Client{
+	client, err := coder.NewClient(coder.ClientOptions{
 		BaseURL: u,
-	}
+		Token:   "JcmErkJjju-KSrztst0IJX7xGJhKQPtfv",
+	})
+	require.NoError(t, err, "failed to create coder.Client")
+
 	users, err := client.Users(context.Background())
 	require.NoError(t, err, "error getting Users")
 	require.Len(t, users, 1, "users should return a single user")
@@ -96,9 +102,8 @@ func TestAuthentication(t *testing.T) {
 
 	const token = "g4mtIPUaKt-pPl9Q0xmgKs7acSypHt4Jf"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("session_token")
-		require.NoError(t, err, "error extracting session token")
-		require.Equal(t, token, cookie.Value, "token does not match")
+		gotToken := r.Header.Get("Session-Token")
+		require.Equal(t, token, gotToken, "token does not match")
 
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}))
@@ -109,11 +114,14 @@ func TestAuthentication(t *testing.T) {
 	u, err := url.Parse(server.URL)
 	require.NoError(t, err, "failed to parse test server URL")
 
-	client := coder.Client{
+	client, err := coder.NewClient(coder.ClientOptions{
 		BaseURL: u,
 		Token:   token,
-	}
-	_, _ = client.APIVersion(context.Background())
+	})
+	require.NoError(t, err, "failed to create coder.Client")
+
+	_, err = client.APIVersion(context.Background())
+	require.NoError(t, err, "failed to get API version information")
 }
 
 func TestContextRoot(t *testing.T) {
@@ -140,9 +148,13 @@ func TestContextRoot(t *testing.T) {
 	for _, prefix := range contextRoots {
 		u.Path = prefix
 
-		client := coder.Client{
+		client, err := coder.NewClient(coder.ClientOptions{
 			BaseURL: u,
-		}
-		_, _ = client.Users(context.Background())
+			Token:   "FrOgA6xhpM-p5nTfsupmvzYJA6DJSOUoE",
+		})
+		require.NoError(t, err, "failed to create coder.Client")
+
+		_, err = client.Users(context.Background())
+		require.Error(t, err, "expected 503 error")
 	}
 }

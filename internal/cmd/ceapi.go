@@ -32,7 +32,7 @@ func lookupUserOrgs(user *coder.User, orgs []coder.Organization) []coder.Organiz
 }
 
 // getEnvs returns all environments for the user.
-func getEnvs(ctx context.Context, client *coder.Client, email string) ([]coder.Environment, error) {
+func getEnvs(ctx context.Context, client coder.Client, email string) ([]coder.Environment, error) {
 	user, err := client.UserByEmail(ctx, email)
 	if err != nil {
 		return nil, xerrors.Errorf("get user: %w", err)
@@ -61,7 +61,7 @@ func getEnvs(ctx context.Context, client *coder.Client, email string) ([]coder.E
 
 // searchForEnv searches a user's environments to find the specified envName. If none is found, the haystack of
 // environment names is returned.
-func searchForEnv(ctx context.Context, client *coder.Client, envName, userEmail string) (_ *coder.Environment, haystack []string, _ error) {
+func searchForEnv(ctx context.Context, client coder.Client, envName, userEmail string) (_ *coder.Environment, haystack []string, _ error) {
 	envs, err := getEnvs(ctx, client, userEmail)
 	if err != nil {
 		return nil, nil, xerrors.Errorf("get environments: %w", err)
@@ -79,7 +79,7 @@ func searchForEnv(ctx context.Context, client *coder.Client, envName, userEmail 
 }
 
 // findEnv returns a single environment by name (if it exists.).
-func findEnv(ctx context.Context, client *coder.Client, envName, userEmail string) (*coder.Environment, error) {
+func findEnv(ctx context.Context, client coder.Client, envName, userEmail string) (*coder.Environment, error) {
 	env, haystack, err := searchForEnv(ctx, client, envName, userEmail)
 	if err != nil {
 		return nil, clog.Fatal(
@@ -98,7 +98,7 @@ type findImgConf struct {
 	orgName string
 }
 
-func findImg(ctx context.Context, client *coder.Client, conf findImgConf) (*coder.Image, error) {
+func findImg(ctx context.Context, client coder.Client, conf findImgConf) (*coder.Image, error) {
 	switch {
 	case conf.email == "":
 		return nil, xerrors.New("user email unset")
@@ -150,7 +150,7 @@ type getImgsConf struct {
 	orgName string
 }
 
-func getImgs(ctx context.Context, client *coder.Client, conf getImgsConf) ([]coder.Image, error) {
+func getImgs(ctx context.Context, client coder.Client, conf getImgsConf) ([]coder.Image, error) {
 	u, err := client.UserByEmail(ctx, conf.email)
 	if err != nil {
 		return nil, err
@@ -182,7 +182,7 @@ func getImgs(ctx context.Context, client *coder.Client, conf getImgsConf) ([]cod
 	return nil, xerrors.Errorf("org name %q not found", conf.orgName)
 }
 
-func isMultiOrgMember(ctx context.Context, client *coder.Client, email string) (bool, error) {
+func isMultiOrgMember(ctx context.Context, client coder.Client, email string) (bool, error) {
 	u, err := client.UserByEmail(ctx, email)
 	if err != nil {
 		return false, xerrors.New("email not found")

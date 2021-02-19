@@ -48,13 +48,8 @@ func withBody(w io.Reader) func(o *requestOptions) {
 }
 
 // request is a helper to set the cookie, marshal the payload and execute the request.
-func (c Client) request(ctx context.Context, method, path string, in interface{}, options ...requestOption) (*http.Response, error) {
-	// Create a default http client with the auth in the cookie.
-	client, err := c.newHTTPClient()
-	if err != nil {
-		return nil, xerrors.Errorf("new http client: %w", err)
-	}
-	url := *c.BaseURL
+func (c *defaultClient) request(ctx context.Context, method, path string, in interface{}, options ...requestOption) (*http.Response, error) {
+	url := *c.baseURL
 
 	var config requestOptions
 	for _, o := range options {
@@ -88,17 +83,22 @@ func (c Client) request(ctx context.Context, method, path string, in interface{}
 		return nil, xerrors.Errorf("create request: %w", err)
 	}
 
-	if config.Headers != nil {
+	if config.Headers == nil {
+		req.Header = http.Header{}
+	} else {
 		req.Header = config.Headers
 	}
 
+	// Provide the session token in a header
+	req.Header.Set("Session-Token", c.token)
+
 	// Execute the request.
-	return client.Do(req)
+	return c.httpClient.Do(req)
 }
 
 // requestBody is a helper extending the Client.request helper, checking the response code
 // and decoding the response payload.
-func (c Client) requestBody(ctx context.Context, method, path string, in, out interface{}, opts ...requestOption) error {
+func (c *defaultClient) requestBody(ctx context.Context, method, path string, in, out interface{}, opts ...requestOption) error {
 	resp, err := c.request(ctx, method, path, in, opts...)
 	if err != nil {
 		return xerrors.Errorf("Execute request: %q", err)

@@ -214,7 +214,7 @@ func rebuildPrompt(env *coder.Environment) (prompt func() error) {
 // Conditions for rebuilding are:
 //	- Environment is offline
 //	- Environment has rebuild messages requiring a rebuild
-func checkAndRebuildEnvironment(ctx context.Context, client *coder.Client, env *coder.Environment) error {
+func checkAndRebuildEnvironment(ctx context.Context, client coder.Client, env *coder.Environment) error {
 	var err error
 	rebuildPrompt := rebuildPrompt(env) // Fetch the prompt for rebuilding envs w/ reason
 
@@ -309,7 +309,7 @@ func sendResizeEvents(ctx context.Context, termFD uintptr, process wsep.Process)
 	}
 }
 
-func runCommand(ctx context.Context, client *coder.Client, env *coder.Environment, command string, args []string) error {
+func runCommand(ctx context.Context, client coder.Client, env *coder.Environment, command string, args []string) error {
 	termFD := os.Stdout.Fd()
 
 	isInteractive := terminal.IsTerminal(int(termFD))

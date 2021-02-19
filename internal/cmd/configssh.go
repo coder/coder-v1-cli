@@ -166,7 +166,7 @@ func sshAvailable(envs []coderutil.EnvWithWorkspaceProvider) bool {
 	return false
 }
 
-func writeSSHKey(ctx context.Context, client *coder.Client, privateKeyPath string) error {
+func writeSSHKey(ctx context.Context, client coder.Client, privateKeyPath string) error {
 	key, err := client.SSHKey(ctx)
 	if err != nil {
 		return err
@@ -235,7 +235,7 @@ func readStr(filename string) (string, error) {
 	return string(contents), nil
 }
 
-func writeSSHUXState(ctx context.Context, client *coder.Client, userID string, envs []coder.Environment) {
+func writeSSHUXState(ctx context.Context, client coder.Client, userID string, envs []coder.Environment) {
 	// Create a map of env.ID -> true to indicate to the web client that all
 	// current environments have SSH configured
 	cliSSHConfigured := make(map[string]bool)

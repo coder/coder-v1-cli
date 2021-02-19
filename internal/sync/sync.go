@@ -42,7 +42,7 @@ type Sync struct {
 	DisableMetrics bool
 
 	Env    coder.Environment
-	Client *coder.Client
+	Client coder.Client
 }
 
 // See https://lxadm.com/Rsync_exit_codes#List_of_standard_rsync_exit_codes.

@@ -58,7 +58,7 @@ type UpdateImageReq struct {
 }
 
 // ImportImage creates a new image and optionally a new registry.
-func (c Client) ImportImage(ctx context.Context, req ImportImageReq) (*Image, error) {
+func (c *defaultClient) ImportImage(ctx context.Context, req ImportImageReq) (*Image, error) {
 	var img Image
 	if err := c.requestBody(ctx, http.MethodPost, "/api/v0/images", req, &img); err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (c Client) ImportImage(ctx context.Context, req ImportImageReq) (*Image, er
 }
 
 // OrganizationImages returns all of the images imported for orgID.
-func (c Client) OrganizationImages(ctx context.Context, orgID string) ([]Image, error) {
+func (c  *defaultClient) OrganizationImages(ctx context.Context, orgID string) ([]Image, error) {
 	var (
 		imgs  []Image
 		query = url.Values{}
@@ -82,11 +82,11 @@ func (c Client) OrganizationImages(ctx context.Context, orgID string) ([]Image, 
 }
 
 // UpdateImage applies a partial update to an image resource.
-func (c Client) UpdateImage(ctx context.Context, imageID string, req UpdateImageReq) error {
+func (c  *defaultClient) UpdateImage(ctx context.Context, imageID string, req UpdateImageReq) error {
 	return c.requestBody(ctx, http.MethodPatch, "/api/v0/images/"+imageID, req, nil)
 }
 
 // UpdateImageTags refreshes the latest digests for all tags of the image.
-func (c Client) UpdateImageTags(ctx context.Context, imageID string) error {
+func (c  *defaultClient) UpdateImageTags(ctx context.Context, imageID string) error {
 	return c.requestBody(ctx, http.MethodPost, "/api/v0/images/"+imageID+"/tags/update", nil, nil)
 }

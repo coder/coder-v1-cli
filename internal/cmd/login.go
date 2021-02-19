@@ -66,13 +66,20 @@ func newLocalListener() (net.Listener, error) {
 // pingAPI creates a client from the given url/token and try to exec an api call.
 // Not using the SDK as we want to verify the url/token pair before storing the config files.
 func pingAPI(ctx context.Context, envURL *url.URL, token string) error {
-	client := &coder.Client{BaseURL: envURL, Token: token}
+	client, err := coder.NewClient(coder.ClientOptions{
+		BaseURL: envURL,
+		Token:   token,
+	})
+	if err != nil {
+		return xerrors.Errorf("failed to create coder.Client: %w", err)
+	}
+
 	if apiVersion, err := client.APIVersion(ctx); err == nil {
 		if apiVersion != "" && !version.VersionsMatch(apiVersion) {
 			logVersionMismatchError(apiVersion)
 		}
 	}
-	_, err := client.Me(ctx)
+	_, err = client.Me(ctx)
 	if err != nil {
 		return xerrors.Errorf("call api: %w", err)
 	}

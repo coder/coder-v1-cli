@@ -260,7 +260,7 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 }
 
 // urlList returns the list of active devURLs from the cemanager.
-func urlList(ctx context.Context, client *coder.Client, envName string) ([]coder.DevURL, error) {
+func urlList(ctx context.Context, client coder.Client, envName string) ([]coder.DevURL, error) {
 	env, err := findEnv(ctx, client, envName, coder.Me)
 	if err != nil {
 		return nil, err
