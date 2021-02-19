@@ -173,6 +173,7 @@ func createEnvCmd() *cobra.Command {
 coder envs create my-new-env --image ubuntu
 coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ubuntu`,
 		PreRun: func(cmd *cobra.Command, args []string) {
+			// TODO: Enable this once we enable autostart.
 			autoStartInfo()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -391,7 +392,8 @@ func editEnvCmd() *cobra.Command {
 
 coder envs edit back-end-env --disk 20`,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			autoStartInfo()
+			// TODO: Enable this once we enable autostart.
+			// autoStartInfo()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -632,6 +634,5 @@ func autoStartInfo() {
 	} else {
 		preferencesURI = fmt.Sprintf("%s%s", accessURI, "/preferences?tab=autostart")
 	}
-
 	clog.LogInfo("⚡NEW: Automate daily environment startup", "Visit "+preferencesURI+" to configure your preferred time")
 }
