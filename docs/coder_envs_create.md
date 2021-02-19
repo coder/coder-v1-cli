@@ -24,7 +24,6 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
       --container-based-vm   deploy the environment as a Container-based VM
   -c, --cpu float32          number of cpu cores the environment should be provisioned with.
   -d, --disk int             GB of disk storage an environment should be provisioned with.
-      --enable-autostart     automatically start this environment at your preferred time.
       --follow               follow buildlog after initiating rebuild
   -g, --gpus int             number GPUs an environment should be provisioned with.
   -h, --help                 help for create
