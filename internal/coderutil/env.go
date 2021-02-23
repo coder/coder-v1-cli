@@ -12,7 +12,7 @@ import (
 
 // DialEnvWsep dials the executor endpoint using the https://github.com/cdr/wsep message protocol.
 // The proper workspace provider envproxy access URL is used.
-func DialEnvWsep(ctx context.Context, client *coder.Client, env *coder.Environment) (*websocket.Conn, error) {
+func DialEnvWsep(ctx context.Context, client coder.Client, env *coder.Environment) (*websocket.Conn, error) {
 	workspaceProvider, err := client.WorkspaceProviderByID(ctx, env.ResourcePoolID)
 	if err != nil {
 		return nil, xerrors.Errorf("get env workspace provider: %w", err)
@@ -36,7 +36,7 @@ type EnvWithWorkspaceProvider struct {
 }
 
 // EnvsWithProvider performs the composition of each Environment with its associated WorkspaceProvider.
-func EnvsWithProvider(ctx context.Context, client *coder.Client, envs []coder.Environment) ([]EnvWithWorkspaceProvider, error) {
+func EnvsWithProvider(ctx context.Context, client coder.Client, envs []coder.Environment) ([]EnvWithWorkspaceProvider, error) {
 	pooledEnvs := make([]EnvWithWorkspaceProvider, 0, len(envs))
 	providers, err := client.WorkspaceProviders(ctx)
 	if err != nil {

@@ -1,46 +1,67 @@
 package coder
 
 import (
+	"errors"
 	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 )
+
+// ensure that DefaultClient implements Client.
+var _ = Client(&DefaultClient{})
 
 // Me is the user ID of the authenticated user.
 const Me = "me"
 
-// Client wraps the Coder HTTP API.
-type Client struct {
+// ClientOptions contains options for the Coder SDK Client.
+type ClientOptions struct {
+	// BaseURL is the root URL of the Coder installation.
 	BaseURL *url.URL
-	Token   string
+
+	// Client is the http.Client to use for requests (optional).
+	// If omitted, the http.DefaultClient will be used.
+	HTTPClient *http.Client
+
+	// Token is the API Token used to authenticate
+	Token string
 }
 
-// newHTTPClient creates a default underlying http client and sets the auth cookie.
-//
-// NOTE:
-// As we do not specify a custom transport, the default one from the stdlib will be used,
-// resulting in a persistent connection pool.
-// We do not set a timeout here as it could cause issue with the websocket.
-// The caller is expected to set it when needed.
-//
-// WARNING:
-// If the caller sets a custom transport to set TLS settings or a custom CA the default
-// pool will not be used and it might result in a new dns lookup/tls session/socket begin
-// established each time.
-func (c Client) newHTTPClient() (*http.Client, error) {
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		return nil, err
+// NewClient creates a new default Coder SDK client.
+func NewClient(opts ClientOptions) (*DefaultClient, error) {
+	httpClient := opts.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
 	}
 
-	jar.SetCookies(c.BaseURL, []*http.Cookie{{
-		Name:     "session_token",
-		Value:    c.Token,
-		MaxAge:   86400,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   c.BaseURL.Scheme == "https",
-	}})
+	if opts.BaseURL == nil {
+		return nil, errors.New("the BaseURL parameter is required")
+	}
 
-	return &http.Client{Jar: jar}, nil
+	if opts.Token == "" {
+		return nil, errors.New("an API token is required")
+	}
+
+	client := &DefaultClient{
+		baseURL:    opts.BaseURL,
+		httpClient: httpClient,
+		token:      opts.Token,
+	}
+
+	return client, nil
+}
+
+// DefaultClient is the default implementation of the coder.Client
+// interface.
+//
+// The empty value is meaningless and the fields are unexported;
+// use NewClient to create an instance.
+type DefaultClient struct {
+	// baseURL is the URL (scheme, hostname/IP address, port,
+	// path prefix of the Coder installation)
+	baseURL *url.URL
+
+	// httpClient is the http.Client used to issue requests.
+	httpClient *http.Client
+
+	// token is the API Token credential.
+	token string
 }

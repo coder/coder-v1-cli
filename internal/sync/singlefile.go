@@ -18,7 +18,7 @@ import (
 )
 
 // SingleFile copies the given file into the remote dir or remote path of the given coder.Environment.
-func SingleFile(ctx context.Context, local, remoteDir string, env *coder.Environment, client *coder.Client) error {
+func SingleFile(ctx context.Context, local, remoteDir string, env *coder.Environment, client coder.Client) error {
 	conn, err := coderutil.DialEnvWsep(ctx, client, env)
 	if err != nil {
 		return xerrors.Errorf("dial remote execer: %w", err)

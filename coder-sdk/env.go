@@ -87,7 +87,7 @@ type CreateEnvironmentRequest struct {
 }
 
 // CreateEnvironment sends a request to create an environment.
-func (c Client) CreateEnvironment(ctx context.Context, req CreateEnvironmentRequest) (*Environment, error) {
+func (c *DefaultClient) CreateEnvironment(ctx context.Context, req CreateEnvironmentRequest) (*Environment, error) {
 	var env Environment
 	if err := c.requestBody(ctx, http.MethodPost, "/api/v0/environments", req, &env); err != nil {
 		return nil, err
@@ -125,7 +125,7 @@ type Resources struct {
 
 // ParseTemplate parses a template config. It support both remote repositories and local files.
 // If a local file is specified then all other values in the request are ignored.
-func (c Client) ParseTemplate(ctx context.Context, req ParseTemplateRequest) (Template, error) {
+func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequest) (Template, error) {
 	const path = "/api/private/environments/template/parse"
 	var (
 		tpl     Template
@@ -152,7 +152,7 @@ func (c Client) ParseTemplate(ctx context.Context, req ParseTemplateRequest) (Te
 }
 
 // CreateEnvironmentFromRepo sends a request to create an environment from a repository.
-func (c Client) CreateEnvironmentFromRepo(ctx context.Context, orgID string, req Template) (*Environment, error) {
+func (c *DefaultClient) CreateEnvironmentFromRepo(ctx context.Context, orgID string, req Template) (*Environment, error) {
 	var env Environment
 	if err := c.requestBody(ctx, http.MethodPost, "/api/private/orgs/"+orgID+"/environments/from-repo", req, &env); err != nil {
 		return nil, err
@@ -162,7 +162,7 @@ func (c Client) CreateEnvironmentFromRepo(ctx context.Context, orgID string, req
 
 // Environments lists environments returned by the given filter.
 // TODO: add the filter options, explore performance issue.
-func (c Client) Environments(ctx context.Context) ([]Environment, error) {
+func (c *DefaultClient) Environments(ctx context.Context) ([]Environment, error) {
 	var envs []Environment
 	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/environments", nil, &envs); err != nil {
 		return nil, err
@@ -171,7 +171,7 @@ func (c Client) Environments(ctx context.Context) ([]Environment, error) {
 }
 
 // UserEnvironmentsByOrganization gets the list of environments owned by the given user.
-func (c Client) UserEnvironmentsByOrganization(ctx context.Context, userID, orgID string) ([]Environment, error) {
+func (c *DefaultClient) UserEnvironmentsByOrganization(ctx context.Context, userID, orgID string) ([]Environment, error) {
 	var (
 		envs  []Environment
 		query = url.Values{}
@@ -187,12 +187,12 @@ func (c Client) UserEnvironmentsByOrganization(ctx context.Context, userID, orgI
 }
 
 // DeleteEnvironment deletes the environment.
-func (c Client) DeleteEnvironment(ctx context.Context, envID string) error {
+func (c *DefaultClient) DeleteEnvironment(ctx context.Context, envID string) error {
 	return c.requestBody(ctx, http.MethodDelete, "/api/v0/environments/"+envID, nil, nil)
 }
 
-// StopEnvironment stops the stops.
-func (c Client) StopEnvironment(ctx context.Context, envID string) error {
+// StopEnvironment stops the environment.
+func (c *DefaultClient) StopEnvironment(ctx context.Context, envID string) error {
 	return c.requestBody(ctx, http.MethodPut, "/api/v0/environments/"+envID+"/stop", nil, nil)
 }
 
@@ -210,23 +210,23 @@ type UpdateEnvironmentReq struct {
 }
 
 // RebuildEnvironment requests that the given envID is rebuilt with no changes to its specification.
-func (c Client) RebuildEnvironment(ctx context.Context, envID string) error {
+func (c *DefaultClient) RebuildEnvironment(ctx context.Context, envID string) error {
 	return c.requestBody(ctx, http.MethodPatch, "/api/v0/environments/"+envID, UpdateEnvironmentReq{}, nil)
 }
 
 // EditEnvironment modifies the environment specification and initiates a rebuild.
-func (c Client) EditEnvironment(ctx context.Context, envID string, req UpdateEnvironmentReq) error {
+func (c *DefaultClient) EditEnvironment(ctx context.Context, envID string, req UpdateEnvironmentReq) error {
 	return c.requestBody(ctx, http.MethodPatch, "/api/v0/environments/"+envID, req, nil)
 }
 
 // DialWsep dials an environments command execution interface
 // See https://github.com/cdr/wsep for details.
-func (c Client) DialWsep(ctx context.Context, baseURL *url.URL, envID string) (*websocket.Conn, error) {
+func (c *DefaultClient) DialWsep(ctx context.Context, baseURL *url.URL, envID string) (*websocket.Conn, error) {
 	return c.dialWebsocket(ctx, "/proxy/environments/"+envID+"/wsep", withBaseURL(baseURL))
 }
 
 // DialExecutor gives a remote execution interface for performing commands inside an environment.
-func (c Client) DialExecutor(ctx context.Context, baseURL *url.URL, envID string) (wsep.Execer, error) {
+func (c *DefaultClient) DialExecutor(ctx context.Context, baseURL *url.URL, envID string) (wsep.Execer, error) {
 	ws, err := c.DialWsep(ctx, baseURL, envID)
 	if err != nil {
 		return nil, err
@@ -235,12 +235,12 @@ func (c Client) DialExecutor(ctx context.Context, baseURL *url.URL, envID string
 }
 
 // DialIDEStatus opens a websocket connection for cpu load metrics on the environment.
-func (c Client) DialIDEStatus(ctx context.Context, baseURL *url.URL, envID string) (*websocket.Conn, error) {
+func (c *DefaultClient) DialIDEStatus(ctx context.Context, baseURL *url.URL, envID string) (*websocket.Conn, error) {
 	return c.dialWebsocket(ctx, "/proxy/environments/"+envID+"/ide/api/status", withBaseURL(baseURL))
 }
 
 // DialEnvironmentBuildLog opens a websocket connection for the environment build log messages.
-func (c Client) DialEnvironmentBuildLog(ctx context.Context, envID string) (*websocket.Conn, error) {
+func (c *DefaultClient) DialEnvironmentBuildLog(ctx context.Context, envID string) (*websocket.Conn, error) {
 	return c.dialWebsocket(ctx, "/api/private/environments/"+envID+"/watch-update")
 }
 
@@ -263,7 +263,7 @@ type BuildLogFollowMsg struct {
 }
 
 // FollowEnvironmentBuildLog trails the build log of a Coder environment.
-func (c Client) FollowEnvironmentBuildLog(ctx context.Context, envID string) (<-chan BuildLogFollowMsg, error) {
+func (c *DefaultClient) FollowEnvironmentBuildLog(ctx context.Context, envID string) (<-chan BuildLogFollowMsg, error) {
 	ch := make(chan BuildLogFollowMsg)
 	ws, err := c.DialEnvironmentBuildLog(ctx, envID)
 	if err != nil {
@@ -288,12 +288,12 @@ func (c Client) FollowEnvironmentBuildLog(ctx context.Context, envID string) (<-
 }
 
 // DialEnvironmentStats opens a websocket connection for environment stats.
-func (c Client) DialEnvironmentStats(ctx context.Context, envID string) (*websocket.Conn, error) {
+func (c *DefaultClient) DialEnvironmentStats(ctx context.Context, envID string) (*websocket.Conn, error) {
 	return c.dialWebsocket(ctx, "/api/private/environments/"+envID+"/watch-stats")
 }
 
 // DialResourceLoad opens a websocket connection for cpu load metrics on the environment.
-func (c Client) DialResourceLoad(ctx context.Context, envID string) (*websocket.Conn, error) {
+func (c *DefaultClient) DialResourceLoad(ctx context.Context, envID string) (*websocket.Conn, error) {
 	return c.dialWebsocket(ctx, "/api/private/environments/"+envID+"/watch-resource-load")
 }
 
@@ -322,7 +322,7 @@ type buildLogMsg struct {
 }
 
 // WaitForEnvironmentReady will watch the build log and return when done.
-func (c Client) WaitForEnvironmentReady(ctx context.Context, envID string) error {
+func (c *DefaultClient) WaitForEnvironmentReady(ctx context.Context, envID string) error {
 	conn, err := c.DialEnvironmentBuildLog(ctx, envID)
 	if err != nil {
 		return xerrors.Errorf("%s: dial build log: %w", envID, err)
@@ -342,7 +342,7 @@ func (c Client) WaitForEnvironmentReady(ctx context.Context, envID string) error
 }
 
 // EnvironmentByID get the details of an environment by its id.
-func (c Client) EnvironmentByID(ctx context.Context, id string) (*Environment, error) {
+func (c *DefaultClient) EnvironmentByID(ctx context.Context, id string) (*Environment, error) {
 	var env Environment
 	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/environments/"+id, nil, &env); err != nil {
 		return nil, err

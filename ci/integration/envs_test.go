@@ -14,21 +14,27 @@ import (
 	"cdr.dev/slog/sloggers/slogtest"
 	"cdr.dev/slog/sloggers/slogtest/assert"
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/pkg/tcli"
 )
 
-func cleanupClient(ctx context.Context, t *testing.T) *coder.Client {
+func cleanupClient(ctx context.Context, t *testing.T) coder.Client {
 	creds := login(ctx, t)
 
 	u, err := url.Parse(creds.url)
 	assert.Success(t, "parse base url", err)
 
-	return &coder.Client{BaseURL: u, Token: creds.token}
+	client, err := coder.NewClient(coder.ClientOptions{
+		BaseURL: u,
+		Token:   creds.token,
+	})
+	require.NoError(t, err, "failed to create coder.Client")
+	return client
 }
 
-func cleanupEnv(t *testing.T, client *coder.Client, envID string) func() {
+func cleanupEnv(t *testing.T, client coder.Client, envID string) func() {
 	return func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -39,9 +45,9 @@ func cleanupEnv(t *testing.T, client *coder.Client, envID string) func() {
 }
 
 // this is a stopgap until we have support for a `coder images` subcommand
-// until then, we want can use the *coder.Client to ensure our integration tests
+// until then, we want can use the coder.Client to ensure our integration tests
 // work on fresh deployments.
-func ensureImageImported(ctx context.Context, t *testing.T, client *coder.Client, img string) {
+func ensureImageImported(ctx context.Context, t *testing.T, client coder.Client, img string) {
 	orgs, err := client.Organizations(ctx)
 	assert.Success(t, "get orgs", err)
 

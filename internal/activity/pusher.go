@@ -19,12 +19,12 @@ type Pusher struct {
 	envID  string
 	source string
 
-	client *coder.Client
+	client coder.Client
 	rate   *rate.Limiter // Use a rate limiter to control the sampling rate.
 }
 
 // NewPusher instantiates a new instance of Pusher.
-func NewPusher(c *coder.Client, envID, source string) *Pusher {
+func NewPusher(c coder.Client, envID, source string) *Pusher {
 	return &Pusher{
 		envID:  envID,
 		source: source,

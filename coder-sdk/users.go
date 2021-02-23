@@ -42,12 +42,12 @@ const (
 )
 
 // Me gets the details of the authenticated user.
-func (c Client) Me(ctx context.Context) (*User, error) {
+func (c *DefaultClient) Me(ctx context.Context) (*User, error) {
 	return c.UserByID(ctx, Me)
 }
 
 // UserByID get the details of a user by their id.
-func (c Client) UserByID(ctx context.Context, id string) (*User, error) {
+func (c *DefaultClient) UserByID(ctx context.Context, id string) (*User, error) {
 	var u User
 	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/users/"+id, nil, &u); err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ type SSHKey struct {
 }
 
 // SSHKey gets the current SSH kepair of the authenticated user.
-func (c Client) SSHKey(ctx context.Context) (*SSHKey, error) {
+func (c *DefaultClient) SSHKey(ctx context.Context) (*SSHKey, error) {
 	var key SSHKey
 	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/users/me/sshkey", nil, &key); err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func (c Client) SSHKey(ctx context.Context) (*SSHKey, error) {
 }
 
 // Users gets the list of user accounts.
-func (c Client) Users(ctx context.Context) ([]User, error) {
+func (c *DefaultClient) Users(ctx context.Context) ([]User, error) {
 	var u []User
 	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/users", nil, &u); err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (c Client) Users(ctx context.Context) ([]User, error) {
 }
 
 // UserByEmail gets a user by email.
-func (c Client) UserByEmail(ctx context.Context, email string) (*User, error) {
+func (c *DefaultClient) UserByEmail(ctx context.Context, email string) (*User, error) {
 	if email == Me {
 		return c.Me(ctx)
 	}
@@ -110,12 +110,12 @@ type UpdateUserReq struct {
 }
 
 // UpdateUser applyes the partial update to the given user.
-func (c Client) UpdateUser(ctx context.Context, userID string, req UpdateUserReq) error {
+func (c *DefaultClient) UpdateUser(ctx context.Context, userID string, req UpdateUserReq) error {
 	return c.requestBody(ctx, http.MethodPatch, "/api/v0/users/"+userID, req, nil)
 }
 
 // UpdateUXState applies a partial update of the user's UX State.
-func (c Client) UpdateUXState(ctx context.Context, userID string, uxsPartial map[string]interface{}) error {
+func (c *DefaultClient) UpdateUXState(ctx context.Context, userID string, uxsPartial map[string]interface{}) error {
 	if err := c.requestBody(ctx, http.MethodPut, "/api/private/users/"+userID+"/ux-state", uxsPartial, nil); err != nil {
 		return err
 	}
@@ -134,11 +134,11 @@ type CreateUserReq struct {
 }
 
 // CreateUser creates a new user account.
-func (c Client) CreateUser(ctx context.Context, req CreateUserReq) error {
+func (c *DefaultClient) CreateUser(ctx context.Context, req CreateUserReq) error {
 	return c.requestBody(ctx, http.MethodPost, "/api/v0/users", req, nil)
 }
 
 // DeleteUser deletes a user account.
-func (c Client) DeleteUser(ctx context.Context, userID string) error {
+func (c *DefaultClient) DeleteUser(ctx context.Context, userID string) error {
 	return c.requestBody(ctx, http.MethodDelete, "/api/v0/users/"+userID, nil, nil)
 }

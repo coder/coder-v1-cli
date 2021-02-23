@@ -32,7 +32,7 @@ const (
 )
 
 // WorkspaceProviderByID fetches a workspace provider entity by its unique ID.
-func (c *Client) WorkspaceProviderByID(ctx context.Context, id string) (*WorkspaceProvider, error) {
+func (c *DefaultClient) WorkspaceProviderByID(ctx context.Context, id string) (*WorkspaceProvider, error) {
 	var wp WorkspaceProvider
 	err := c.requestBody(ctx, http.MethodGet, "/api/private/resource-pools/"+id, nil, &wp)
 	if err != nil {
@@ -42,7 +42,7 @@ func (c *Client) WorkspaceProviderByID(ctx context.Context, id string) (*Workspa
 }
 
 // WorkspaceProviders fetches all workspace providers known to the Coder control plane.
-func (c *Client) WorkspaceProviders(ctx context.Context) ([]WorkspaceProvider, error) {
+func (c *DefaultClient) WorkspaceProviders(ctx context.Context) ([]WorkspaceProvider, error) {
 	var providers []WorkspaceProvider
 	err := c.requestBody(ctx, http.MethodGet, "/api/private/resource-pools", nil, &providers)
 	if err != nil {
@@ -65,7 +65,7 @@ type CreateWorkspaceProviderRes struct {
 }
 
 // CreateWorkspaceProvider creates a new WorkspaceProvider entity.
-func (c *Client) CreateWorkspaceProvider(ctx context.Context, req CreateWorkspaceProviderReq) (*CreateWorkspaceProviderRes, error) {
+func (c *DefaultClient) CreateWorkspaceProvider(ctx context.Context, req CreateWorkspaceProviderReq) (*CreateWorkspaceProviderRes, error) {
 	var res CreateWorkspaceProviderRes
 	err := c.requestBody(ctx, http.MethodPost, "/api/private/resource-pools", req, &res)
 	if err != nil {
@@ -75,6 +75,6 @@ func (c *Client) CreateWorkspaceProvider(ctx context.Context, req CreateWorkspac
 }
 
 // DeleteWorkspaceProviderByID deletes a workspace provider entity from the Coder control plane.
-func (c *Client) DeleteWorkspaceProviderByID(ctx context.Context, id string) error {
+func (c *DefaultClient) DeleteWorkspaceProviderByID(ctx context.Context, id string) error {
 	return c.requestBody(ctx, http.MethodDelete, "/api/private/resource-pools/"+id, nil, nil)
 }

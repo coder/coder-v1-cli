@@ -65,7 +65,7 @@ type ConfigOAuth struct {
 }
 
 // SiteConfigAuth fetches the sitewide authentication configuration.
-func (c Client) SiteConfigAuth(ctx context.Context) (*ConfigAuth, error) {
+func (c *DefaultClient) SiteConfigAuth(ctx context.Context) (*ConfigAuth, error) {
 	var conf ConfigAuth
 	if err := c.requestBody(ctx, http.MethodGet, "/api/private/auth/config", nil, &conf); err != nil {
 		return nil, err
@@ -74,12 +74,12 @@ func (c Client) SiteConfigAuth(ctx context.Context) (*ConfigAuth, error) {
 }
 
 // PutSiteConfigAuth sets the sitewide authentication configuration.
-func (c Client) PutSiteConfigAuth(ctx context.Context, req ConfigAuth) error {
+func (c *DefaultClient) PutSiteConfigAuth(ctx context.Context, req ConfigAuth) error {
 	return c.requestBody(ctx, http.MethodPut, "/api/private/auth/config", req, nil)
 }
 
 // SiteConfigOAuth fetches the sitewide git provider OAuth configuration.
-func (c Client) SiteConfigOAuth(ctx context.Context) (*ConfigOAuth, error) {
+func (c *DefaultClient) SiteConfigOAuth(ctx context.Context) (*ConfigOAuth, error) {
 	var conf ConfigOAuth
 	if err := c.requestBody(ctx, http.MethodGet, "/api/private/oauth/config", nil, &conf); err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func (c Client) SiteConfigOAuth(ctx context.Context) (*ConfigOAuth, error) {
 }
 
 // PutSiteConfigOAuth sets the sitewide git provider OAuth configuration.
-func (c Client) PutSiteConfigOAuth(ctx context.Context, req ConfigOAuth) error {
+func (c *DefaultClient) PutSiteConfigOAuth(ctx context.Context, req ConfigOAuth) error {
 	return c.requestBody(ctx, http.MethodPut, "/api/private/oauth/config", req, nil)
 }
 
@@ -97,7 +97,7 @@ type configSetupMode struct {
 }
 
 // SiteSetupModeEnabled fetches the current setup_mode state of a Coder Enterprise deployment.
-func (c Client) SiteSetupModeEnabled(ctx context.Context) (bool, error) {
+func (c *DefaultClient) SiteSetupModeEnabled(ctx context.Context) (bool, error) {
 	var conf configSetupMode
 	if err := c.requestBody(ctx, http.MethodGet, "/api/private/config/setup-mode", nil, &conf); err != nil {
 		return false, err
@@ -125,7 +125,7 @@ type ConfigExtensionMarketplace struct {
 }
 
 // SiteConfigExtensionMarketplace fetches the extension marketplace configuration.
-func (c Client) SiteConfigExtensionMarketplace(ctx context.Context) (*ConfigExtensionMarketplace, error) {
+func (c *DefaultClient) SiteConfigExtensionMarketplace(ctx context.Context) (*ConfigExtensionMarketplace, error) {
 	var conf ConfigExtensionMarketplace
 	if err := c.requestBody(ctx, http.MethodGet, "/api/private/extensions/config", nil, &conf); err != nil {
 		return nil, err
@@ -134,6 +134,6 @@ func (c Client) SiteConfigExtensionMarketplace(ctx context.Context) (*ConfigExte
 }
 
 // PutSiteConfigExtensionMarketplace sets the extension marketplace configuration.
-func (c Client) PutSiteConfigExtensionMarketplace(ctx context.Context, req ConfigExtensionMarketplace) error {
+func (c *DefaultClient) PutSiteConfigExtensionMarketplace(ctx context.Context, req ConfigExtensionMarketplace) error {
 	return c.requestBody(ctx, http.MethodPut, "/api/private/extensions/config", req, nil)
 }
