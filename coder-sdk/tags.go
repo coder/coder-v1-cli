@@ -40,7 +40,7 @@ type CreateImageTagReq struct {
 }
 
 // CreateImageTag creates a new image tag resource.
-func (c *defaultClient) CreateImageTag(ctx context.Context, imageID string, req CreateImageTagReq) (*ImageTag, error) {
+func (c *DefaultClient) CreateImageTag(ctx context.Context, imageID string, req CreateImageTagReq) (*ImageTag, error) {
 	var tag ImageTag
 	if err := c.requestBody(ctx, http.MethodPost, "/api/v0/images/"+imageID+"/tags", req, tag); err != nil {
 		return nil, err
@@ -49,12 +49,12 @@ func (c *defaultClient) CreateImageTag(ctx context.Context, imageID string, req 
 }
 
 // DeleteImageTag deletes an image tag resource.
-func (c *defaultClient) DeleteImageTag(ctx context.Context, imageID, tag string) error {
+func (c *DefaultClient) DeleteImageTag(ctx context.Context, imageID, tag string) error {
 	return c.requestBody(ctx, http.MethodDelete, "/api/v0/images/"+imageID+"/tags/"+tag, nil, nil)
 }
 
 // ImageTags fetch all image tags.
-func (c *defaultClient) ImageTags(ctx context.Context, imageID string) ([]ImageTag, error) {
+func (c *DefaultClient) ImageTags(ctx context.Context, imageID string) ([]ImageTag, error) {
 	var tags []ImageTag
 	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/images/"+imageID+"/tags", nil, &tags); err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (c *defaultClient) ImageTags(ctx context.Context, imageID string) ([]ImageT
 }
 
 // ImageTagByID fetch an image tag by ID.
-func (c *defaultClient) ImageTagByID(ctx context.Context, imageID, tagID string) (*ImageTag, error) {
+func (c *DefaultClient) ImageTagByID(ctx context.Context, imageID, tagID string) (*ImageTag, error) {
 	var tag ImageTag
 	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/images/"+imageID+"/tags/"+tagID, nil, &tag); err != nil {
 		return nil, err

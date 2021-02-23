@@ -18,7 +18,7 @@ type Registry struct {
 }
 
 // Registries fetches all registries in an organization.
-func (c *defaultClient) Registries(ctx context.Context, orgID string) ([]Registry, error) {
+func (c *DefaultClient) Registries(ctx context.Context, orgID string) ([]Registry, error) {
 	var (
 		r     []Registry
 		query = url.Values{}
@@ -33,7 +33,7 @@ func (c *defaultClient) Registries(ctx context.Context, orgID string) ([]Registr
 }
 
 // RegistryByID fetches a registry resource by its ID.
-func (c *defaultClient) RegistryByID(ctx context.Context, registryID string) (*Registry, error) {
+func (c *DefaultClient) RegistryByID(ctx context.Context, registryID string) (*Registry, error) {
 	var r Registry
 	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/registries/"+registryID, nil, &r); err != nil {
 		return nil, err
@@ -50,11 +50,11 @@ type UpdateRegistryReq struct {
 }
 
 // UpdateRegistry applies a partial update to a registry resource.
-func (c *defaultClient) UpdateRegistry(ctx context.Context, registryID string, req UpdateRegistryReq) error {
+func (c *DefaultClient) UpdateRegistry(ctx context.Context, registryID string, req UpdateRegistryReq) error {
 	return c.requestBody(ctx, http.MethodPatch, "/api/v0/registries/"+registryID, req, nil)
 }
 
 // DeleteRegistry deletes a registry resource by its ID.
-func (c *defaultClient) DeleteRegistry(ctx context.Context, registryID string) error {
+func (c *DefaultClient) DeleteRegistry(ctx context.Context, registryID string) error {
 	return c.requestBody(ctx, http.MethodDelete, "/api/v0/registries/"+registryID, nil, nil)
 }

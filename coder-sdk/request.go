@@ -48,7 +48,7 @@ func withBody(w io.Reader) func(o *requestOptions) {
 }
 
 // request is a helper to set the cookie, marshal the payload and execute the request.
-func (c *defaultClient) request(ctx context.Context, method, path string, in interface{}, options ...requestOption) (*http.Response, error) {
+func (c *DefaultClient) request(ctx context.Context, method, path string, in interface{}, options ...requestOption) (*http.Response, error) {
 	url := *c.baseURL
 
 	var config requestOptions
@@ -98,7 +98,7 @@ func (c *defaultClient) request(ctx context.Context, method, path string, in int
 
 // requestBody is a helper extending the Client.request helper, checking the response code
 // and decoding the response payload.
-func (c *defaultClient) requestBody(ctx context.Context, method, path string, in, out interface{}, opts ...requestOption) error {
+func (c *DefaultClient) requestBody(ctx context.Context, method, path string, in, out interface{}, opts ...requestOption) error {
 	resp, err := c.request(ctx, method, path, in, opts...)
 	if err != nil {
 		return xerrors.Errorf("Execute request: %q", err)

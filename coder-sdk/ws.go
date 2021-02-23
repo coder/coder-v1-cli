@@ -8,7 +8,7 @@ import (
 )
 
 // dialWebsocket establish the websocket connection while setting the authentication header.
-func (c *defaultClient) dialWebsocket(ctx context.Context, path string, options ...requestOption) (*websocket.Conn, error) {
+func (c *DefaultClient) dialWebsocket(ctx context.Context, path string, options ...requestOption) (*websocket.Conn, error) {
 	// Make a copy of the url so we can update the scheme to ws(s) without mutating the state.
 	url := *c.baseURL
 	var config requestOptions
