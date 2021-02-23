@@ -12,11 +12,21 @@ import (
 	"golang.org/x/xerrors"
 )
 
+// LoginRequest is a request to authenticate using email
+// and password credentials.
+//
+// This is provided for use in tests, and we recommend users authenticate
+// using an API Token.
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
+// LoginResponse contains successful response data for an authentication
+// request, including an API Token to be used for subsequent requests.
+//
+// This is provided for use in tests, and we recommend users authenticate
+// using an API Token.
 type LoginResponse struct {
 	SessionToken string `json:"session_token"`
 }
