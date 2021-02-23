@@ -6,7 +6,7 @@ import (
 	"net/url"
 )
 
-// ensure that DefaultClient implements Client
+// ensure that DefaultClient implements Client.
 var _ = Client(&DefaultClient{})
 
 // Me is the user ID of the authenticated user.
