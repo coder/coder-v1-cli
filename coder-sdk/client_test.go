@@ -124,6 +124,74 @@ func TestAuthentication(t *testing.T) {
 	require.NoError(t, err, "failed to get API version information")
 }
 
+func TestPasswordAuthentication(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/auth/basic/login", func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, r.Method, http.MethodPost, "login is a POST")
+
+		expected := map[string]interface{}{
+			"email":    "user@coder.com",
+			"password": "coder4all",
+		}
+		var request map[string]interface{}
+		err := json.NewDecoder(r.Body).Decode(&request)
+		require.NoError(t, err, "error decoding JSON")
+		require.EqualValues(t, expected, request, "unexpected request data")
+
+		response := map[string]interface{}{
+			"session_token": "g4mtIPUaKt-pPl9Q0xmgKs7acSypHt4Jf",
+		}
+
+		w.WriteHeader(http.StatusOK)
+		err = json.NewEncoder(w).Encode(response)
+		require.NoError(t, err, "error encoding JSON")
+	})
+	mux.HandleFunc("/api/v0/users/me", func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodGet, r.Method, "Users is a GET")
+
+		require.Equal(t, "g4mtIPUaKt-pPl9Q0xmgKs7acSypHt4Jf", r.Header.Get("Session-Token"), "expected session token to match return of login")
+
+		user := map[string]interface{}{
+			"id":                 "default",
+			"email":              "user@coder.com",
+			"username":           "charlie",
+			"name":               "Charlie Root",
+			"roles":              []coder.Role{coder.SiteAdmin},
+			"temporary_password": false,
+			"login_type":         coder.LoginTypeBuiltIn,
+			"key_regenerated_at": time.Now(),
+			"created_at":         time.Now(),
+			"updated_at":         time.Now(),
+		}
+
+		w.WriteHeader(http.StatusOK)
+		err := json.NewEncoder(w).Encode(user)
+		require.NoError(t, err, "error encoding JSON")
+	})
+	server := httptest.NewTLSServer(mux)
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	u, err := url.Parse(server.URL)
+	require.NoError(t, err, "failed to parse test server URL")
+	require.Equal(t, "https", u.Scheme, "expected HTTPS base URL")
+
+	client, err := coder.NewClient(coder.ClientOptions{
+		BaseURL:    u,
+		HTTPClient: server.Client(),
+		Email:      "user@coder.com",
+		Password:   "coder4all",
+	})
+	require.NoError(t, err, "failed to create Client")
+
+	user, err := client.Me(context.Background())
+	require.NoError(t, err, "failed to get information about current user")
+	require.Equal(t, "user@coder.com", user.Email, "expected test user")
+}
+
 func TestContextRoot(t *testing.T) {
 	t.Parallel()
 
