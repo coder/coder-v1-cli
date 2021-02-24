@@ -29,26 +29,26 @@ type ClientOptions struct {
 	// Token is the API Token used to authenticate (optional).
 	//
 	// If Token is provided, the DefaultClient will use it to
-	// authenticate. If it is not provided, it will require another
-	// type of credential, such as a Email/Password pair.
+	// authenticate. If it is not provided, the client require
+	// another type of credential, such as an Email/Password pair.
 	Token string
 
-	// Email will be used to authenticate.
+	// Email used to authenticate with Coder.
 	//
-	// DefaultClient requires exactly one type of credential
-	// (Token, or Email/Password pair).
-	//
-	// NewClient will exchange the Email and Password for a Token
-	// and will not retain them in-memory after NewClient returns.
+	// If you supply an Email and Password pair, NewClient will
+	// exchange these credentials for a Token during initialization.
+	// This is only applicable for the built-in authentication
+	// provider. The client will not retain these credentials in
+	// memory after NewClient returns.
 	Email string
 
-	// Password will be used to authenticate.
+	// Password used to authenticate with Coder.
 	//
-	// DefaultClient requires exactly one type of credential
-	// (Token, or Email/Password pair).
-	//
-	// NewClient will exchange the Email and Password for a Token
-	// and will not retain them in-memory after NewClient returns.
+	// If you supply an Email and Password pair, NewClient will
+	// exchange these credentials for a Token during initialization.
+	// This is only applicable for the built-in authentication
+	// provider. The client will not retain these credentials in
+	// memory after NewClient returns.
 	Password string
 }
 
