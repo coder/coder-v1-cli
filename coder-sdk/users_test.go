@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"github.com/stretchr/testify/require"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 func TestUsers(t *testing.T) {
@@ -92,11 +93,12 @@ func TestUserUpdatePassword(t *testing.T) {
 	})
 	require.NoError(t, err, "failed to create coder.Client")
 
-	client.UpdateUser(context.Background(), "me", coder.UpdateUserReq{
+	err = client.UpdateUser(context.Background(), "me", coder.UpdateUserReq{
 		UserPasswordSettings: &coder.UserPasswordSettings{
 			OldPassword: "vt9g9rxsptrq",
 			Password:    "wmf39jw2f7pk",
 			Temporary:   true,
 		},
 	})
+	require.NoError(t, err, "error when updating password")
 }

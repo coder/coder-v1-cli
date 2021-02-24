@@ -14,7 +14,6 @@ import (
 	"cdr.dev/coder-cli/coder-sdk"
 )
 
-
 func TestAuthentication(t *testing.T) {
 	t.Parallel()
 
