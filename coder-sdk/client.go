@@ -29,7 +29,7 @@ type ClientOptions struct {
 	// Token is the API Token used to authenticate (optional).
 	//
 	// If Token is provided, the DefaultClient will use it to
-	// authenticate. If it is not provided, the client require
+	// authenticate. If it is not provided, the client requires
 	// another type of credential, such as an Email/Password pair.
 	Token string
 
