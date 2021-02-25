@@ -99,7 +99,7 @@ func (c *DefaultClient) UserByEmail(ctx context.Context, email string) (*User, e
 // UpdateUserReq defines a modification to the user, updating the
 // value of all non-nil values.
 type UpdateUserReq struct {
-	// TODO(@cmoog) add update password option
+	*UserPasswordSettings
 	Revoked        *bool      `json:"revoked,omitempty"`
 	Roles          *[]Role    `json:"roles,omitempty"`
 	LoginType      *LoginType `json:"login_type,omitempty"`
@@ -107,6 +107,27 @@ type UpdateUserReq struct {
 	Username       *string    `json:"username,omitempty"`
 	Email          *string    `json:"email,omitempty"`
 	DotfilesGitURL *string    `json:"dotfiles_git_uri,omitempty"`
+}
+
+// UserPasswordSettings allows modification of the user's password
+// settings.
+//
+// These settings are only applicable to users managed using the
+// built-in authentication provider; users authenticating using
+// OAuth must change their password through the identity provider
+// instead.
+type UserPasswordSettings struct {
+	// OldPassword is the account's current password.
+	OldPassword string `json:"old_password,omitempty"`
+
+	// Password is the new password, which may be a temporary password.
+	Password string `json:"password,omitempty"`
+
+	// Temporary indicates that API access should be restricted to the
+	// password change API and a few other APIs. If set to true, Coder
+	// will prompt the user to change their password upon their next
+	// login through the web interface.
+	Temporary bool `json:"temporary_password,omitempty"`
 }
 
 // UpdateUser applyes the partial update to the given user.
