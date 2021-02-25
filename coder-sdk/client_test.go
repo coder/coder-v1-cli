@@ -37,6 +37,9 @@ func TestAuthentication(t *testing.T) {
 	})
 	require.NoError(t, err, "failed to create coder.Client")
 
+	require.Equal(t, token, client.Token(), "expected Token to match")
+	require.EqualValues(t, *u, client.BaseURL(), "expected BaseURL to match")
+
 	_, err = client.APIVersion(context.Background())
 	require.NoError(t, err, "failed to get API version information")
 }
@@ -103,6 +106,7 @@ func TestPasswordAuthentication(t *testing.T) {
 		Password:   "coder4all",
 	})
 	require.NoError(t, err, "failed to create Client")
+	require.Equal(t, "g4mtIPUaKt-pPl9Q0xmgKs7acSypHt4Jf", client.Token(), "expected token to match")
 
 	user, err := client.Me(context.Background())
 	require.NoError(t, err, "failed to get information about current user")

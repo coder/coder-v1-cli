@@ -213,4 +213,10 @@ type Client interface {
 
 	// DeleteWorkspaceProviderByID deletes a workspace provider entity from the Coder control plane.
 	DeleteWorkspaceProviderByID(ctx context.Context, id string) error
+
+	// Token returns the API Token used to authenticate.
+	Token() string
+
+	// BaseURL returns the BaseURL configured for this Client.
+	BaseURL() url.URL
 }
