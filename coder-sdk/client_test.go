@@ -18,6 +18,7 @@ func TestAuthentication(t *testing.T) {
 	t.Parallel()
 
 	const token = "g4mtIPUaKt-pPl9Q0xmgKs7acSypHt4Jf"
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotToken := r.Header.Get("Session-Token")
 		require.Equal(t, token, gotToken, "token does not match")
@@ -47,13 +48,17 @@ func TestAuthentication(t *testing.T) {
 func TestPasswordAuthentication(t *testing.T) {
 	t.Parallel()
 
+	const email = "user@coder.com"
+	const password = "coder4all"
+	const token = "g4mtIPUaKt-pPl9Q0xmgKs7acSypHt4Jf"
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/auth/basic/login", func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, r.Method, http.MethodPost, "login is a POST")
 
 		expected := map[string]interface{}{
-			"email":    "user@coder.com",
-			"password": "coder4all",
+			"email":    email,
+			"password": password,
 		}
 		var request map[string]interface{}
 		err := json.NewDecoder(r.Body).Decode(&request)
@@ -61,7 +66,7 @@ func TestPasswordAuthentication(t *testing.T) {
 		require.EqualValues(t, expected, request, "unexpected request data")
 
 		response := map[string]interface{}{
-			"session_token": "g4mtIPUaKt-pPl9Q0xmgKs7acSypHt4Jf",
+			"session_token": token,
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -71,11 +76,11 @@ func TestPasswordAuthentication(t *testing.T) {
 	mux.HandleFunc("/api/v0/users/me", func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodGet, r.Method, "Users is a GET")
 
-		require.Equal(t, "g4mtIPUaKt-pPl9Q0xmgKs7acSypHt4Jf", r.Header.Get("Session-Token"), "expected session token to match return of login")
+		require.Equal(t, token, r.Header.Get("Session-Token"), "expected session token to match return of login")
 
 		user := map[string]interface{}{
 			"id":                 "default",
-			"email":              "user@coder.com",
+			"email":              email,
 			"username":           "charlie",
 			"name":               "Charlie Root",
 			"roles":              []coder.Role{coder.SiteAdmin},
@@ -102,15 +107,15 @@ func TestPasswordAuthentication(t *testing.T) {
 	client, err := coder.NewClient(coder.ClientOptions{
 		BaseURL:    u,
 		HTTPClient: server.Client(),
-		Email:      "user@coder.com",
-		Password:   "coder4all",
+		Email:      email,
+		Password:   password,
 	})
 	require.NoError(t, err, "failed to create Client")
-	require.Equal(t, "g4mtIPUaKt-pPl9Q0xmgKs7acSypHt4Jf", client.Token(), "expected token to match")
+	require.Equal(t, token, client.Token(), "expected token to match")
 
 	user, err := client.Me(context.Background())
 	require.NoError(t, err, "failed to get information about current user")
-	require.Equal(t, "user@coder.com", user.Email, "expected test user")
+	require.Equal(t, email, user.Email, "expected test user")
 }
 
 func TestContextRoot(t *testing.T) {

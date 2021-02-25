@@ -17,6 +17,9 @@ import (
 func TestUsers(t *testing.T) {
 	t.Parallel()
 
+	const username = "root"
+	const name = "Charlie Root"
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodGet, r.Method, "Users is a GET")
 		require.Equal(t, "/api/v0/users", r.URL.Path)
@@ -25,8 +28,8 @@ func TestUsers(t *testing.T) {
 			{
 				"id":                 "default",
 				"email":              "root@user.com",
-				"username":           "root",
-				"name":               "Charlie Root",
+				"username":           username,
+				"name":               name,
 				"roles":              []coder.Role{coder.SiteAdmin},
 				"temporary_password": false,
 				"login_type":         coder.LoginTypeBuiltIn,
@@ -56,20 +59,23 @@ func TestUsers(t *testing.T) {
 	users, err := client.Users(context.Background())
 	require.NoError(t, err, "error getting Users")
 	require.Len(t, users, 1, "users should return a single user")
-	require.Equal(t, "Charlie Root", users[0].Name)
-	require.Equal(t, "root", users[0].Username)
+	require.Equal(t, name, users[0].Name)
+	require.Equal(t, username, users[0].Username)
 }
 
 func TestUserUpdatePassword(t *testing.T) {
 	t.Parallel()
+
+	const oldPassword = "vt9g9rxsptrq"
+	const newPassword = "wmf39jw2f7pk"
 
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodPatch, r.Method, "Users is a PATCH")
 		require.Equal(t, "/api/v0/users/me", r.URL.Path)
 
 		expected := map[string]interface{}{
-			"old_password": "vt9g9rxsptrq",
-			"password":     "wmf39jw2f7pk",
+			"old_password": oldPassword,
+			"password":     newPassword,
 		}
 		var request map[string]interface{}
 		err := json.NewDecoder(r.Body).Decode(&request)
@@ -94,8 +100,8 @@ func TestUserUpdatePassword(t *testing.T) {
 
 	err = client.UpdateUser(context.Background(), "me", coder.UpdateUserReq{
 		UserPasswordSettings: &coder.UserPasswordSettings{
-			OldPassword: "vt9g9rxsptrq",
-			Password:    "wmf39jw2f7pk",
+			OldPassword: oldPassword,
+			Password:    newPassword,
 			Temporary:   false,
 		},
 	})
