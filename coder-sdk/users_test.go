@@ -68,9 +68,8 @@ func TestUserUpdatePassword(t *testing.T) {
 		require.Equal(t, "/api/v0/users/me", r.URL.Path)
 
 		expected := map[string]interface{}{
-			"old_password":       "vt9g9rxsptrq",
-			"password":           "wmf39jw2f7pk",
-			"temporary_password": false,
+			"old_password": "vt9g9rxsptrq",
+			"password":     "wmf39jw2f7pk",
 		}
 		var request map[string]interface{}
 		err := json.NewDecoder(r.Body).Decode(&request)
