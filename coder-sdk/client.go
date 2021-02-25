@@ -116,3 +116,13 @@ type DefaultClient struct {
 	// token is the API Token credential.
 	token string
 }
+
+// Token returns the API Token used to authenticate.
+func (c *DefaultClient) Token() string {
+	return c.token
+}
+
+// BaseURL returns the BaseURL configured for this Client.
+func (c *DefaultClient) BaseURL() url.URL {
+	return *c.baseURL
+}
