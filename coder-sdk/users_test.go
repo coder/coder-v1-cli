@@ -70,7 +70,7 @@ func TestUserUpdatePassword(t *testing.T) {
 		expected := map[string]interface{}{
 			"old_password":       "vt9g9rxsptrq",
 			"password":           "wmf39jw2f7pk",
-			"temporary_password": true,
+			"temporary_password": false,
 		}
 		var request map[string]interface{}
 		err := json.NewDecoder(r.Body).Decode(&request)
@@ -97,7 +97,7 @@ func TestUserUpdatePassword(t *testing.T) {
 		UserPasswordSettings: &coder.UserPasswordSettings{
 			OldPassword: "vt9g9rxsptrq",
 			Password:    "wmf39jw2f7pk",
-			Temporary:   true,
+			Temporary:   false,
 		},
 	})
 	require.NoError(t, err, "error when updating password")
