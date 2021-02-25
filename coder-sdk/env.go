@@ -86,6 +86,8 @@ type CreateEnvironmentRequest struct {
 	Services       []string `json:"services"`
 	UseContainerVM bool     `json:"use_container_vm"`
 
+	// Template comes from the parse template route on cemanager.
+	// This field should never be manually populated
 	Template Template `json:"template,omitempty"`
 }
 
