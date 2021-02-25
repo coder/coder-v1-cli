@@ -317,24 +317,8 @@ coder envs create-from-repo -f coder.yaml`,
 				return xerrors.Errorf("parse environment template config: %w", err)
 			}
 
-			importedImg, err := findImg(ctx, client, findImgConf{
-				email:   coder.Me,
-				imgName: tpl.Workspace.Image,
-				orgName: org,
-			})
-			if err != nil {
-				return err
-			}
-
 			env, err := client.CreateEnvironment(ctx, coder.CreateEnvironmentRequest{
-				Name:           tpl.Workspace.Name,
-				ImageID:        importedImg.ID,
-				OrgID:          importedImg.OrganizationID,
-				ImageTag:       importedImg.DefaultTag.Tag,
-				CPUCores:       tpl.Workspace.Resources.CPU,
-				MemoryGB:       tpl.Workspace.Resources.Memory,
-				DiskGB:         tpl.Workspace.Resources.Disk,
-				UseContainerVM: tpl.Workspace.ContainerBasedVM,
+				Template: tpl,
 			})
 			if err != nil {
 				return xerrors.Errorf("create environment: %w", err)
