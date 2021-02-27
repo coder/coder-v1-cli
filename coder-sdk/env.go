@@ -2,6 +2,7 @@ package coder
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/url"
@@ -84,6 +85,10 @@ type CreateEnvironmentRequest struct {
 	GPUs           int      `json:"gpus"`
 	Services       []string `json:"services"`
 	UseContainerVM bool     `json:"use_container_vm"`
+
+	// Template comes from the parse template route on cemanager.
+	// This field should never be manually populated
+	Template Template `json:"template,omitempty"`
 }
 
 // CreateEnvironment sends a request to create an environment.
@@ -104,24 +109,9 @@ type ParseTemplateRequest struct {
 }
 
 // Template is a Workspaces As Code (WAC) template.
-type Template struct {
-	Workspace Workspace `json:"workspace"`
-}
-
-// Workspace defines values on the workspace that can be configured.
-type Workspace struct {
-	Name             string    `json:"name"`
-	Image            string    `json:"image"`
-	ContainerBasedVM bool      `json:"container-based-vm"`
-	Resources        Resources `json:"resources"`
-}
-
-// Resources defines compute values that can be configured for a workspace.
-type Resources struct {
-	CPU    float32 `json:"cpu" `
-	Memory float32 `json:"memory"`
-	Disk   int     `json:"disk"`
-}
+// For now, let's not interpret it on the CLI level. We just need
+// to forward this as part of the create env request.
+type Template = json.RawMessage
 
 // ParseTemplate parses a template config. It support both remote repositories and local files.
 // If a local file is specified then all other values in the request are ignored.
