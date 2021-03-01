@@ -183,14 +183,22 @@ func getImgs(ctx context.Context, client coder.Client, conf getImgsConf) ([]code
 }
 
 func isMultiOrgMember(ctx context.Context, client coder.Client, email string) (bool, error) {
+	orgs, err := getUserOrgs(ctx, client, email)
+	if err != nil {
+		return false, err
+	}
+	return len(orgs) > 1, nil
+}
+
+func getUserOrgs(ctx context.Context, client coder.Client, email string) ([]coder.Organization, error) {
 	u, err := client.UserByEmail(ctx, email)
 	if err != nil {
-		return false, xerrors.New("email not found")
+		return nil, xerrors.New("email not found")
 	}
 
 	orgs, err := client.Organizations(ctx)
 	if err != nil {
-		return false, err
+		return nil, xerrors.New("no organizations found")
 	}
-	return len(lookupUserOrgs(u, orgs)) > 1, nil
+	return lookupUserOrgs(u, orgs), nil
 }
