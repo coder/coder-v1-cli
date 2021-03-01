@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"golang.org/x/xerrors"
@@ -91,6 +92,11 @@ func (c *DefaultClient) request(ctx context.Context, method, path string, in int
 
 	// Provide the session token in a header
 	req.Header.Set("Session-Token", c.token)
+
+	customAuthHeader, ok := os.LookupEnv("ENDPOINT_AUTH_HEADER")
+	if ok {
+		req.Header.Set("Authorization", customAuthHeader)
+	}
 
 	// Execute the request.
 	return c.httpClient.Do(req)
