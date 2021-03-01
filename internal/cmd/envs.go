@@ -314,7 +314,7 @@ coder envs create-from-repo -f coder.yaml`,
 
 			if userOrg == nil {
 				if org != "" {
-					return xerrors.Errorf("Unable to locate org '%s', org")
+					return xerrors.Errorf("Unable to locate org '%s'", org)
 				}
 				return xerrors.Errorf("Unable to locate a default organization for the user")
 			}
