@@ -35,14 +35,6 @@ type EnvWithWorkspaceProvider struct {
 	WorkspaceProvider coder.WorkspaceProvider
 }
 
-// EWPsByEnvName implements the sort.Interface for sorting
-// []coderutil.EnvWithWorkspaceProvider by coder.Environment.Name.
-type EWPsByEnvName []EnvWithWorkspaceProvider
-
-func (e EWPsByEnvName) Len() int           { return len(e) }
-func (e EWPsByEnvName) Less(i, j int) bool { return e[i].Env.Name < e[j].Env.Name }
-func (e EWPsByEnvName) Swap(i, j int)      { e[i], e[j] = e[j], e[i] }
-
 // EnvsWithProvider performs the composition of each Environment with its associated WorkspaceProvider.
 func EnvsWithProvider(ctx context.Context, client coder.Client, envs []coder.Environment) ([]EnvWithWorkspaceProvider, error) {
 	pooledEnvs := make([]EnvWithWorkspaceProvider, 0, len(envs))

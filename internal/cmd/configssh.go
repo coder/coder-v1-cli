@@ -178,7 +178,7 @@ func writeSSHKey(ctx context.Context, client coder.Client, privateKeyPath string
 func makeNewConfigs(userName string, envs []coderutil.EnvWithWorkspaceProvider, privateKeyFilepath string) string {
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", sshStartToken, sshStartMessage)
 
-	sort.Sort(coderutil.EWPsByEnvName(envs))
+	sort.Slice(envs, func(i, j int) bool { return envs[i].Env.Name < envs[j].Env.Name })
 
 	for _, env := range envs {
 		if !env.WorkspaceProvider.SSHEnabled {
