@@ -36,7 +36,7 @@ type EnvWithWorkspaceProvider struct {
 }
 
 // EWPsByEnvName implements the sort.Interface for sorting
-// []coderutil.EnvWithWorkspaceProvider by coder.Environment.Name
+// []coderutil.EnvWithWorkspaceProvider by coder.Environment.Name.
 type EWPsByEnvName []EnvWithWorkspaceProvider
 
 func (e EWPsByEnvName) Len() int           { return len(e) }
