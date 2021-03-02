@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"cdr.dev/coder-cli/pkg/clog"
@@ -176,6 +177,9 @@ func writeSSHKey(ctx context.Context, client coder.Client, privateKeyPath string
 
 func makeNewConfigs(userName string, envs []coderutil.EnvWithWorkspaceProvider, privateKeyFilepath string) string {
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", sshStartToken, sshStartMessage)
+
+	sort.Sort(coderutil.EWPsByEnvName(envs))
+
 	for _, env := range envs {
 		if !env.WorkspaceProvider.SSHEnabled {
 			clog.LogWarn(fmt.Sprintf("SSH is not enabled for workspace provider %q", env.WorkspaceProvider.Name),
