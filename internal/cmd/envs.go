@@ -288,13 +288,35 @@ coder envs create-from-repo -f coder.yaml`,
 				}
 			}
 
-			multiOrgMember, err := isMultiOrgMember(ctx, client, coder.Me)
+			orgs, err := getUserOrgs(ctx, client, coder.Me)
 			if err != nil {
 				return err
 			}
 
+			multiOrgMember := len(orgs) > 1
 			if multiOrgMember && org == "" {
 				return xerrors.New("org is required for multi-org members")
+			}
+
+			var userOrg *coder.Organization
+			for i := range orgs {
+				// Look for org by name
+				if orgs[i].Name == org {
+					userOrg = &orgs[i]
+					break
+				}
+				// Or use default if the provided is blank
+				if org == "" && orgs[i].Default {
+					userOrg = &orgs[i]
+					break
+				}
+			}
+
+			if userOrg == nil {
+				if org != "" {
+					return xerrors.Errorf("Unable to locate org '%s'", org)
+				}
+				return xerrors.Errorf("Unable to locate a default organization for the user")
 			}
 
 			var rd io.Reader
@@ -318,6 +340,7 @@ coder envs create-from-repo -f coder.yaml`,
 			}
 
 			env, err := client.CreateEnvironment(ctx, coder.CreateEnvironmentRequest{
+				OrgID:    userOrg.ID,
 				Template: tpl,
 			})
 			if err != nil {
