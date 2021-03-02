@@ -59,6 +59,7 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 		}
 
 		privateKeyFilepath := filepath.Join(usr.HomeDir, ".ssh", "coder_enterprise")
+		coderSSHConfigPath := filepath.Join(usr.HomeDir, ".ssh", "coder.conf")
 
 		if strings.HasPrefix(*configpath, "~") {
 			*configpath = strings.Replace(*configpath, "~", usr.HomeDir, 1)
@@ -82,6 +83,8 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			if err != nil {
 				return xerrors.Errorf("write to ssh config file %q: %s", *configpath, err)
 			}
+
+			_ = os.Remove(coderSSHConfigPath)
 			_ = os.Remove(privateKeyFilepath)
 
 			return nil
@@ -114,16 +117,23 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			return xerrors.New("SSH is disabled or not available for any environments in your Coder Enterprise deployment.")
 		}
 
-		newConfig := makeNewConfigs(user.Username, envsWithProviders, privateKeyFilepath)
+		coderSSHConfigData := makeNewConfigs(user.Username, envsWithProviders, privateKeyFilepath)
+		if err := os.MkdirAll(filepath.Dir(coderSSHConfigPath), os.ModePerm); err != nil {
+			return xerrors.Errorf("make configuration directory %s: %w", filepath.Dir(coderSSHConfigPath), err)
+		}
+		if err := writeStr(coderSSHConfigPath, coderSSHConfigData); err != nil {
+			return xerrors.Errorf("write new configurations to coder ssh config file %q: %w", coderSSHConfigPath, err)
+		}
 
-		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
-		if err != nil {
+		includeCoderSSH := fmt.Sprintf("Include %s", coderSSHConfigPath)
+		coderSSHSection := fmt.Sprintf("\n%s\n%s\n\n%s\n\n%s\n", sshStartToken, sshStartMessage, includeCoderSSH, sshEndToken)
+		if err := os.MkdirAll(filepath.Dir(*configpath), os.ModePerm); err != nil {
 			return xerrors.Errorf("make configuration directory: %w", err)
 		}
-		err = writeStr(*configpath, currentConfig+newConfig)
-		if err != nil {
+		if err := writeStr(*configpath, coderSSHSection+currentConfig); err != nil {
 			return xerrors.Errorf("write new configurations to ssh config file %q: %w", *configpath, err)
 		}
+
 		err = writeSSHKey(ctx, client, privateKeyFilepath)
 		if err != nil {
 			if !xerrors.Is(err, os.ErrPermission) {
