@@ -190,13 +190,12 @@ func (c *DefaultClient) StopEnvironment(ctx context.Context, envID string) error
 // UpdateEnvironmentReq defines the update operation, only setting
 // nil-fields.
 type UpdateEnvironmentReq struct {
-	ImageID              *string  `json:"image_id"`
-	ImageTag             *string  `json:"image_tag"`
-	CPUCores             *float32 `json:"cpu_cores"`
-	MemoryGB             *float32 `json:"memory_gb"`
-	DiskGB               *int     `json:"disk_gb"`
-	GPUs                 *int     `json:"gpus"`
-	CodeServerReleaseURL *string  `json:"code_server_release_url"`
+	ImageID  *string  `json:"image_id"`
+	ImageTag *string  `json:"image_tag"`
+	CPUCores *float32 `json:"cpu_cores"`
+	MemoryGB *float32 `json:"memory_gb"`
+	DiskGB   *int     `json:"disk_gb"`
+	GPUs     *int     `json:"gpus"`
 }
 
 // RebuildEnvironment requests that the given envID is rebuilt with no changes to its specification.
