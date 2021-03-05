@@ -75,16 +75,17 @@ const (
 
 // CreateEnvironmentRequest is used to configure a new environment.
 type CreateEnvironmentRequest struct {
-	Name           string   `json:"name"`
-	ImageID        string   `json:"image_id"`
-	OrgID          string   `json:"org_id"`
-	ImageTag       string   `json:"image_tag"`
-	CPUCores       float32  `json:"cpu_cores"`
-	MemoryGB       float32  `json:"memory_gb"`
-	DiskGB         int      `json:"disk_gb"`
-	GPUs           int      `json:"gpus"`
-	Services       []string `json:"services"`
-	UseContainerVM bool     `json:"use_container_vm"`
+	Name           string  `json:"name"`
+	ImageID        string  `json:"image_id"`
+	OrgID          string  `json:"org_id"`
+	ImageTag       string  `json:"image_tag"`
+	CPUCores       float32 `json:"cpu_cores"`
+	MemoryGB       float32 `json:"memory_gb"`
+	DiskGB         int     `json:"disk_gb"`
+	GPUs           int     `json:"gpus"`
+	UseContainerVM bool    `json:"use_container_vm"`
+	ResourcePoolID string  `json:"resource_pool_id"`
+	Namespace      string  `json:"namespace"`
 
 	// Template comes from the parse template route on cemanager.
 	// This field should never be manually populated
@@ -189,14 +190,13 @@ func (c *DefaultClient) StopEnvironment(ctx context.Context, envID string) error
 // UpdateEnvironmentReq defines the update operation, only setting
 // nil-fields.
 type UpdateEnvironmentReq struct {
-	ImageID              *string   `json:"image_id"`
-	ImageTag             *string   `json:"image_tag"`
-	CPUCores             *float32  `json:"cpu_cores"`
-	MemoryGB             *float32  `json:"memory_gb"`
-	DiskGB               *int      `json:"disk_gb"`
-	GPUs                 *int      `json:"gpus"`
-	Services             *[]string `json:"services"`
-	CodeServerReleaseURL *string   `json:"code_server_release_url"`
+	ImageID              *string  `json:"image_id"`
+	ImageTag             *string  `json:"image_tag"`
+	CPUCores             *float32 `json:"cpu_cores"`
+	MemoryGB             *float32 `json:"memory_gb"`
+	DiskGB               *int     `json:"disk_gb"`
+	GPUs                 *int     `json:"gpus"`
+	CodeServerReleaseURL *string  `json:"code_server_release_url"`
 }
 
 // RebuildEnvironment requests that the given envID is rebuilt with no changes to its specification.
