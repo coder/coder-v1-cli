@@ -59,7 +59,7 @@ func EnvsWithProvider(ctx context.Context, client coder.Client, envs []coder.Env
 	return pooledEnvs, nil
 }
 
-// DefaultWorkspaceProvider returns the default provider with with to create environments.
+// DefaultWorkspaceProvider returns the default provider with which to create environments.
 func DefaultWorkspaceProvider(ctx context.Context, c coder.Client) (*coder.WorkspaceProvider, error) {
 	provider, err := c.WorkspaceProviders(ctx)
 	if err != nil {
