@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/coder-cli/pkg/tablewriter"
@@ -198,6 +199,11 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 				return err
 			}
 
+			provider, err := coderutil.DefaultWorkspaceProvider(ctx, client)
+			if err != nil {
+				return xerrors.Errorf("default workspace provider: %w", err)
+			}
+
 			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
 			createReq := &coder.CreateEnvironmentRequest{
 				Name:           args[0],
@@ -209,6 +215,8 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 				DiskGB:         disk,
 				GPUs:           gpus,
 				UseContainerVM: useCVM,
+				ResourcePoolID: provider.ID,
+				Namespace:      provider.DefaultNamespace,
 			}
 
 			// if any of these defaulted to their zero value we provision
@@ -339,9 +347,16 @@ coder envs create-from-repo -f coder.yaml`,
 				return xerrors.Errorf("parse environment template config: %w", err)
 			}
 
+			provider, err := coderutil.DefaultWorkspaceProvider(ctx, client)
+			if err != nil {
+				return xerrors.Errorf("default workspace provider: %w", err)
+			}
+
 			env, err := client.CreateEnvironment(ctx, coder.CreateEnvironmentRequest{
-				OrgID:    userOrg.ID,
-				Template: tpl,
+				OrgID:          userOrg.ID,
+				Template:       tpl,
+				ResourcePoolID: provider.ID,
+				Namespace:      provider.DefaultNamespace,
 			})
 			if err != nil {
 				return xerrors.Errorf("create environment: %w", err)
