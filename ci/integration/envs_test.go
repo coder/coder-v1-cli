@@ -14,7 +14,6 @@ import (
 	"cdr.dev/slog/sloggers/slogtest"
 	"cdr.dev/slog/sloggers/slogtest/assert"
 	"github.com/google/go-cmp/cmp"
-	"github.com/stretchr/testify/require"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/pkg/tcli"
@@ -30,7 +29,7 @@ func cleanupClient(ctx context.Context, t *testing.T) coder.Client {
 		BaseURL: u,
 		Token:   creds.token,
 	})
-	require.NoError(t, err, "failed to create coder.Client")
+	assert.Success(t, "failed to create coder.Client", err)
 	return client
 }
 

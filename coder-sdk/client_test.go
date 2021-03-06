@@ -9,9 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/slog/sloggers/slogtest/assert"
 )
 
 func TestAuthentication(t *testing.T) {
@@ -21,7 +20,7 @@ func TestAuthentication(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotToken := r.Header.Get("Session-Token")
-		require.Equal(t, token, gotToken, "token does not match")
+		assert.Equal(t, "token does not match", token, gotToken)
 
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}))
@@ -30,19 +29,19 @@ func TestAuthentication(t *testing.T) {
 	})
 
 	u, err := url.Parse(server.URL)
-	require.NoError(t, err, "failed to parse test server URL")
+	assert.Success(t, "failed to parse test server URL", err)
 
 	client, err := coder.NewClient(coder.ClientOptions{
 		BaseURL: u,
 		Token:   token,
 	})
-	require.NoError(t, err, "failed to create coder.Client")
+	assert.Success(t, "failed to create coder.Client", err)
 
-	require.Equal(t, token, client.Token(), "expected Token to match")
-	require.EqualValues(t, *u, client.BaseURL(), "expected BaseURL to match")
+	assert.Equal(t, "expected Token to match", token, client.Token())
+	assert.Equal(t, "expected BaseURL to match", *u, client.BaseURL())
 
 	_, err = client.APIVersion(context.Background())
-	require.NoError(t, err, "failed to get API version information")
+	assert.Success(t, "failed to get API version information", err)
 }
 
 func TestPasswordAuthentication(t *testing.T) {
@@ -54,7 +53,7 @@ func TestPasswordAuthentication(t *testing.T) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/auth/basic/login", func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, r.Method, http.MethodPost, "login is a POST")
+		assert.Equal(t, "login is a POST", http.MethodPost, r.Method)
 
 		expected := map[string]interface{}{
 			"email":    email,
@@ -62,8 +61,8 @@ func TestPasswordAuthentication(t *testing.T) {
 		}
 		var request map[string]interface{}
 		err := json.NewDecoder(r.Body).Decode(&request)
-		require.NoError(t, err, "error decoding JSON")
-		require.EqualValues(t, expected, request, "unexpected request data")
+		assert.Success(t, "error decoding JSON", err)
+		assert.Equal(t, "unexpected request data", expected, request)
 
 		response := map[string]interface{}{
 			"session_token": token,
@@ -71,12 +70,13 @@ func TestPasswordAuthentication(t *testing.T) {
 
 		w.WriteHeader(http.StatusOK)
 		err = json.NewEncoder(w).Encode(response)
-		require.NoError(t, err, "error encoding JSON")
+		assert.Success(t, "error encoding JSON", err)
 	})
 	mux.HandleFunc("/api/v0/users/me", func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, http.MethodGet, r.Method, "Users is a GET")
+		assert.Equal(t, "Users is a GET", http.MethodGet, r.Method)
 
-		require.Equal(t, token, r.Header.Get("Session-Token"), "expected session token to match return of login")
+		gotToken := r.Header.Get("Session-Token")
+		assert.Equal(t, "expected session token to match return of login", token, gotToken)
 
 		user := map[string]interface{}{
 			"id":                 "default",
@@ -93,7 +93,7 @@ func TestPasswordAuthentication(t *testing.T) {
 
 		w.WriteHeader(http.StatusOK)
 		err := json.NewEncoder(w).Encode(user)
-		require.NoError(t, err, "error encoding JSON")
+		assert.Success(t, "error encoding JSON", err)
 	})
 	server := httptest.NewTLSServer(mux)
 	t.Cleanup(func() {
@@ -101,8 +101,8 @@ func TestPasswordAuthentication(t *testing.T) {
 	})
 
 	u, err := url.Parse(server.URL)
-	require.NoError(t, err, "failed to parse test server URL")
-	require.Equal(t, "https", u.Scheme, "expected HTTPS base URL")
+	assert.Success(t, "failed to parse test server URL", err)
+	assert.Equal(t, "expected HTTPS base URL", "https", u.Scheme)
 
 	client, err := coder.NewClient(coder.ClientOptions{
 		BaseURL:    u,
@@ -110,20 +110,20 @@ func TestPasswordAuthentication(t *testing.T) {
 		Email:      email,
 		Password:   password,
 	})
-	require.NoError(t, err, "failed to create Client")
-	require.Equal(t, token, client.Token(), "expected token to match")
+	assert.Success(t, "failed to create Client", err)
+	assert.Equal(t, "expected token to match", token, client.Token())
 
 	user, err := client.Me(context.Background())
-	require.NoError(t, err, "failed to get information about current user")
-	require.Equal(t, email, user.Email, "expected test user")
+	assert.Success(t, "failed to get information about current user", err)
+	assert.Equal(t, "expected test user", email, user.Email)
 }
 
 func TestContextRoot(t *testing.T) {
 	t.Parallel()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, r.Method, http.MethodGet, "Users is a GET")
-		require.Equal(t, r.URL.Path, "/context-root/api/v0/users")
+		assert.Equal(t, "Users is a GET", http.MethodGet, r.Method)
+		assert.Equal(t, "expected context root", "/context-root/api/v0/users", r.URL.Path)
 
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}))
@@ -137,7 +137,7 @@ func TestContextRoot(t *testing.T) {
 	}
 
 	u, err := url.Parse(server.URL)
-	require.NoError(t, err, "failed to parse test server URL")
+	assert.Success(t, "failed to parse test server URL", err)
 
 	for _, prefix := range contextRoots {
 		u.Path = prefix
@@ -146,9 +146,9 @@ func TestContextRoot(t *testing.T) {
 			BaseURL: u,
 			Token:   "FrOgA6xhpM-p5nTfsupmvzYJA6DJSOUoE",
 		})
-		require.NoError(t, err, "failed to create coder.Client")
+		assert.Success(t, "failed to create coder.Client", err)
 
 		_, err = client.Users(context.Background())
-		require.Error(t, err, "expected 503 error")
+		assert.Error(t, "expected 503 error", err)
 	}
 }
