@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/slog/sloggers/slogtest/assert"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 func TestUsers(t *testing.T) {

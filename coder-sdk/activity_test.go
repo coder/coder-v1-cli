@@ -8,8 +8,9 @@ import (
 	"net/url"
 	"testing"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/slog/sloggers/slogtest/assert"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 func TestPushActivity(t *testing.T) {
