@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"cdr.dev/slog/sloggers/slogtest/assert"
 
 	"cdr.dev/coder-cli/coder-sdk"
 )
@@ -19,8 +19,8 @@ func TestPushActivity(t *testing.T) {
 	const source = "test"
 	const envID = "602d377a-e6b8d763cae7561885c5f1b2"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, http.MethodPost, r.Method, "PushActivity is a POST")
-		require.Equal(t, "/api/private/metrics/usage/push", r.URL.Path)
+		assert.Equal(t, "PushActivity is a POST", http.MethodPost, r.Method)
+		assert.Equal(t, "URL matches", "/api/private/metrics/usage/push", r.URL.Path)
 
 		expected := map[string]interface{}{
 			"source":         source,
@@ -28,8 +28,8 @@ func TestPushActivity(t *testing.T) {
 		}
 		var request map[string]interface{}
 		err := json.NewDecoder(r.Body).Decode(&request)
-		require.NoError(t, err, "error decoding JSON")
-		require.EqualValues(t, expected, request, "unexpected request data")
+		assert.Success(t, "error decoding JSON", err)
+		assert.Equal(t, "unexpected request data", expected, request)
 
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -38,14 +38,14 @@ func TestPushActivity(t *testing.T) {
 	})
 
 	u, err := url.Parse(server.URL)
-	require.NoError(t, err, "failed to parse test server URL")
+	assert.Success(t, "failed to parse test server URL", err)
 
 	client, err := coder.NewClient(coder.ClientOptions{
 		BaseURL: u,
 		Token:   "SwdcSoq5Jc-0C1r8wfwm7h6h9i0RDk7JT",
 	})
-	require.NoError(t, err, "failed to create coder.Client")
+	assert.Success(t, "failed to create coder.Client", err)
 
 	err = client.PushActivity(context.Background(), source, envID)
-	require.NoError(t, err)
+	assert.Success(t, "expected successful response from PushActivity", err)
 }

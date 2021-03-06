@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
+	"cdr.dev/slog/sloggers/slogtest/assert"
 
 	"cdr.dev/coder-cli/coder-sdk"
 )
@@ -21,8 +21,8 @@ func TestUsers(t *testing.T) {
 	const name = "Charlie Root"
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, http.MethodGet, r.Method, "Users is a GET")
-		require.Equal(t, "/api/v0/users", r.URL.Path)
+		assert.Equal(t, "Users is a GET", http.MethodGet, r.Method)
+		assert.Equal(t, "Path matches", "/api/v0/users", r.URL.Path)
 
 		users := []map[string]interface{}{
 			{
@@ -41,26 +41,26 @@ func TestUsers(t *testing.T) {
 
 		w.WriteHeader(http.StatusOK)
 		err := json.NewEncoder(w).Encode(users)
-		require.NoError(t, err, "error encoding JSON")
+		assert.Success(t, "error encoding JSON", err)
 	}))
 	t.Cleanup(func() {
 		server.Close()
 	})
 
 	u, err := url.Parse(server.URL)
-	require.NoError(t, err, "failed to parse test server URL")
+	assert.Success(t, "failed to parse test server URL", err)
 
 	client, err := coder.NewClient(coder.ClientOptions{
 		BaseURL: u,
 		Token:   "JcmErkJjju-KSrztst0IJX7xGJhKQPtfv",
 	})
-	require.NoError(t, err, "failed to create coder.Client")
+	assert.Success(t, "failed to create coder.Client", err)
 
 	users, err := client.Users(context.Background())
-	require.NoError(t, err, "error getting Users")
-	require.Len(t, users, 1, "users should return a single user")
-	require.Equal(t, name, users[0].Name)
-	require.Equal(t, username, users[0].Username)
+	assert.Success(t, "error getting Users", err)
+	assert.True(t, "users should return a single user", len(users) == 1)
+	assert.Equal(t, "expected user's name to match", name, users[0].Name)
+	assert.Equal(t, "expected user's username to match", username, users[0].Username)
 }
 
 func TestUserUpdatePassword(t *testing.T) {
@@ -70,8 +70,8 @@ func TestUserUpdatePassword(t *testing.T) {
 	const newPassword = "wmf39jw2f7pk"
 
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, http.MethodPatch, r.Method, "Users is a PATCH")
-		require.Equal(t, "/api/v0/users/me", r.URL.Path)
+		assert.Equal(t, "Users is a PATCH", http.MethodPatch, r.Method)
+		assert.Equal(t, "Path matches", "/api/v0/users/me", r.URL.Path)
 
 		expected := map[string]interface{}{
 			"old_password": oldPassword,
@@ -79,8 +79,8 @@ func TestUserUpdatePassword(t *testing.T) {
 		}
 		var request map[string]interface{}
 		err := json.NewDecoder(r.Body).Decode(&request)
-		require.NoError(t, err, "error decoding JSON")
-		require.EqualValues(t, expected, request, "unexpected request data")
+		assert.Success(t, "error decoding JSON", err)
+		assert.Equal(t, "unexpected request data", expected, request)
 
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -89,14 +89,14 @@ func TestUserUpdatePassword(t *testing.T) {
 	})
 
 	u, err := url.Parse(server.URL)
-	require.NoError(t, err, "failed to parse test server URL")
+	assert.Success(t, "failed to parse test server URL", err)
 
 	client, err := coder.NewClient(coder.ClientOptions{
 		BaseURL:    u,
 		HTTPClient: server.Client(),
 		Token:      "JcmErkJjju-KSrztst0IJX7xGJhKQPtfv",
 	})
-	require.NoError(t, err, "failed to create coder.Client")
+	assert.Success(t, "failed to create coder.Client", err)
 
 	err = client.UpdateUser(context.Background(), "me", coder.UpdateUserReq{
 		UserPasswordSettings: &coder.UserPasswordSettings{
@@ -105,5 +105,5 @@ func TestUserUpdatePassword(t *testing.T) {
 			Temporary:   false,
 		},
 	})
-	require.NoError(t, err, "error when updating password")
+	assert.Success(t, "error when updating password", err)
 }

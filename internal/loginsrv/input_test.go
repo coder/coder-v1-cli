@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
+	"cdr.dev/slog/sloggers/slogtest/assert"
 
 	"cdr.dev/coder-cli/internal/loginsrv"
 )
@@ -62,14 +62,14 @@ func TestReadLine(t *testing.T) {
 			case err := <-errChan:
 				t.Fatalf("ReadLine returned before we got the token (%v).", err)
 			case actualToken := <-tokenChan:
-				require.Equal(t, testToken, actualToken, "Unexpected token received from readline.")
+				assert.Equal(t, "Unexpected token received from readline.", testToken, actualToken)
 			}
 
 			select {
 			case <-ctx.Done():
 				t.Fatal("Timeout waiting for readline to finish.")
 			case err := <-errChan:
-				require.NoError(t, err, "Error reading the line.")
+				assert.Success(t, "Error reading the line.", err)
 			}
 		})
 	}
@@ -119,7 +119,7 @@ func TestReadLineMissingToken(t *testing.T) {
 	case <-ctx.Done():
 		t.Fatal("Timeout waiting for readline to finish.")
 	case err := <-errChan:
-		require.NoError(t, err, "Error reading the line.")
+		assert.Success(t, "Error reading the line.", err)
 	case token, ok := <-tokenChan:
 		t.Fatalf("Token channel unexpectedly unblocked. Data: %q, state: %t.", token, ok)
 	}
