@@ -397,7 +397,7 @@ coder envs create-from-config -f coder.yaml`,
 	return cmd
 }
 
-// handleTemplateError attempts to convert the basic error into a more detailed clog error
+// handleTemplateError attempts to convert the basic error into a more detailed clog error.
 func handleTemplateError(origError error) error {
 	var httpError *coder.HTTPError
 	if !xerrors.As(origError, &httpError) {
