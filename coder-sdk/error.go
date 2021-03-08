@@ -17,7 +17,7 @@ var ErrPermissions = xerrors.New("insufficient permissions")
 // ErrAuthentication describes the error case in which the requester has invalid authentication.
 var ErrAuthentication = xerrors.New("invalid authentication")
 
-// APIError is the expected payload format for our errors.
+// APIError is the expected payload format for API errors.
 type APIError struct {
 	Err APIErrorMsg `json:"error"`
 }
