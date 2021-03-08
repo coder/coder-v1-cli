@@ -3,13 +3,14 @@ package cmd
 import (
 	"encoding/json"
 
+	"golang.org/x/xerrors"
+
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/pkg/clog"
-	"golang.org/x/xerrors"
 )
 
 // handleAPIError attempts to convert an api error into a more detailed clog error.
-// If it cannot, it will return the original error
+// If it cannot, it will return the original error.
 func handleAPIError(origError error) error {
 	var httpError *coder.HTTPError
 	if !xerrors.As(origError, &httpError) {
