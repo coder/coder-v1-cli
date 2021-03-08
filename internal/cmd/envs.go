@@ -397,15 +397,16 @@ coder envs create-from-config -f coder.yaml`,
 	return cmd
 }
 
+// handleTemplateError attempts to convert the basic error into a more detailed clog error
 func handleTemplateError(origError error) error {
 	var httpError *coder.HTTPError
 	if !xerrors.As(origError, &httpError) {
-		return origError
+		return origError // Return the original
 	}
 
 	ae, err := httpError.Payload()
 	if err != nil {
-		return origError
+		return origError // Return the original
 	}
 
 	// TODO: Handle verbose case here too?
@@ -423,7 +424,8 @@ func handleTemplateError(origError error) error {
 
 		return clog.Error(p.ErrorType, p.Msgs...)
 	}
-	return origError
+
+	return origError // Return the original
 }
 
 func editEnvCmd() *cobra.Command {
