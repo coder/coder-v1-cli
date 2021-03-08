@@ -410,19 +410,32 @@ func handleTemplateError(origError error) error {
 	}
 
 	// TODO: Handle verbose case here too?
-	if ae.Err.Code == "wac_template" {
-		type payload struct {
+	switch ae.Err.Code {
+	case "wac_template":
+		type templatePayload struct {
 			ErrorType string   `json:"error_type"`
 			Msgs      []string `json:"messages"`
 		}
 
-		var p payload
+		var p templatePayload
 		err := json.Unmarshal(ae.Err.Details, &p)
 		if err != nil {
 			return origError
 		}
 
 		return clog.Error(p.ErrorType, p.Msgs...)
+	case "verbose":
+		// TODO: We should move this to some general spot to decode this
+		type verbosePayload struct {
+			Verbose string `json:"verbose"`
+		}
+		var p verbosePayload
+		err := json.Unmarshal(ae.Err.Details, &p)
+		if err != nil {
+			return origError
+		}
+
+		return clog.Error(origError.Error(), p.Verbose)
 	}
 
 	return origError // Return the original
