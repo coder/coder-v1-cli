@@ -290,8 +290,8 @@ func createEnvFromRepoCmd() *cobra.Command {
 		Long:   "Create a new Coder environment from a config file.",
 		Hidden: true,
 		Example: `# create a new environment from git repository template
-coder envs create-from-repo --repo-url github.com/cdr/m --branch my-branch
-coder envs create-from-repo -f coder.yaml`,
+coder envs create-from-config --repo-url github.com/cdr/m --branch my-branch
+coder envs create-from-config -f coder.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
@@ -355,7 +355,7 @@ coder envs create-from-repo -f coder.yaml`,
 
 			tpl, err := client.ParseTemplate(ctx, req)
 			if err != nil {
-				return xerrors.Errorf("parse environment template config: %w", err)
+				return handleTemplateError(err)
 			}
 
 			provider, err := coderutil.DefaultWorkspaceProvider(ctx, client)
@@ -395,6 +395,35 @@ coder envs create-from-repo -f coder.yaml`,
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the environment")
 	return cmd
+}
+
+func handleTemplateError(origError error) error {
+	var httpError *coder.HTTPError
+	if !xerrors.As(origError, &httpError) {
+		return origError
+	}
+
+	ae, err := httpError.Payload()
+	if err != nil {
+		return origError
+	}
+
+	switch ae.Err.Code {
+	case "wac_template":
+		type payload struct {
+			ErrorType string   `json:"error_type"`
+			Msgs      []string `json:"messages"`
+		}
+
+		var p payload
+		err := json.Unmarshal(ae.Err.Details, &p)
+		if err != nil {
+			return origError
+		}
+
+		return clog.Error(p.ErrorType, p.Msgs...)
+	}
+	return origError
 }
 
 func editEnvCmd() *cobra.Command {
