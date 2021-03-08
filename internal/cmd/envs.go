@@ -408,8 +408,8 @@ func handleTemplateError(origError error) error {
 		return origError
 	}
 
-	switch ae.Err.Code {
-	case "wac_template":
+	// TODO: Handle verbose case here too?
+	if ae.Err.Code == "wac_template" {
 		type payload struct {
 			ErrorType string   `json:"error_type"`
 			Msgs      []string `json:"messages"`

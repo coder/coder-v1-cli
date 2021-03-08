@@ -17,13 +17,13 @@ var ErrPermissions = xerrors.New("insufficient permissions")
 // ErrAuthentication describes the error case in which the requester has invalid authentication.
 var ErrAuthentication = xerrors.New("invalid authentication")
 
-// apiError is the expected payload format for our errors.
-type apiError struct {
-	Err apiErrorMsg `json:"error"`
+// APIError is the expected payload format for our errors.
+type APIError struct {
+	Err APIErrorMsg `json:"error"`
 }
 
-// apiErrorMsg contains the rich error information returned by API errors.
-type apiErrorMsg struct {
+// APIErrorMsg contains the rich error information returned by API errors.
+type APIErrorMsg struct {
 	Msg     string          `json:"msg"`
 	Code    string          `json:"code"`
 	Details json.RawMessage `json:"details"`
@@ -32,12 +32,14 @@ type apiErrorMsg struct {
 // HTTPError represents an error from the Coder API.
 type HTTPError struct {
 	*http.Response
-	cached    *apiError
+	cached    *APIError
 	cachedErr error
 }
 
-func (e *HTTPError) Payload() (*apiError, error) {
-	var msg apiError
+// Payload decode the response body into the standard error structure. The `details`
+// section is stored as a raw json, and type depends on the `code` field.
+func (e *HTTPError) Payload() (*APIError, error) {
+	var msg APIError
 	if e.cached != nil || e.cachedErr != nil {
 		return e.cached, e.cachedErr
 	}
