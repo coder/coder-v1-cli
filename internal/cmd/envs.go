@@ -355,7 +355,7 @@ coder envs create-from-config -f coder.yaml`,
 
 			tpl, err := client.ParseTemplate(ctx, req)
 			if err != nil {
-				return handleTemplateError(err)
+				return handleAPIError(err)
 			}
 
 			provider, err := coderutil.DefaultWorkspaceProvider(ctx, client)
@@ -370,7 +370,7 @@ coder envs create-from-config -f coder.yaml`,
 				Namespace:      provider.DefaultNamespace,
 			})
 			if err != nil {
-				return xerrors.Errorf("create environment: %w", err)
+				return handleAPIError(err)
 			}
 
 			if follow {
@@ -395,50 +395,6 @@ coder envs create-from-config -f coder.yaml`,
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the environment")
 	return cmd
-}
-
-// handleTemplateError attempts to convert the basic error into a more detailed clog error.
-func handleTemplateError(origError error) error {
-	var httpError *coder.HTTPError
-	if !xerrors.As(origError, &httpError) {
-		return origError // Return the original
-	}
-
-	ae, err := httpError.Payload()
-	if err != nil {
-		return origError // Return the original
-	}
-
-	// TODO: Handle verbose case here too?
-	switch ae.Err.Code {
-	case "wac_template":
-		type templatePayload struct {
-			ErrorType string   `json:"error_type"`
-			Msgs      []string `json:"messages"`
-		}
-
-		var p templatePayload
-		err := json.Unmarshal(ae.Err.Details, &p)
-		if err != nil {
-			return origError
-		}
-
-		return clog.Error(p.ErrorType, p.Msgs...)
-	case "verbose":
-		// TODO: We should move this to some general spot to decode this
-		type verbosePayload struct {
-			Verbose string `json:"verbose"`
-		}
-		var p verbosePayload
-		err := json.Unmarshal(ae.Err.Details, &p)
-		if err != nil {
-			return origError
-		}
-
-		return clog.Error(origError.Error(), p.Verbose)
-	}
-
-	return origError // Return the original
 }
 
 func editEnvCmd() *cobra.Command {
