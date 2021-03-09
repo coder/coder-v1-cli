@@ -1,21 +1,21 @@
-## coder envs watch-build
+## coder envs logs
 
-trail the build log of a Coder environment
+get the logs of a Coder environment
 
 ```
-coder envs watch-build [environment_name] [flags]
+coder envs logs [environment_name] [flags]
 ```
 
 ### Examples
 
 ```
-coder envs watch-build front-end-env
+coder envs logs front-end-env
 ```
 
 ### Options
 
 ```
-  -h, --help          help for watch-build
+  -h, --help          help for logs
       --user string   Specify the user whose resources to target (default "me")
 ```
 

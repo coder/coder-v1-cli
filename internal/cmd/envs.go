@@ -34,7 +34,7 @@ func envsCmd() *cobra.Command {
 		lsEnvsCommand(),
 		stopEnvsCmd(),
 		rmEnvsCmd(),
-		watchBuildLogCommand(),
+		logsCommand(),
 		rebuildEnvCommand(),
 		createEnvCmd(),
 		createEnvFromRepoCmd(),
@@ -246,7 +246,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 
 			clog.LogSuccess("creating environment...",
 				clog.BlankLine,
-				clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, env.Name),
+				clog.Tipf(`run "coder envs logs %s" to trail the build logs`, env.Name),
 			)
 			return nil
 		},
@@ -372,7 +372,7 @@ coder envs create-from-repo -f coder.yaml`,
 
 			clog.LogSuccess("creating environment...",
 				clog.BlankLine,
-				clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, env.Name),
+				clog.Tipf(`run "coder envs logs %s" to trail the build logs`, env.Name),
 			)
 			return nil
 		},
@@ -459,7 +459,7 @@ coder envs edit back-end-env --disk 20`,
 
 			clog.LogSuccess("applied changes to the environment, rebuilding...",
 				clog.BlankLine,
-				clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, envName),
+				clog.Tipf(`run "coder envs logs %s" to trail the build logs`, envName),
 			)
 			return nil
 		},

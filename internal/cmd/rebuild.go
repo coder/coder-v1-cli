@@ -63,7 +63,7 @@ coder envs rebuild backend-env --force`,
 			} else {
 				clog.LogSuccess(
 					"successfully started rebuild",
-					clog.Tipf("run \"coder envs watch-build %s\" to follow the build logs", env.Name),
+					clog.Tipf("run \"coder envs logs %s\" to follow the build logs", env.Name),
 				)
 			}
 			return nil
@@ -159,12 +159,14 @@ func trailBuildLogs(ctx context.Context, client coder.Client, envID string) erro
 	return nil
 }
 
-func watchBuildLogCommand() *cobra.Command {
+func ldLogCommand() *cobra.Command {
 	var user string
+	var follow bool
 	cmd := &cobra.Command{
-		Use:     "watch-build [environment_name]",
-		Example: "coder envs watch-build front-end-env",
-		Short:   "trail the build log of a Coder environment",
+		Use:     "logs [environment_name]",
+		Aliases: []string{"watch-build"},
+		Example: "coder envs logs front-end-env",
+		Short:   "get the logs of a Coder environment",
 		Args:    xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -184,5 +186,6 @@ func watchBuildLogCommand() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
+	cmd.Flags().BoolVar(&follow, "follow", false, "Follow the logs as updates are pushed.")
 	return cmd
 }

@@ -156,7 +156,7 @@ func TestEnvsCLI(t *testing.T) {
 
 		assert.Equal(t, "environment cpu was correctly set", cpu, float64(env.CPUCores), floatComparer)
 
-		c.Run(ctx, fmt.Sprintf("coder envs watch-build %s", name)).Assert(t,
+		c.Run(ctx, fmt.Sprintf("coder envs logs %s", name)).Assert(t,
 			tcli.Success(),
 		)
 
