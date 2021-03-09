@@ -200,9 +200,17 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 				return err
 			}
 
-			provider, err := coderutil.DefaultWorkspaceProvider(ctx, client)
-			if err != nil {
-				return xerrors.Errorf("default workspace provider: %w", err)
+			var provider *coder.KubernetesProvider
+			if providerName == "" {
+				provider, err = coderutil.DefaultWorkspaceProvider(ctx, client)
+				if err != nil {
+					return xerrors.Errorf("default workspace provider: %w", err)
+				}
+			} else {
+				provider, err = coderutil.ProviderByName(ctx, client, providerName)
+				if err != nil {
+					return xerrors.Errorf("provider by name: %w", err)
+				}
 			}
 
 			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
@@ -350,17 +358,9 @@ coder envs create-from-repo -f coder.yaml`,
 				return xerrors.Errorf("parse environment template config: %w", err)
 			}
 
-			var provider *coder.KubernetesProvider
-			if providerName == "" {
-				provider, err = coderutil.DefaultWorkspaceProvider(ctx, client)
-				if err != nil {
-					return xerrors.Errorf("default workspace provider: %w", err)
-				}
-			} else {
-				provider, err = coderutil.ProviderByName(ctx, client, providerName)
-				if err != nil {
-					return xerrors.Errorf("provider by name: %w", err)
-				}
+			provider, err := coderutil.DefaultWorkspaceProvider(ctx, client)
+			if err != nil {
+				return xerrors.Errorf("default workspace provider: %w", err)
 			}
 
 			env, err := client.CreateEnvironment(ctx, coder.CreateEnvironmentRequest{
