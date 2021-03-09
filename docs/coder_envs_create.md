@@ -30,6 +30,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
   -i, --image string         name of the image to base the environment off of.
   -m, --memory float32       GB of RAM an environment should be provisioned with.
   -o, --org string           name of the organization the environment should be created under.
+      --provider string      name of Workspace Provider with which to create the environment
   -t, --tag string           tag of the image the environment will be based off of. (default "latest")
 ```
 
