@@ -66,7 +66,7 @@ func DefaultWorkspaceProvider(ctx context.Context, c coder.Client) (*coder.Kuber
 		return nil, err
 	}
 	for _, p := range provider.Kubernetes {
-		if p.Local {
+		if p.BuiltIn {
 			return &p, nil
 		}
 	}
