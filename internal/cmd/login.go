@@ -16,6 +16,7 @@ import (
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/version"
 	"cdr.dev/coder-cli/internal/x/xcobra"
+	"cdr.dev/coder-cli/pkg/clog"
 )
 
 func loginCmd() *cobra.Command {
@@ -76,7 +77,11 @@ func login(ctx context.Context, envURL *url.URL) error {
 	if err := pingAPI(ctx, envURL, token); err != nil {
 		return xerrors.Errorf("ping API with credentials: %w", err)
 	}
-	return storeConfig(envURL, token, config.URL, config.Session)
+	if err := storeConfig(envURL, token, config.URL, config.Session); err != nil {
+		return xerrors.Errorf("store auth: %w", err)
+	}
+	clog.LogSuccess("logged in")
+	return nil
 }
 
 func readLine(prompt string) string {
