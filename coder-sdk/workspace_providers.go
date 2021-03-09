@@ -5,8 +5,13 @@ import (
 	"net/http"
 )
 
-// WorkspaceProvider defines an entity capable of deploying and acting as an ingress for Coder environments.
-type WorkspaceProvider struct {
+// WorkspaceProviders defines all available Coder workspace provider targets.
+type WorkspaceProviders struct {
+	Kubernetes []KubernetesProvider `json:"kubernetes"`
+}
+
+// KubernetesProvider defines an entity capable of deploying and acting as an ingress for Coder environments.
+type KubernetesProvider struct {
 	ID                  string                  `json:"id" table:"-"`
 	Name                string                  `json:"name" table:"Name"`
 	Status              WorkspaceProviderStatus `json:"status" table:"Status"`
@@ -32,8 +37,8 @@ const (
 )
 
 // WorkspaceProviderByID fetches a workspace provider entity by its unique ID.
-func (c *DefaultClient) WorkspaceProviderByID(ctx context.Context, id string) (*WorkspaceProvider, error) {
-	var wp WorkspaceProvider
+func (c *DefaultClient) WorkspaceProviderByID(ctx context.Context, id string) (*KubernetesProvider, error) {
+	var wp KubernetesProvider
 	err := c.requestBody(ctx, http.MethodGet, "/api/private/resource-pools/"+id, nil, &wp)
 	if err != nil {
 		return nil, err
@@ -42,13 +47,13 @@ func (c *DefaultClient) WorkspaceProviderByID(ctx context.Context, id string) (*
 }
 
 // WorkspaceProviders fetches all workspace providers known to the Coder control plane.
-func (c *DefaultClient) WorkspaceProviders(ctx context.Context) ([]WorkspaceProvider, error) {
-	var providers []WorkspaceProvider
+func (c *DefaultClient) WorkspaceProviders(ctx context.Context) (*WorkspaceProviders, error) {
+	var providers WorkspaceProviders
 	err := c.requestBody(ctx, http.MethodGet, "/api/private/resource-pools", nil, &providers)
 	if err != nil {
 		return nil, err
 	}
-	return providers, nil
+	return &providers, nil
 }
 
 // CreateWorkspaceProviderReq defines the request parameters for creating a new workspace provider entity.

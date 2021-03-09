@@ -32,7 +32,7 @@ func DialEnvWsep(ctx context.Context, client coder.Client, env *coder.Environmen
 // EnvWithWorkspaceProvider composes an Environment entity with its associated WorkspaceProvider.
 type EnvWithWorkspaceProvider struct {
 	Env               coder.Environment
-	WorkspaceProvider coder.WorkspaceProvider
+	WorkspaceProvider coder.KubernetesProvider
 }
 
 // EnvsWithProvider performs the composition of each Environment with its associated WorkspaceProvider.
@@ -42,8 +42,8 @@ func EnvsWithProvider(ctx context.Context, client coder.Client, envs []coder.Env
 	if err != nil {
 		return nil, err
 	}
-	providerMap := make(map[string]coder.WorkspaceProvider, len(providers))
-	for _, p := range providers {
+	providerMap := make(map[string]coder.KubernetesProvider, len(providers.Kubernetes))
+	for _, p := range providers.Kubernetes {
 		providerMap[p.ID] = p
 	}
 	for _, e := range envs {
@@ -60,12 +60,12 @@ func EnvsWithProvider(ctx context.Context, client coder.Client, envs []coder.Env
 }
 
 // DefaultWorkspaceProvider returns the default provider with which to create environments.
-func DefaultWorkspaceProvider(ctx context.Context, c coder.Client) (*coder.WorkspaceProvider, error) {
+func DefaultWorkspaceProvider(ctx context.Context, c coder.Client) (*coder.KubernetesProvider, error) {
 	provider, err := c.WorkspaceProviders(ctx)
 	if err != nil {
 		return nil, err
 	}
-	for _, p := range provider {
+	for _, p := range provider.Kubernetes {
 		if p.Local {
 			return &p, nil
 		}

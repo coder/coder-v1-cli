@@ -203,10 +203,10 @@ type Client interface {
 	APIVersion(ctx context.Context) (string, error)
 
 	// WorkspaceProviderByID fetches a workspace provider entity by its unique ID.
-	WorkspaceProviderByID(ctx context.Context, id string) (*WorkspaceProvider, error)
+	WorkspaceProviderByID(ctx context.Context, id string) (*KubernetesProvider, error)
 
 	// WorkspaceProviders fetches all workspace providers known to the Coder control plane.
-	WorkspaceProviders(ctx context.Context) ([]WorkspaceProvider, error)
+	WorkspaceProviders(ctx context.Context) (*WorkspaceProviders, error)
 
 	// CreateWorkspaceProvider creates a new WorkspaceProvider entity.
 	CreateWorkspaceProvider(ctx context.Context, req CreateWorkspaceProviderReq) (*CreateWorkspaceProviderRes, error)
