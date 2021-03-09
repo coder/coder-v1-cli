@@ -86,8 +86,8 @@ coder providers ls`,
 				return xerrors.Errorf("list workspace providers: %w", err)
 			}
 
-			err = tablewriter.WriteTable(len(wps), func(i int) interface{} {
-				return wps[i]
+			err = tablewriter.WriteTable(len(wps.Kubernetes), func(i int) interface{} {
+				return wps.Kubernetes[i]
 			})
 			if err != nil {
 				return xerrors.Errorf("write table: %w", err)
@@ -122,7 +122,7 @@ coder providers rm my-workspace-provider`,
 				name := wpName
 				egroup.Go(func() error {
 					var id string
-					for _, wp := range wps {
+					for _, wp := range wps.Kubernetes {
 						if wp.Name == name {
 							id = wp.ID
 						}

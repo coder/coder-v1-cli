@@ -152,15 +152,16 @@ coder envs --user charlie@coder.com ls -o json \
 
 func createEnvCmd() *cobra.Command {
 	var (
-		org    string
-		cpu    float32
-		memory float32
-		disk   int
-		gpus   int
-		img    string
-		tag    string
-		follow bool
-		useCVM bool
+		org          string
+		cpu          float32
+		memory       float32
+		disk         int
+		gpus         int
+		img          string
+		tag          string
+		follow       bool
+		useCVM       bool
+		providerName string
 	)
 
 	cmd := &cobra.Command{
@@ -199,9 +200,17 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 				return err
 			}
 
-			provider, err := coderutil.DefaultWorkspaceProvider(ctx, client)
-			if err != nil {
-				return xerrors.Errorf("default workspace provider: %w", err)
+			var provider *coder.KubernetesProvider
+			if providerName == "" {
+				provider, err = coderutil.DefaultWorkspaceProvider(ctx, client)
+				if err != nil {
+					return xerrors.Errorf("default workspace provider: %w", err)
+				}
+			} else {
+				provider, err = coderutil.ProviderByName(ctx, client, providerName)
+				if err != nil {
+					return xerrors.Errorf("provider by name: %w", err)
+				}
 			}
 
 			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
@@ -258,6 +267,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 	cmd.Flags().IntVarP(&disk, "disk", "d", 0, "GB of disk storage an environment should be provisioned with.")
 	cmd.Flags().IntVarP(&gpus, "gpus", "g", 0, "number GPUs an environment should be provisioned with.")
 	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image to base the environment off of.")
+	cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the environment")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.Flags().BoolVar(&useCVM, "container-based-vm", false, "deploy the environment as a Container-based VM")
 	_ = cmd.MarkFlagRequired("image")
@@ -266,11 +276,12 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 
 func createEnvFromRepoCmd() *cobra.Command {
 	var (
-		ref      string
-		repo     string
-		follow   bool
-		filepath string
-		org      string
+		ref          string
+		repo         string
+		follow       bool
+		filepath     string
+		org          string
+		providerName string
 	)
 
 	cmd := &cobra.Command{
@@ -382,6 +393,7 @@ coder envs create-from-repo -f coder.yaml`,
 	cmd.Flags().StringVarP(&ref, "ref", "", "master", "git reference to pull template from. May be a branch, tag, or commit hash.")
 	cmd.Flags().StringVarP(&repo, "repo-url", "r", "", "URL of the git repository to pull the config from. Config file must live in '.coder/coder.yaml'.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
+	cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the environment")
 	return cmd
 }
 
