@@ -39,7 +39,7 @@ func loginCmd() *cobra.Command {
 			// From this point, the commandline is correct.
 			// Don't return errors as it would print the usage.
 
-			if err := login(cmd.Context(), u, config.URL, config.Session); err != nil {
+			if err := login(cmd.Context(), u); err != nil {
 				return xerrors.Errorf("login error: %w", err)
 			}
 			return nil
@@ -59,15 +59,14 @@ func storeConfig(envURL *url.URL, sessionToken string, urlCfg, sessionCfg config
 	return nil
 }
 
-func login(ctx context.Context, envURL *url.URL, urlCfg, sessionCfg config.File) error {
-	// Forge the auth URL with the callback set to the local server.
+func login(ctx context.Context, envURL *url.URL) error {
 	authURL := *envURL
 	authURL.Path = envURL.Path + "/internal-auth"
 	q := authURL.Query()
 	q.Add("show_token", "true")
 	authURL.RawQuery = q.Encode()
 
-	if err := browser.OpenURL(authURL.String()); err != nil {
+	if err := browser.OpenURL(authURL.String()); err != nil || true {
 		fmt.Printf("Open the following in your browser:\n\nt%s\n\n", authURL.String())
 	} else {
 		fmt.Printf("Your browser has been opened to visit:\n\n\t%s\n\n", authURL.String())
