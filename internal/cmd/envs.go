@@ -290,8 +290,8 @@ func createEnvFromRepoCmd() *cobra.Command {
 		Long:   "Create a new Coder environment from a config file.",
 		Hidden: true,
 		Example: `# create a new environment from git repository template
-coder envs create-from-repo --repo-url github.com/cdr/m --branch my-branch
-coder envs create-from-repo -f coder.yaml`,
+coder envs create-from-config --repo-url github.com/cdr/m --branch my-branch
+coder envs create-from-config -f coder.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
@@ -355,7 +355,7 @@ coder envs create-from-repo -f coder.yaml`,
 
 			tpl, err := client.ParseTemplate(ctx, req)
 			if err != nil {
-				return xerrors.Errorf("parse environment template config: %w", err)
+				return handleAPIError(err)
 			}
 
 			provider, err := coderutil.DefaultWorkspaceProvider(ctx, client)
@@ -370,7 +370,7 @@ coder envs create-from-repo -f coder.yaml`,
 				Namespace:      provider.DefaultNamespace,
 			})
 			if err != nil {
-				return xerrors.Errorf("create environment: %w", err)
+				return handleAPIError(err)
 			}
 
 			if follow {
