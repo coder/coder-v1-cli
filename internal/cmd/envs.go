@@ -362,12 +362,14 @@ coder envs create-from-config -f coder.yaml`,
 			}
 
 			req := coder.ParseTemplateRequest{
-				RepoURL: repo,
-				Ref:     ref,
-				Local:   rd,
+				RepoURL:  repo,
+				Ref:      ref,
+				Local:    rd,
+				OrgID:    org,
+				Filepath: ".coder/coder.yaml",
 			}
 
-			tpl, err := client.ParseTemplate(ctx, req)
+			version, err := client.ParseTemplate(ctx, req)
 			if err != nil {
 				return handleAPIError(err)
 			}
@@ -379,7 +381,7 @@ coder envs create-from-config -f coder.yaml`,
 
 			env, err := client.CreateEnvironment(ctx, coder.CreateEnvironmentRequest{
 				OrgID:          userOrg.ID,
-				Template:       tpl,
+				TemplateID:     version.TemplateID,
 				ResourcePoolID: provider.ID,
 				Namespace:      provider.DefaultNamespace,
 			})
