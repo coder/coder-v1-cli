@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"golang.org/x/xerrors"
 
@@ -47,6 +48,23 @@ func handleAPIError(origError error) error {
 		}
 
 		return clog.Error(origError.Error(), p.Verbose)
+	case "precondition":
+		type preconditionPayload struct {
+			Error    string `json:"error"`
+			Message  string `json:"message"`
+			Solution string `json:"solution"`
+		}
+
+		var p preconditionPayload
+		err := json.Unmarshal(ae.Err.Details, &p)
+		if err != nil {
+			return origError
+		}
+
+		return clog.Error(fmt.Sprintf("Precondition Error : Status Code=%d", httpError.StatusCode),
+			p.Message,
+			clog.BlankLine,
+			clog.Tipf(p.Solution))
 	}
 
 	return origError // Return the original
