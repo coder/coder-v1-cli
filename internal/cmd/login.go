@@ -67,7 +67,7 @@ func login(ctx context.Context, envURL *url.URL) error {
 	q.Add("show_token", "true")
 	authURL.RawQuery = q.Encode()
 
-	if err := browser.OpenURL(authURL.String()); err != nil || true {
+	if err := browser.OpenURL(authURL.String()); err != nil {
 		fmt.Printf("Open the following in your browser:\n\n\t%s\n\n", authURL.String())
 	} else {
 		fmt.Printf("Your browser has been opened to visit:\n\n\t%s\n\n", authURL.String())
