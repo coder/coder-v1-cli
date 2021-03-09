@@ -12,19 +12,24 @@ type WorkspaceProviders struct {
 
 // KubernetesProvider defines an entity capable of deploying and acting as an ingress for Coder environments.
 type KubernetesProvider struct {
-	ID                  string                  `json:"id" table:"-"`
-	Name                string                  `json:"name" table:"Name"`
-	Status              WorkspaceProviderStatus `json:"status" table:"Status"`
-	Local               bool                    `json:"local" table:"-"`
-	ClusterAddress      string                  `json:"cluster_address" table:"Cluster Address"`
-	DefaultNamespace    string                  `json:"default_namespace" table:"Namespace"`
-	StorageClass        string                  `json:"storage_class" table:"Storage Class"`
-	ClusterDomainSuffix string                  `json:"cluster_domain_suffix" table:"Cluster Domain Suffix"`
-	EnvproxyAccessURL   string                  `json:"envproxy_access_url" validate:"required" table:"Access URL"`
-	DevurlHost          string                  `json:"devurl_host" table:"Devurl Host"`
-	SSHEnabled          bool                    `json:"ssh_enabled" table:"SSH Enabled"`
-	NamespaceWhitelist  []string                `json:"namespace_whitelist" table:"Namespace Allowlist"`
-	OrgWhitelist        []string                `json:"org_whitelist" table:"-"`
+	ID                 string                  `json:"id" table:"-"`
+	Name               string                  `json:"name" table:"Name"`
+	Status             WorkspaceProviderStatus `json:"status" table:"Status"`
+	Local              bool                    `json:"local" table:"-"`
+	EnvproxyAccessURL  string                  `json:"envproxy_access_url" validate:"required" table:"Access URL"`
+	DevurlHost         string                  `json:"devurl_host" table:"Devurl Host"`
+	OrgWhitelist       []string                `json:"org_whitelist" table:"-"`
+	KubeProviderConfig `json:"config"`
+}
+
+// KubeProviderConfig defines Kubernetes-specific configuration options.
+type KubeProviderConfig struct {
+	ClusterAddress      string   `json:"cluster_address" table:"Cluster Address"`
+	DefaultNamespace    string   `json:"default_namespace" table:"Namespace"`
+	StorageClass        string   `json:"storage_class" table:"Storage Class"`
+	ClusterDomainSuffix string   `json:"cluster_domain_suffix" table:"Cluster Domain Suffix"`
+	SSHEnabled          bool     `json:"ssh_enabled" table:"SSH Enabled"`
+	NamespaceWhitelist  []string `json:"namespace_whitelist" table:"Namespace Allowlist"`
 }
 
 // WorkspaceProviderStatus represents the configuration state of a workspace provider.
