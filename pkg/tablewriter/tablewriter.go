@@ -13,11 +13,16 @@ const structFieldTagKey = "table"
 // StructValues tab delimits the values of a given struct.
 //
 // Tag a field `table:"-"` to hide it from output.
+// Tag a field `table:"_"` to flatten its subfields.
 func StructValues(data interface{}) string {
 	v := reflect.ValueOf(data)
 	s := &strings.Builder{}
 	for i := 0; i < v.NumField(); i++ {
 		if shouldHideField(v.Type().Field(i)) {
+			continue
+		}
+		if shouldFlatten(v.Type().Field(i)) {
+			fmt.Fprintf(s, "%v\t", StructValues(v.Field(i).Interface()))
 			continue
 		}
 		fmt.Fprintf(s, "%v\t", v.Field(i).Interface())
@@ -28,12 +33,20 @@ func StructValues(data interface{}) string {
 // StructFieldNames tab delimits the field names of a given struct.
 //
 // Tag a field `table:"-"` to hide it from output.
+// Tag a field `table:"_"` to flatten its subfields.
 func StructFieldNames(data interface{}) string {
 	v := reflect.ValueOf(data)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
 	s := &strings.Builder{}
 	for i := 0; i < v.NumField(); i++ {
 		field := v.Type().Field(i)
 		if shouldHideField(field) {
+			continue
+		}
+		if shouldFlatten(field) {
+			fmt.Fprintf(s, "%s\t", StructFieldNames(reflect.New(field.Type).Interface()))
 			continue
 		}
 		fmt.Fprintf(s, "%s\t", fieldName(field))
@@ -45,6 +58,7 @@ func StructFieldNames(data interface{}) string {
 // tabular format. Headers abide by the `table` struct tag.
 //
 // `table:"-"` omits the field and no tag defaults to the Go identifier.
+// `table:"_"` flattens a fields subfields.
 func WriteTable(length int, each func(i int) interface{}) error {
 	if length < 1 {
 		return nil
@@ -71,6 +85,10 @@ func fieldName(f reflect.StructField) string {
 		return custom
 	}
 	return f.Name
+}
+
+func shouldFlatten(f reflect.StructField) bool {
+	return f.Tag.Get(structFieldTagKey) == "_"
 }
 
 func shouldHideField(f reflect.StructField) bool {

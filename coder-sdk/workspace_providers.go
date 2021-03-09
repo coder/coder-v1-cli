@@ -19,7 +19,7 @@ type KubernetesProvider struct {
 	EnvproxyAccessURL  string                  `json:"envproxy_access_url" validate:"required" table:"Access URL"`
 	DevurlHost         string                  `json:"devurl_host" table:"Devurl Host"`
 	OrgWhitelist       []string                `json:"org_whitelist" table:"-"`
-	KubeProviderConfig `json:"config"`
+	KubeProviderConfig `json:"config" table:"_"`
 }
 
 // KubeProviderConfig defines Kubernetes-specific configuration options.
