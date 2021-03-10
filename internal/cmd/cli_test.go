@@ -11,13 +11,14 @@ import (
 	"strings"
 	"testing"
 
-	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/config"
-	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/slogtest"
 	"cdr.dev/slog/sloggers/slogtest/assert"
 	"golang.org/x/xerrors"
+
+	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/config"
+	"cdr.dev/coder-cli/pkg/clog"
 )
 
 func init() {
@@ -103,14 +104,14 @@ func (r result) clogError(t *testing.T) clog.CLIError {
 func execute(t *testing.T, args []string, in io.Reader) result {
 	cmd := Make()
 
-	outStream := bytes.NewBuffer(nil)
-	errStream := bytes.NewBuffer(nil)
+	var outStream bytes.Buffer
+	var errStream bytes.Buffer
 
 	cmd.SetArgs(args)
 
 	cmd.SetIn(in)
-	cmd.SetOut(outStream)
-	cmd.SetErr(errStream)
+	cmd.SetOut(&outStream)
+	cmd.SetErr(&errStream)
 
 	err := cmd.Execute()
 
@@ -121,8 +122,8 @@ func execute(t *testing.T, args []string, in io.Reader) result {
 		slog.F("execute_error", err),
 	)
 	return result{
-		OutBuffer: outStream,
-		ErrBuffer: errStream,
+		OutBuffer: &outStream,
+		ErrBuffer: &errStream,
 		ExitErr:   err,
 	}
 }
