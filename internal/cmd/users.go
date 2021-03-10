@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"os"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -51,7 +50,7 @@ func listUsers(outputFmt *string) func(cmd *cobra.Command, args []string) error 
 				return xerrors.Errorf("write table: %w", err)
 			}
 		case "json":
-			if err := json.NewEncoder(os.Stdout).Encode(users); err != nil {
+			if err := json.NewEncoder(cmd.OutOrStdout()).Encode(users); err != nil {
 				return xerrors.Errorf("encode users as json: %w", err)
 			}
 		default:

@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
@@ -85,7 +83,7 @@ func trailBuildLogs(ctx context.Context, client coder.Client, envID string) erro
 	newSpinner := func() *spinner.Spinner { return spinner.New(spinner.CharSets[11], 100*time.Millisecond) }
 
 	// this tells us whether to show dynamic loaders when printing output
-	isTerminal := terminal.IsTerminal(int(os.Stdout.Fd()))
+	isTerminal := showInteractiveOutput
 
 	logs, err := client.FollowEnvironmentBuildLog(ctx, envID)
 	if err != nil {

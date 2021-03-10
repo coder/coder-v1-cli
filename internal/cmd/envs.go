@@ -8,7 +8,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/url"
-	"os"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/coderutil"
@@ -82,7 +81,7 @@ func lsEnvsCommand() *cobra.Command {
 					return xerrors.Errorf("write table: %w", err)
 				}
 			case jsonOutput:
-				err := json.NewEncoder(os.Stdout).Encode(envs)
+				err := json.NewEncoder(cmd.OutOrStdout()).Encode(envs)
 				if err != nil {
 					return xerrors.Errorf("write environments as JSON: %w", err)
 				}

@@ -41,8 +41,12 @@ type Sync struct {
 	// DisableMetrics disables activity metric pushing.
 	DisableMetrics bool
 
-	Env    coder.Environment
-	Client coder.Client
+	Env                 coder.Environment
+	Client              coder.Client
+	OutW                io.Writer
+	ErrW                io.Writer
+	InputReader         io.Reader
+	IsInteractiveOutput bool
 }
 
 // See https://lxadm.com/Rsync_exit_codes#List_of_standard_rsync_exit_codes.
@@ -71,9 +75,9 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 	// (AB): compression sped up the initial sync of the enterprise repo by 30%, leading me to believe it's
 	// good in general for codebases.
 	cmd := exec.Command("rsync", args...)
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = s.OutW
 	cmd.Stderr = ioutil.Discard
-	cmd.Stdin = os.Stdin
+	cmd.Stdin = s.InputReader
 
 	if err := cmd.Run(); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
@@ -106,8 +110,8 @@ func (s Sync) remoteCmd(ctx context.Context, prog string, args ...string) error 
 		return xerrors.Errorf("exec remote process: %w", err)
 	}
 	// NOTE: If the copy routine fail, it will result in `process.Wait` to unblock and report an error.
-	go func() { _, _ = io.Copy(os.Stdout, process.Stdout()) }() // Best effort.
-	go func() { _, _ = io.Copy(os.Stderr, process.Stderr()) }() // Best effort.
+	go func() { _, _ = io.Copy(s.OutW, process.Stdout()) }() // Best effort.
+	go func() { _, _ = io.Copy(s.ErrW, process.Stderr()) }() // Best effort.
 
 	if err := process.Wait(); err != nil {
 		if code, ok := err.(wsep.ExitError); ok {
@@ -235,7 +239,7 @@ func (s Sync) workEventGroup(evs []timedEvent) {
 
 	var wg sync.WaitGroup
 	for _, ev := range cache.ConcurrentEvents() {
-		setConsoleTitle(fmtUpdateTitle(ev.Path()))
+		setConsoleTitle(fmtUpdateTitle(ev.Path()), s.IsInteractiveOutput)
 
 		wg.Add(1)
 		// TODO: Document why this error is discarded. See https://github.com/cdr/coder-cli/issues/122 for reference.
@@ -326,7 +330,7 @@ func (s Sync) Run() error {
 	ap := activity.NewPusher(s.Client, s.Env.ID, activityName)
 	ap.Push(ctx)
 
-	setConsoleTitle("⏳ syncing project")
+	setConsoleTitle("⏳ syncing project", s.IsInteractiveOutput)
 	if err := s.initSync(); err != nil {
 		return err
 	}
@@ -363,7 +367,7 @@ func (s Sync) Run() error {
 	defer dispatchEventGroup.Stop()
 	for {
 		const watchingFilesystemTitle = "🛰 watching filesystem"
-		setConsoleTitle(watchingFilesystemTitle)
+		setConsoleTitle(watchingFilesystemTitle, s.IsInteractiveOutput)
 
 		select {
 		case ev := <-timedEvents:

@@ -2,8 +2,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 
@@ -106,13 +104,13 @@ $ coder completion fish > ~/.config/fish/completions/coder.fish
 		Run: func(cmd *cobra.Command, args []string) {
 			switch args[0] {
 			case "bash":
-				_ = cmd.Root().GenBashCompletion(os.Stdout) // Best effort.
+				_ = cmd.Root().GenBashCompletion(cmd.OutOrStdout()) // Best effort.
 			case "zsh":
-				_ = cmd.Root().GenZshCompletion(os.Stdout) // Best effort.
+				_ = cmd.Root().GenZshCompletion(cmd.OutOrStdout()) // Best effort.
 			case "fish":
-				_ = cmd.Root().GenFishCompletion(os.Stdout, true) // Best effort.
+				_ = cmd.Root().GenFishCompletion(cmd.OutOrStdout(), true) // Best effort.
 			case "powershell":
-				_ = cmd.Root().GenPowerShellCompletion(os.Stdout) // Best effort.
+				_ = cmd.Root().GenPowerShellCompletion(cmd.OutOrStdout()) // Best effort.
 			}
 		},
 	}

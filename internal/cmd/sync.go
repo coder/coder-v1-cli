@@ -90,11 +90,15 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 		}
 
 		s := sync.Sync{
-			Init:      *init,
-			Env:       *env,
-			RemoteDir: remoteDir,
-			LocalDir:  absLocal,
-			Client:    client,
+			Init:                *init,
+			Env:                 *env,
+			RemoteDir:           remoteDir,
+			LocalDir:            absLocal,
+			Client:              client,
+			OutW:                cmd.OutOrStdout(),
+			ErrW:                cmd.ErrOrStderr(),
+			InputReader:         cmd.InOrStdin(),
+			IsInteractiveOutput: showInteractiveOutput,
 		}
 
 		localVersion := rsyncVersion()

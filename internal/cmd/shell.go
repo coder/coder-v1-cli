@@ -24,6 +24,12 @@ import (
 	"cdr.dev/coder-cli/pkg/clog"
 )
 
+var (
+	showInteractiveOutput = terminal.IsTerminal(int(os.Stdout.Fd()))
+	outputFd              = os.Stdout.Fd()
+	inputFd               = os.Stdin.Fd()
+)
+
 func getEnvsForCompletion(user string) func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		ctx := cmd.Context()
@@ -146,15 +152,14 @@ func shell(cmd *cobra.Command, cmdArgs []string) error {
 	}
 
 	// TODO: Verify this is the correct behavior
-	isInteractive := terminal.IsTerminal(int(os.Stdout.Fd()))
-	if isInteractive { // checkAndRebuildEnvironment requires an interactive shell
+	if showInteractiveOutput { // checkAndRebuildEnvironment requires an interactive shell
 		// Checks & Rebuilds the environment if needed.
 		if err := checkAndRebuildEnvironment(ctx, client, env); err != nil {
 			return err
 		}
 	}
 
-	if err := runCommand(ctx, client, env, command, args); err != nil {
+	if err := runCommand(cmd, client, env, command, args); err != nil {
 		if exitErr, ok := err.(wsep.ExitError); ok {
 			os.Exit(exitErr.Code)
 		}
@@ -309,26 +314,23 @@ func sendResizeEvents(ctx context.Context, termFD uintptr, process wsep.Process)
 	}
 }
 
-func runCommand(ctx context.Context, client coder.Client, env *coder.Environment, command string, args []string) error {
-	termFD := os.Stdout.Fd()
-
-	isInteractive := terminal.IsTerminal(int(termFD))
-	if isInteractive {
+func runCommand(cmd *cobra.Command, client coder.Client, env *coder.Environment, command string, args []string) error {
+	if showInteractiveOutput {
 		// If the client has a tty, take over it by setting the raw mode.
 		// This allows for all input to be directly forwarded to the remote process,
 		// otherwise, the local terminal would buffer input, interpret special keys, etc.
-		stdinState, err := xterminal.MakeRaw(os.Stdin.Fd())
+		stdinState, err := xterminal.MakeRaw(inputFd)
 		if err != nil {
 			return err
 		}
 		defer func() {
 			// Best effort. If this fails it will result in a broken terminal,
 			// but there is nothing we can do about it.
-			_ = xterminal.Restore(os.Stdin.Fd(), stdinState)
+			_ = xterminal.Restore(inputFd, stdinState)
 		}()
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(cmd.Context())
 	defer cancel()
 
 	conn, err := coderutil.DialEnvWsep(ctx, client, env)
@@ -338,7 +340,7 @@ func runCommand(ctx context.Context, client coder.Client, env *coder.Environment
 	go heartbeat(ctx, conn, 15*time.Second)
 
 	var cmdEnv []string
-	if isInteractive {
+	if showInteractiveOutput {
 		term := os.Getenv("TERM")
 		if term == "" {
 			term = "xterm"
@@ -350,7 +352,7 @@ func runCommand(ctx context.Context, client coder.Client, env *coder.Environment
 	process, err := execer.Start(ctx, wsep.Command{
 		Command: command,
 		Args:    args,
-		TTY:     isInteractive,
+		TTY:     showInteractiveOutput,
 		Stdin:   true,
 		Env:     cmdEnv,
 	})
@@ -363,8 +365,8 @@ func runCommand(ctx context.Context, client coder.Client, env *coder.Environment
 	}
 
 	// Now that the remote process successfully started, if we have a tty, start the resize event watcher.
-	if isInteractive {
-		go sendResizeEvents(ctx, termFD, process)
+	if showInteractiveOutput {
+		go sendResizeEvents(ctx, outputFd, process)
 	}
 
 	go func() {
@@ -373,17 +375,17 @@ func runCommand(ctx context.Context, client coder.Client, env *coder.Environment
 
 		ap := activity.NewPusher(client, env.ID, sshActivityName)
 		wr := ap.Writer(stdin)
-		if _, err := io.Copy(wr, os.Stdin); err != nil {
+		if _, err := io.Copy(wr, cmd.InOrStdin()); err != nil {
 			cancel()
 		}
 	}()
 	go func() {
-		if _, err := io.Copy(os.Stdout, process.Stdout()); err != nil {
+		if _, err := io.Copy(cmd.OutOrStdout(), process.Stdout()); err != nil {
 			cancel()
 		}
 	}()
 	go func() {
-		if _, err := io.Copy(os.Stderr, process.Stderr()); err != nil {
+		if _, err := io.Copy(cmd.ErrOrStderr(), process.Stderr()); err != nil {
 			cancel()
 		}
 	}()

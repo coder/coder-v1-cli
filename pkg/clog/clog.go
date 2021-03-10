@@ -3,12 +3,20 @@ package clog
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
 	"github.com/fatih/color"
 	"golang.org/x/xerrors"
 )
+
+var writer io.Writer = os.Stderr
+
+// SetOutput sets the package-level writer target for log functions.
+func SetOutput(w io.Writer) {
+	writer = w
+}
 
 // CLIMessage provides a human-readable message for CLI errors and messages.
 type CLIMessage struct {
@@ -45,12 +53,12 @@ func Log(err error) {
 	if !xerrors.As(err, &cliErr) {
 		cliErr = Fatal(err.Error())
 	}
-	fmt.Fprintln(os.Stderr, cliErr.String())
+	fmt.Fprintln(writer, cliErr.String())
 }
 
 // LogInfo prints the given info message to stderr.
 func LogInfo(header string, lines ...string) {
-	fmt.Fprint(os.Stderr, CLIMessage{
+	fmt.Fprint(writer, CLIMessage{
 		Level:  "info",
 		Color:  color.FgBlue,
 		Header: header,
@@ -60,7 +68,7 @@ func LogInfo(header string, lines ...string) {
 
 // LogSuccess prints the given info message to stderr.
 func LogSuccess(header string, lines ...string) {
-	fmt.Fprint(os.Stderr, CLIMessage{
+	fmt.Fprint(writer, CLIMessage{
 		Level:  "success",
 		Color:  color.FgGreen,
 		Header: header,
@@ -70,7 +78,7 @@ func LogSuccess(header string, lines ...string) {
 
 // LogWarn prints the given warn message to stderr.
 func LogWarn(header string, lines ...string) {
-	fmt.Fprint(os.Stderr, CLIMessage{
+	fmt.Fprint(writer, CLIMessage{
 		Level:  "warning",
 		Color:  color.FgYellow,
 		Header: header,

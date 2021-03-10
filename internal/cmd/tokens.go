@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -56,7 +55,7 @@ func lsTokensCmd() *cobra.Command {
 					return xerrors.Errorf("write table: %w", err)
 				}
 			case jsonOutput:
-				err := json.NewEncoder(os.Stdout).Encode(tokens)
+				err := json.NewEncoder(cmd.OutOrStdout()).Encode(tokens)
 				if err != nil {
 					return xerrors.Errorf("write tokens as JSON: %w", err)
 				}

@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"text/tabwriter"
 
@@ -96,7 +95,7 @@ func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args [
 			return xerrors.Errorf("unknown --group %q", options.group)
 		}
 
-		return printResourceTop(os.Stdout, groups, labeler, options.showEmptyGroups, options.sortBy)
+		return printResourceTop(cmd.OutOrStdout(), groups, labeler, options.showEmptyGroups, options.sortBy)
 	}
 }
 

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"os"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -62,7 +61,7 @@ func lsImgsCommand(user *string) *cobra.Command {
 
 			switch outputFmt {
 			case jsonOutput:
-				enc := json.NewEncoder(os.Stdout)
+				enc := json.NewEncoder(cmd.OutOrStdout())
 				// pretty print the json
 				enc.SetIndent("", "\t")
 

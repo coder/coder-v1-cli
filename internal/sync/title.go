@@ -2,14 +2,11 @@ package sync
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
-
-	"golang.org/x/crypto/ssh/terminal"
 )
 
-func setConsoleTitle(title string) {
-	if !terminal.IsTerminal(int(os.Stdout.Fd())) {
+func setConsoleTitle(title string, isInteractiveOutput bool) {
+	if !isInteractiveOutput {
 		return
 	}
 	fmt.Printf("\033]0;%s\007", title)
