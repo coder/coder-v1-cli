@@ -41,10 +41,10 @@ const (
 	WorkspaceProviderReady   WorkspaceProviderStatus = "ready"
 )
 
-// WorkspaceProviderStatus represents the configuration state of a workspace provider.
+// WorkspaceProviderType represents the type of workspace provider.
 type WorkspaceProviderType string
 
-// Workspace Provider statuses.
+// Workspace Provider types.
 const (
 	WorkspaceProviderKubernetes WorkspaceProviderType = "kubernetes"
 )
@@ -71,10 +71,10 @@ func (c *DefaultClient) WorkspaceProviders(ctx context.Context) (*WorkspaceProvi
 
 // CreateWorkspaceProviderReq defines the request parameters for creating a new workspace provider entity.
 type CreateWorkspaceProviderReq struct {
-	Name string `json:"name"`
-	Type WorkspaceProviderType `json:"type"`
-	Hostname string                `json:"hostname"`
-	ClusterAddress string          `json:"cluster_address"`
+	Name           string                `json:"name"`
+	Type           WorkspaceProviderType `json:"type"`
+	Hostname       string                `json:"hostname"`
+	ClusterAddress string                `json:"cluster_address"`
 }
 
 // CreateWorkspaceProviderRes defines the response from creating a new workspace provider entity.

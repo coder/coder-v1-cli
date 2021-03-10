@@ -29,8 +29,8 @@ func providersCmd() *cobra.Command {
 
 func createProviderCmd() *cobra.Command {
 	var (
-		name string
-		hostname string
+		name           string
+		hostname       string
 		clusterAddress string
 	)
 	cmd := &cobra.Command{
@@ -49,9 +49,9 @@ coder providers create --name=my-provider --hostname=provider.example.com --clus
 			}
 
 			createReq := &coder.CreateWorkspaceProviderReq{
-				Name: name,
-				Type: coder.WorkspaceProviderKubernetes,
-				Hostname: hostname,
+				Name:           name,
+				Type:           coder.WorkspaceProviderKubernetes,
+				Hostname:       hostname,
 				ClusterAddress: clusterAddress,
 			}
 
