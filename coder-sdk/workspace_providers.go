@@ -15,7 +15,7 @@ type KubernetesProvider struct {
 	ID                 string                  `json:"id" table:"-"`
 	Name               string                  `json:"name" table:"Name"`
 	Status             WorkspaceProviderStatus `json:"status" table:"Status"`
-	Local              bool                    `json:"local" table:"-"`
+	BuiltIn            bool                    `json:"built_in" table:"-"`
 	EnvproxyAccessURL  string                  `json:"envproxy_access_url" validate:"required" table:"Access URL"`
 	DevurlHost         string                  `json:"devurl_host" table:"Devurl Host"`
 	OrgWhitelist       []string                `json:"org_whitelist" table:"-"`
