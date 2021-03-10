@@ -40,6 +40,9 @@ jobs:
         uses: ./ci/image
         env:
           COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CODER_URL: ${{ secrets.CODER_URL }}
+          CODER_EMAIL: ${{ secrets.CODER_EMAIL }}
+          CODER_PASSWORD: ${{ secrets.CODER_PASSWORD }}
         with:
           args: make -j test/coverage
   gendocs:
