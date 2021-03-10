@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/kirsle/configdir v0.0.0-20170128060238-e45d2f54772f
 	github.com/klauspost/compress v1.10.8 // indirect
-	github.com/manifoldco/promptui v0.7.0
+	github.com/manifoldco/promptui v0.8.0
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 	github.com/rjeczalik/notify v0.9.2
 	github.com/spf13/cobra v1.1.1
