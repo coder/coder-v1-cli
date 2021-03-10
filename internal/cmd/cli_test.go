@@ -67,31 +67,37 @@ func (r result) success(t *testing.T) {
 	assert.Success(t, "execute command", r.exitErr)
 }
 
+//nolint
 func (r result) stdoutContains(t *testing.T, substring string) {
 	if !strings.Contains(r.outBuffer.String(), substring) {
 		slogtest.Fatal(t, "stdout contains substring", slog.F("substring", substring), slog.F("stdout", r.outBuffer.String()))
 	}
 }
 
+//nolint
 func (r result) stdoutUnmarshals(t *testing.T, target interface{}) {
 	err := json.Unmarshal(r.outBuffer.Bytes(), target)
 	assert.Success(t, "unmarshal json", err)
 }
 
+//nolint
 func (r result) stdoutEmpty(t *testing.T) {
 	assert.Equal(t, "stdout empty", "", r.outBuffer.String())
 }
 
+//nolint
 func (r result) stderrEmpty(t *testing.T) {
 	assert.Equal(t, "stderr empty", "", r.errBuffer.String())
 }
 
+//nolint
 func (r result) stderrContains(t *testing.T, substring string) {
 	if !strings.Contains(r.errBuffer.String(), substring) {
 		slogtest.Fatal(t, "stderr contains substring", slog.F("substring", substring), slog.F("stderr", r.errBuffer.String()))
 	}
 }
 
+//nolint
 func (r result) clogError(t *testing.T) clog.CLIError {
 	var cliErr clog.CLIError
 	if !xerrors.As(r.exitErr, &cliErr) {
