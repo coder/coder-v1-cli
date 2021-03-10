@@ -64,11 +64,13 @@ type result struct {
 }
 
 func (r result) success(t *testing.T) {
+	t.Helper()
 	assert.Success(t, "execute command", r.exitErr)
 }
 
 //nolint
 func (r result) stdoutContains(t *testing.T, substring string) {
+	t.Helper()
 	if !strings.Contains(r.outBuffer.String(), substring) {
 		slogtest.Fatal(t, "stdout contains substring", slog.F("substring", substring), slog.F("stdout", r.outBuffer.String()))
 	}
@@ -76,22 +78,26 @@ func (r result) stdoutContains(t *testing.T, substring string) {
 
 //nolint
 func (r result) stdoutUnmarshals(t *testing.T, target interface{}) {
+	t.Helper()
 	err := json.Unmarshal(r.outBuffer.Bytes(), target)
 	assert.Success(t, "unmarshal json", err)
 }
 
 //nolint
 func (r result) stdoutEmpty(t *testing.T) {
+	t.Helper()
 	assert.Equal(t, "stdout empty", "", r.outBuffer.String())
 }
 
 //nolint
 func (r result) stderrEmpty(t *testing.T) {
+	t.Helper()
 	assert.Equal(t, "stderr empty", "", r.errBuffer.String())
 }
 
 //nolint
 func (r result) stderrContains(t *testing.T, substring string) {
+	t.Helper()
 	if !strings.Contains(r.errBuffer.String(), substring) {
 		slogtest.Fatal(t, "stderr contains substring", slog.F("substring", substring), slog.F("stderr", r.errBuffer.String()))
 	}
@@ -99,6 +105,7 @@ func (r result) stderrContains(t *testing.T, substring string) {
 
 //nolint
 func (r result) clogError(t *testing.T) clog.CLIError {
+	t.Helper()
 	var cliErr clog.CLIError
 	if !xerrors.As(r.exitErr, &cliErr) {
 		slogtest.Fatal(t, "expected clog error, none found", slog.Error(r.exitErr), slog.F("type", fmt.Sprintf("%T", r.exitErr)))
@@ -122,8 +129,8 @@ func execute(t *testing.T, in io.Reader, args ...string) result {
 	err := cmd.Execute()
 
 	slogtest.Debug(t, "execute command",
-		slog.F("outBuffer", outStream.String()),
-		slog.F("errBuffer", errStream.String()),
+		slog.F("out_buffer", outStream.String()),
+		slog.F("err_buffer", errStream.String()),
 		slog.F("args", args),
 		slog.F("execute_error", err),
 	)
