@@ -70,7 +70,7 @@ func lsImgsCommand(user *string) *cobra.Command {
 				}
 				return nil
 			case humanOutput:
-				err = tablewriter.WriteTable(len(imgs), func(i int) interface{} {
+				err = tablewriter.WriteTable(cmd.OutOrStdout(), len(imgs), func(i int) interface{} {
 					return imgs[i]
 				})
 				if err != nil {

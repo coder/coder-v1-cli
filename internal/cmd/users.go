@@ -46,7 +46,7 @@ func listUsers(outputFmt *string) func(cmd *cobra.Command, args []string) error 
 		case humanOutput:
 			// For each element, return the user.
 			each := func(i int) interface{} { return users[i] }
-			if err := tablewriter.WriteTable(len(users), each); err != nil {
+			if err := tablewriter.WriteTable(cmd.OutOrStdout(), len(users), each); err != nil {
 				return xerrors.Errorf("write table: %w", err)
 			}
 		case "json":

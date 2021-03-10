@@ -3,7 +3,6 @@ package tablewriter
 import (
 	"fmt"
 	"io"
-	"os"
 	"reflect"
 	"strings"
 	"text/tabwriter"
@@ -55,19 +54,16 @@ func StructFieldNames(data interface{}) string {
 	return s.String()
 }
 
-// The output io.Writer for WriteTable. This is globally defined to allow overriding in tests.
-var tableOutput io.Writer = os.Stdout
-
 // WriteTable writes the given list elements to stdout in a human readable
 // tabular format. Headers abide by the `table` struct tag.
 //
 // `table:"-"` omits the field and no tag defaults to the Go identifier.
 // `table:"_"` flattens a fields subfields.
-func WriteTable(length int, each func(i int) interface{}) error {
+func WriteTable(writer io.Writer, length int, each func(i int) interface{}) error {
 	if length < 1 {
 		return nil
 	}
-	w := tabwriter.NewWriter(tableOutput, 0, 0, 4, ' ', 0)
+	w := tabwriter.NewWriter(writer, 0, 0, 4, ' ', 0)
 	defer func() { _ = w.Flush() }() // Best effort.
 	for ix := 0; ix < length; ix++ {
 		item := each(ix)

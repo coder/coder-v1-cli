@@ -49,8 +49,7 @@ func TestTableWriter(t *testing.T) {
 	}
 
 	buf := bytes.NewBuffer(nil)
-	tableOutput = buf
-	err := WriteTable(len(items), func(i int) interface{} { return items[i] })
+	err := WriteTable(buf, len(items), func(i int) interface{} { return items[i] })
 	assert.Success(t, "write table", err)
 
 	assertGolden(t, "table_output.golden", buf.Bytes())
