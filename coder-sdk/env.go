@@ -75,17 +75,18 @@ const (
 
 // CreateEnvironmentRequest is used to configure a new environment.
 type CreateEnvironmentRequest struct {
-	Name           string  `json:"name"`
-	ImageID        string  `json:"image_id"`
-	OrgID          string  `json:"org_id"`
-	ImageTag       string  `json:"image_tag"`
-	CPUCores       float32 `json:"cpu_cores"`
-	MemoryGB       float32 `json:"memory_gb"`
-	DiskGB         int     `json:"disk_gb"`
-	GPUs           int     `json:"gpus"`
-	UseContainerVM bool    `json:"use_container_vm"`
-	ResourcePoolID string  `json:"resource_pool_id"`
-	Namespace      string  `json:"namespace"`
+	Name            string  `json:"name"`
+	ImageID         string  `json:"image_id"`
+	OrgID           string  `json:"org_id"`
+	ImageTag        string  `json:"image_tag"`
+	CPUCores        float32 `json:"cpu_cores"`
+	MemoryGB        float32 `json:"memory_gb"`
+	DiskGB          int     `json:"disk_gb"`
+	GPUs            int     `json:"gpus"`
+	UseContainerVM  bool    `json:"use_container_vm"`
+	ResourcePoolID  string  `json:"resource_pool_id"`
+	Namespace       string  `json:"namespace"`
+	EnableAutoStart bool    `json:"autostart_enabled"`
 
 	// Template comes from the parse template route on cemanager.
 	// This field should never be manually populated
