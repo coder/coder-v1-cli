@@ -2,6 +2,7 @@ package tablewriter
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"strings"
@@ -22,7 +23,7 @@ func StructValues(data interface{}) string {
 			continue
 		}
 		if shouldFlatten(v.Type().Field(i)) {
-			fmt.Fprintf(s, "%v\t", StructValues(v.Field(i).Interface()))
+			fmt.Fprintf(s, "%v", StructValues(v.Field(i).Interface()))
 			continue
 		}
 		fmt.Fprintf(s, "%v\t", v.Field(i).Interface())
@@ -46,13 +47,16 @@ func StructFieldNames(data interface{}) string {
 			continue
 		}
 		if shouldFlatten(field) {
-			fmt.Fprintf(s, "%s\t", StructFieldNames(reflect.New(field.Type).Interface()))
+			fmt.Fprintf(s, "%s", StructFieldNames(reflect.New(field.Type).Interface()))
 			continue
 		}
 		fmt.Fprintf(s, "%s\t", fieldName(field))
 	}
 	return s.String()
 }
+
+// The output io.Writer for WriteTable. This is globally defined to allow overriding in tests.
+var tableOutput io.Writer = os.Stdout
 
 // WriteTable writes the given list elements to stdout in a human readable
 // tabular format. Headers abide by the `table` struct tag.
@@ -63,7 +67,7 @@ func WriteTable(length int, each func(i int) interface{}) error {
 	if length < 1 {
 		return nil
 	}
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 4, ' ', 0)
+	w := tabwriter.NewWriter(tableOutput, 0, 0, 4, ' ', 0)
 	defer func() { _ = w.Flush() }() // Best effort.
 	for ix := 0; ix < length; ix++ {
 		item := each(ix)
