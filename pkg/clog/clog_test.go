@@ -20,7 +20,7 @@ func TestError(t *testing.T) {
 		assert.Success(t, "create pipe", err)
 
 		//! clearly not thread safe
-		os.Stderr = writer
+		SetOutput(writer)
 
 		Log(mockErr)
 		writer.Close()
@@ -39,7 +39,7 @@ func TestError(t *testing.T) {
 		assert.Success(t, "create pipe", err)
 
 		//! clearly not thread safe
-		os.Stderr = writer
+		SetOutput(writer)
 
 		Log(mockErr)
 		writer.Close()
@@ -59,7 +59,7 @@ func TestError(t *testing.T) {
 		assert.Success(t, "create pipe", err)
 
 		//! clearly not thread safe
-		os.Stderr = writer
+		SetOutput(writer)
 
 		Log(mockErr)
 		writer.Close()

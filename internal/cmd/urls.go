@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -107,7 +106,7 @@ func listDevURLsCmd(outputFmt *string) func(cmd *cobra.Command, args []string) e
 				return xerrors.Errorf("write table: %w", err)
 			}
 		case jsonOutput:
-			if err := json.NewEncoder(os.Stdout).Encode(devURLs); err != nil {
+			if err := json.NewEncoder(cmd.OutOrStdout()).Encode(devURLs); err != nil {
 				return xerrors.Errorf("encode DevURLs as json: %w", err)
 			}
 		default:

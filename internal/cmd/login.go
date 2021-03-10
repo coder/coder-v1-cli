@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/pkg/browser"
@@ -40,7 +40,7 @@ func loginCmd() *cobra.Command {
 			// From this point, the commandline is correct.
 			// Don't return errors as it would print the usage.
 
-			if err := login(cmd.Context(), u); err != nil {
+			if err := login(cmd, u); err != nil {
 				return xerrors.Errorf("login error: %w", err)
 			}
 			return nil
@@ -60,7 +60,7 @@ func storeConfig(envURL *url.URL, sessionToken string, urlCfg, sessionCfg config
 	return nil
 }
 
-func login(ctx context.Context, envURL *url.URL) error {
+func login(cmd *cobra.Command, envURL *url.URL) error {
 	authURL := *envURL
 	authURL.Path = envURL.Path + "/internal-auth"
 	q := authURL.Query()
@@ -73,8 +73,8 @@ func login(ctx context.Context, envURL *url.URL) error {
 		fmt.Printf("Your browser has been opened to visit:\n\n\t%s\n\n", authURL.String())
 	}
 
-	token := readLine("Paste token here: ")
-	if err := pingAPI(ctx, envURL, token); err != nil {
+	token := readLine("Paste token here: ", cmd.InOrStdin())
+	if err := pingAPI(cmd.Context(), envURL, token); err != nil {
 		return xerrors.Errorf("ping API with credentials: %w", err)
 	}
 	if err := storeConfig(envURL, token, config.URL, config.Session); err != nil {
@@ -84,8 +84,8 @@ func login(ctx context.Context, envURL *url.URL) error {
 	return nil
 }
 
-func readLine(prompt string) string {
-	reader := bufio.NewReader(os.Stdin)
+func readLine(prompt string, r io.Reader) string {
+	reader := bufio.NewReader(r)
 	fmt.Print(prompt)
 	text, _ := reader.ReadString('\n')
 	return strings.TrimSuffix(text, "\n")

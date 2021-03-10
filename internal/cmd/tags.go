@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"os"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -113,7 +112,7 @@ func tagsLsCmd() *cobra.Command {
 					return err
 				}
 			case jsonOutput:
-				err := json.NewEncoder(os.Stdout).Encode(tags)
+				err := json.NewEncoder(cmd.OutOrStdout()).Encode(tags)
 				if err != nil {
 					return err
 				}
