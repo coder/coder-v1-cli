@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 
+	"cdr.dev/coder-cli/internal/x/xcobra"
+
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
@@ -29,17 +31,17 @@ func providersCmd() *cobra.Command {
 
 func createProviderCmd() *cobra.Command {
 	var (
-		name           string
 		hostname       string
 		clusterAddress string
 	)
 	cmd := &cobra.Command{
-		Use:   "create --name=[name] --hostname=[hostname] --clusterAddress=[clusterAddress]",
+		Use:   "create [name] --hostname=[hostname] --clusterAddress=[clusterAddress]",
+		Args:  xcobra.ExactArgs(1),
 		Short: "create a new workspace provider.",
 		Long:  "Create a new Coder workspace provider.",
 		Example: `# create a new workspace provider in a pending state
 
-coder providers create --name=my-provider --hostname=provider.example.com --clusterAddress=255.255.255.255`,
+coder providers create my-provider --hostname=https://provider.example.com --cluster-address=https://255.255.255.255`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
@@ -48,8 +50,9 @@ coder providers create --name=my-provider --hostname=provider.example.com --clus
 				return err
 			}
 
+			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
 			createReq := &coder.CreateWorkspaceProviderReq{
-				Name:           name,
+				Name:           args[0],
 				Type:           coder.WorkspaceProviderKubernetes,
 				Hostname:       hostname,
 				ClusterAddress: clusterAddress,
@@ -70,12 +73,10 @@ coder providers create --name=my-provider --hostname=provider.example.com --clus
 		},
 	}
 
-	cmd.Flags().StringVar(&name, "name", "", "workspace provider name")
 	cmd.Flags().StringVar(&hostname, "hostname", "", "workspace provider hostname")
-	cmd.Flags().StringVar(&clusterAddress, "clusterAddress", "", "kubernetes cluster apiserver endpoint")
-	_ = cmd.MarkFlagRequired("name")
+	cmd.Flags().StringVar(&clusterAddress, "cluster-address", "", "kubernetes cluster apiserver endpoint")
 	_ = cmd.MarkFlagRequired("hostname")
-	_ = cmd.MarkFlagRequired("clusterAdress")
+	_ = cmd.MarkFlagRequired("cluster-address")
 	return cmd
 }
 
