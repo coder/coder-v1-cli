@@ -107,7 +107,7 @@ func tagsLsCmd() *cobra.Command {
 
 			switch outputFmt {
 			case humanOutput:
-				err = tablewriter.WriteTable(len(tags), func(i int) interface{} { return tags[i] })
+				err = tablewriter.WriteTable(cmd.OutOrStdout(), len(tags), func(i int) interface{} { return tags[i] })
 				if err != nil {
 					return err
 				}

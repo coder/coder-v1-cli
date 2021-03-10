@@ -99,7 +99,7 @@ func listDevURLsCmd(outputFmt *string) func(cmd *cobra.Command, args []string) e
 				clog.LogInfo(fmt.Sprintf("no devURLs found for environment %q", envName))
 				return nil
 			}
-			err := tablewriter.WriteTable(len(devURLs), func(i int) interface{} {
+			err := tablewriter.WriteTable(cmd.OutOrStdout(), len(devURLs), func(i int) interface{} {
 				return devURLs[i]
 			})
 			if err != nil {

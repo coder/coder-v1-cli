@@ -8,14 +8,17 @@ import (
 	"github.com/kirsle/configdir"
 )
 
-func dir() string {
-	return configdir.LocalConfig("coder")
+var configRoot = configdir.LocalConfig("coder")
+
+// SetRoot overrides the package-level config root configuration.
+func SetRoot(root string) {
+	configRoot = root
 }
 
 // open opens a file in the configuration directory,
 // creating all intermediate directories.
 func open(path string, flag int, mode os.FileMode) (*os.File, error) {
-	path = filepath.Join(dir(), path)
+	path = filepath.Join(configRoot, path)
 
 	err := os.MkdirAll(filepath.Dir(path), 0750)
 	if err != nil {
@@ -45,5 +48,5 @@ func read(path string) ([]byte, error) {
 }
 
 func rm(path string) error {
-	return os.Remove(filepath.Join(dir(), path))
+	return os.Remove(filepath.Join(configRoot, path))
 }

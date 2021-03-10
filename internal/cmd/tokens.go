@@ -48,7 +48,7 @@ func lsTokensCmd() *cobra.Command {
 
 			switch outputFmt {
 			case humanOutput:
-				err := tablewriter.WriteTable(len(tokens), func(i int) interface{} {
+				err := tablewriter.WriteTable(cmd.OutOrStdout(), len(tokens), func(i int) interface{} {
 					return tokens[i]
 				})
 				if err != nil {

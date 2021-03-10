@@ -63,7 +63,7 @@ coder providers create my-provider --hostname=https://provider.example.com --clu
 				return xerrors.Errorf("create workspace provider: %w", err)
 			}
 
-			err = tablewriter.WriteTable(1, func(i int) interface{} {
+			err = tablewriter.WriteTable(cmd.OutOrStdout(), 1, func(i int) interface{} {
 				return *wp
 			})
 			if err != nil {
@@ -100,7 +100,7 @@ coder providers ls`,
 				return xerrors.Errorf("list workspace providers: %w", err)
 			}
 
-			err = tablewriter.WriteTable(len(wps.Kubernetes), func(i int) interface{} {
+			err = tablewriter.WriteTable(cmd.OutOrStdout(), len(wps.Kubernetes), func(i int) interface{} {
 				return wps.Kubernetes[i]
 			})
 			if err != nil {
