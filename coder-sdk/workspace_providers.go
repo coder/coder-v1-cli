@@ -41,6 +41,14 @@ const (
 	WorkspaceProviderReady   WorkspaceProviderStatus = "ready"
 )
 
+// WorkspaceProviderType represents the type of workspace provider.
+type WorkspaceProviderType string
+
+// Workspace Provider types.
+const (
+	WorkspaceProviderKubernetes WorkspaceProviderType = "kubernetes"
+)
+
 // WorkspaceProviderByID fetches a workspace provider entity by its unique ID.
 func (c *DefaultClient) WorkspaceProviderByID(ctx context.Context, id string) (*KubernetesProvider, error) {
 	var wp KubernetesProvider
@@ -63,7 +71,10 @@ func (c *DefaultClient) WorkspaceProviders(ctx context.Context) (*WorkspaceProvi
 
 // CreateWorkspaceProviderReq defines the request parameters for creating a new workspace provider entity.
 type CreateWorkspaceProviderReq struct {
-	Name string `json:"name"`
+	Name           string                `json:"name"`
+	Type           WorkspaceProviderType `json:"type"`
+	Hostname       string                `json:"hostname"`
+	ClusterAddress string                `json:"cluster_address"`
 }
 
 // CreateWorkspaceProviderRes defines the response from creating a new workspace provider entity.

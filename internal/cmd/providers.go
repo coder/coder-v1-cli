@@ -3,11 +3,12 @@ package cmd
 import (
 	"fmt"
 
+	"cdr.dev/coder-cli/internal/x/xcobra"
+
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/coder-cli/pkg/tablewriter"
 )
@@ -29,13 +30,18 @@ func providersCmd() *cobra.Command {
 }
 
 func createProviderCmd() *cobra.Command {
+	var (
+		hostname       string
+		clusterAddress string
+	)
 	cmd := &cobra.Command{
-		Use:   "create [workspace_provider_name]",
-		Short: "create a new workspace provider.",
+		Use:   "create [name] --hostname=[hostname] --clusterAddress=[clusterAddress]",
 		Args:  xcobra.ExactArgs(1),
+		Short: "create a new workspace provider.",
 		Long:  "Create a new Coder workspace provider.",
 		Example: `# create a new workspace provider in a pending state
-coder providers create my-new-workspace-provider`,
+
+coder providers create my-provider --hostname=https://provider.example.com --cluster-address=https://255.255.255.255`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
@@ -46,7 +52,10 @@ coder providers create my-new-workspace-provider`,
 
 			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
 			createReq := &coder.CreateWorkspaceProviderReq{
-				Name: args[0],
+				Name:           args[0],
+				Type:           coder.WorkspaceProviderKubernetes,
+				Hostname:       hostname,
+				ClusterAddress: clusterAddress,
 			}
 
 			wp, err := client.CreateWorkspaceProvider(ctx, *createReq)
@@ -63,6 +72,11 @@ coder providers create my-new-workspace-provider`,
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVar(&hostname, "hostname", "", "workspace provider hostname")
+	cmd.Flags().StringVar(&clusterAddress, "cluster-address", "", "kubernetes cluster apiserver endpoint")
+	_ = cmd.MarkFlagRequired("hostname")
+	_ = cmd.MarkFlagRequired("cluster-address")
 	return cmd
 }
 
