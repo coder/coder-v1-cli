@@ -58,44 +58,44 @@ func init() {
 }
 
 type result struct {
-	OutBuffer *bytes.Buffer
-	ErrBuffer *bytes.Buffer
-	ExitErr   error
+	outBuffer *bytes.Buffer
+	errBuffer *bytes.Buffer
+	exitErr   error
 }
 
 func (r result) success(t *testing.T) {
-	assert.Success(t, "execute command", r.ExitErr)
+	assert.Success(t, "execute command", r.exitErr)
 }
 
 func (r result) stdoutContains(t *testing.T, substring string) {
-	if !strings.Contains(r.OutBuffer.String(), substring) {
-		slogtest.Fatal(t, "stdout contains substring", slog.F("substring", substring), slog.F("stdout", r.OutBuffer.String()))
+	if !strings.Contains(r.outBuffer.String(), substring) {
+		slogtest.Fatal(t, "stdout contains substring", slog.F("substring", substring), slog.F("stdout", r.outBuffer.String()))
 	}
 }
 
 func (r result) stdoutUnmarshals(t *testing.T, target interface{}) {
-	err := json.Unmarshal(r.OutBuffer.Bytes(), target)
+	err := json.Unmarshal(r.outBuffer.Bytes(), target)
 	assert.Success(t, "unmarshal json", err)
 }
 
 func (r result) stdoutEmpty(t *testing.T) {
-	assert.Equal(t, "stdout empty", "", r.OutBuffer.String())
+	assert.Equal(t, "stdout empty", "", r.outBuffer.String())
 }
 
 func (r result) stderrEmpty(t *testing.T) {
-	assert.Equal(t, "stderr empty", "", r.ErrBuffer.String())
+	assert.Equal(t, "stderr empty", "", r.errBuffer.String())
 }
 
 func (r result) stderrContains(t *testing.T, substring string) {
-	if !strings.Contains(r.ErrBuffer.String(), substring) {
-		slogtest.Fatal(t, "stderr contains substring", slog.F("substring", substring), slog.F("stderr", r.ErrBuffer.String()))
+	if !strings.Contains(r.errBuffer.String(), substring) {
+		slogtest.Fatal(t, "stderr contains substring", slog.F("substring", substring), slog.F("stderr", r.errBuffer.String()))
 	}
 }
 
 func (r result) clogError(t *testing.T) clog.CLIError {
 	var cliErr clog.CLIError
-	if !xerrors.As(r.ExitErr, &cliErr) {
-		slogtest.Fatal(t, "expected clog error, none found", slog.Error(r.ExitErr), slog.F("type", fmt.Sprintf("%T", r.ExitErr)))
+	if !xerrors.As(r.exitErr, &cliErr) {
+		slogtest.Fatal(t, "expected clog error, none found", slog.Error(r.exitErr), slog.F("type", fmt.Sprintf("%T", r.exitErr)))
 	}
 	slogtest.Debug(t, "clog error", slog.F("message", cliErr.String()))
 	return cliErr
@@ -122,8 +122,8 @@ func execute(t *testing.T, args []string, in io.Reader) result {
 		slog.F("execute_error", err),
 	)
 	return result{
-		OutBuffer: &outStream,
-		ErrBuffer: &errStream,
-		ExitErr:   err,
+		outBuffer: &outStream,
+		errBuffer: &errStream,
+		exitErr:   err,
 	}
 }
