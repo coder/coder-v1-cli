@@ -107,7 +107,7 @@ func (r result) clogError(t *testing.T) clog.CLIError {
 	return cliErr
 }
 
-func execute(t *testing.T, args []string, in io.Reader) result {
+func execute(t *testing.T, in io.Reader, args ...string) result {
 	cmd := Make()
 
 	var outStream bytes.Buffer
