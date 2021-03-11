@@ -1,9 +1,9 @@
 package clog
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"testing"
 
 	"cdr.dev/slog/sloggers/slogtest/assert"
@@ -16,16 +16,13 @@ func TestError(t *testing.T) {
 		mockErr = xerrors.Errorf("wrap 1: %w", mockErr)
 		mockErr = fmt.Errorf("wrap 2: %w", mockErr)
 
-		reader, writer, err := os.Pipe()
-		assert.Success(t, "create pipe", err)
-
-		//! clearly not thread safe
-		SetOutput(writer)
+		var buf bytes.Buffer
+		//! clearly not concurrent safe
+		SetOutput(&buf)
 
 		Log(mockErr)
-		writer.Close()
 
-		output, err := ioutil.ReadAll(reader)
+		output, err := ioutil.ReadAll(&buf)
 		assert.Success(t, "read all stderr output", err)
 
 		assert.Equal(t, "output is as expected", "error: fake error\n\n", string(output))
@@ -35,19 +32,34 @@ func TestError(t *testing.T) {
 		mockErr := xerrors.Errorf("base error")
 		mockErr = fmt.Errorf("wrap 1: %w", mockErr)
 
-		reader, writer, err := os.Pipe()
-		assert.Success(t, "create pipe", err)
-
-		//! clearly not thread safe
-		SetOutput(writer)
+		var buf bytes.Buffer
+		//! clearly not concurrent safe
+		SetOutput(&buf)
 
 		Log(mockErr)
-		writer.Close()
 
-		output, err := ioutil.ReadAll(reader)
+		output, err := ioutil.ReadAll(&buf)
 		assert.Success(t, "read all stderr output", err)
 
 		assert.Equal(t, "output is as expected", "fatal: wrap 1: base error\n\n", string(output))
+	})
+
+	t.Run("message", func(t *testing.T) {
+		for _, f := range []struct {
+			f     func(string, ...string)
+			level string
+		}{{LogInfo, "info"}, {LogSuccess, "success"}, {LogWarn, "warning"}} {
+			var buf bytes.Buffer
+			//! clearly not concurrent safe
+			SetOutput(&buf)
+
+			f.f("testing", Hintf("maybe do %q", "this"), BlankLine, Causef("what happened was %q", "this"))
+
+			output, err := ioutil.ReadAll(&buf)
+			assert.Success(t, "read all stderr output", err)
+
+			assert.Equal(t, "output is as expected", f.level+": testing\n  | hint: maybe do \"this\"\n  | \n  | cause: what happened was \"this\"\n", string(output))
+		}
 	})
 
 	t.Run("multi-line", func(t *testing.T) {
@@ -55,16 +67,13 @@ func TestError(t *testing.T) {
 		mockErr = xerrors.Errorf("wrap 1: %w", mockErr)
 		mockErr = fmt.Errorf("wrap 1: %w", mockErr)
 
-		reader, writer, err := os.Pipe()
-		assert.Success(t, "create pipe", err)
-
-		//! clearly not thread safe
-		SetOutput(writer)
+		var buf bytes.Buffer
+		//! clearly not concurrent safe
+		SetOutput(&buf)
 
 		Log(mockErr)
-		writer.Close()
 
-		output, err := ioutil.ReadAll(reader)
+		output, err := ioutil.ReadAll(&buf)
 		assert.Success(t, "read all stderr output", err)
 
 		assert.Equal(t,
