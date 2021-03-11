@@ -74,6 +74,8 @@ func DefaultWorkspaceProvider(ctx context.Context, c coder.Client) (*coder.Kuber
 	return nil, coder.ErrNotFound
 }
 
+// EnvTable defines an Environment-like structure with associated entities composed in a human
+// readable form.
 type EnvTable struct {
 	Name     string  `table:"Name"`
 	Image    string  `table:"Image"`
