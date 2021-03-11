@@ -202,3 +202,30 @@ func getUserOrgs(ctx context.Context, client coder.Client, email string) ([]code
 	}
 	return lookupUserOrgs(u, orgs), nil
 }
+
+func getProviderByName(ctx context.Context, client coder.Client, wpName string) (*coder.KubernetesProvider, error) {
+	providers, err := client.WorkspaceProviders(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, provider := range providers.Kubernetes {
+		if provider.Name == wpName {
+			return &provider, nil
+		}
+	}
+	return nil, xerrors.Errorf("workspace provider %q not found", wpName)
+}
+
+func getEnvsByProvider(ctx context.Context, client coder.Client, wpName string) ([]coder.Environment, error) {
+	wp, err := getProviderByName(ctx, client, wpName)
+	if err != nil {
+		return nil, err
+	}
+
+	envs, err := client.EnvironmentsByWorkspaceProvider(ctx, wp.ID)
+	if err != nil {
+		return nil, err
+	}
+	return envs, nil
+}

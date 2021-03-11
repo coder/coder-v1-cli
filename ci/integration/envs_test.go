@@ -144,6 +144,20 @@ func TestEnvsCLI(t *testing.T) {
 			tcli.StdoutMatches(regexp.QuoteMeta(name)),
 		)
 
+		// filter by provider that does not exist should fail
+		doesntExist := randString(10)
+		c.Run(ctx, fmt.Sprintf("coder envs ls --provider %s", doesntExist)).Assert(t,
+			tcli.Error(),
+			tcli.StderrMatches(regexp.QuoteMeta(fmt.Sprintf("fatal: no environments found for workspace provider %q", doesntExist))),
+		)
+
+		// filter by provider that does exist should succeed
+		var envs []coder.Environment
+		c.Run(ctx, "coder envs ls --provider built-in").Assert(t,
+			tcli.Success(),
+			tcli.StdoutJSONUnmarshal(&envs),
+		)
+
 		var env coder.Environment
 		c.Run(ctx, fmt.Sprintf(`coder envs ls -o json | jq '.[] | select(.name == "%s")'`, name)).Assert(t,
 			tcli.Success(),

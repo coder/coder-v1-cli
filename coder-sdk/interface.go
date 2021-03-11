@@ -130,6 +130,9 @@ type Client interface {
 	// EnvironmentByID get the details of an environment by its id.
 	EnvironmentByID(ctx context.Context, id string) (*Environment, error)
 
+	// EnvironmentsByWorkspaceProvider returns environments that belong to a particular workspace provider.
+	EnvironmentsByWorkspaceProvider(ctx context.Context, wpID string) ([]Environment, error)
+
 	// ImportImage creates a new image and optionally a new registry.
 	ImportImage(ctx context.Context, req ImportImageReq) (*Image, error)
 

@@ -51,6 +51,7 @@ func lsEnvsCommand() *cobra.Command {
 	var (
 		outputFmt string
 		user      string
+		provider  string
 	)
 
 	cmd := &cobra.Command{
@@ -66,6 +67,12 @@ func lsEnvsCommand() *cobra.Command {
 			envs, err := getEnvs(ctx, client, user)
 			if err != nil {
 				return err
+			}
+			if provider != "" {
+				envs, err = getEnvsByProvider(ctx, client, provider)
+				if err != nil {
+					return err
+				}
 			}
 			if len(envs) < 1 {
 				clog.LogInfo("no environments found")
@@ -94,6 +101,7 @@ func lsEnvsCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	cmd.Flags().StringVarP(&outputFmt, "output", "o", humanOutput, "human | json")
+	cmd.Flags().StringVarP(&provider, "provider", "p", "", "Filter environments by a particular workspace provider name.")
 
 	return cmd
 }
