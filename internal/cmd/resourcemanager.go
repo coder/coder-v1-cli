@@ -310,12 +310,6 @@ func (a resources) String() string {
 		"[cpu: alloc=%.1fvCPU]\t[mem: alloc=%.1fGB]",
 		a.cpuAllocation, a.memAllocation,
 	)
-
-	// TODO@cmoog: consider adding the utilization info once a historical average is considered or implemented
-	// return fmt.Sprintf(
-	// 	"[cpu: alloc=%.1fvCPU, util=%s]\t[mem: alloc=%.1fGB, util=%s]",
-	// 	a.cpuAllocation, a.cpuUtilPercentage(), a.memAllocation, a.memUtilPercentage(),
-	// )
 }
 
 //nolint:unused

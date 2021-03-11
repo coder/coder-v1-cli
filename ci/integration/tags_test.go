@@ -31,7 +31,5 @@ func TestTags(t *testing.T) {
 			tcli.StdoutJSONUnmarshal(&tags),
 		)
 		assert.True(t, "> 0 tags", len(tags) > 0)
-
-		// TODO(@cmoog) add create and rm integration tests
 	})
 }
