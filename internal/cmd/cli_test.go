@@ -21,6 +21,21 @@ import (
 	"cdr.dev/coder-cli/pkg/clog"
 )
 
+var (
+	shouldSkipAuthedTests bool = false
+)
+
+func isCI() bool {
+	_, ok := os.LookupEnv("CI")
+	return ok
+}
+
+func skipIfNoAuth(t *testing.T) {
+	if shouldSkipAuthedTests {
+		t.Skip("no authentication provided and not in CI, skipping")
+	}
+}
+
 func init() {
 	tmpDir, err := ioutil.TempDir("", "coder-cli-config-dir")
 	if err != nil {
@@ -35,7 +50,11 @@ func init() {
 	password := os.Getenv("CODER_PASSWORD")
 	rawURL := os.Getenv("CODER_URL")
 	if email == "" || password == "" || rawURL == "" {
-		panic("CODER_EMAIL, CODER_PASSWORD, and CODER_URL are required environment variables")
+		if isCI() {
+			panic("when run in CI, CODER_EMAIL, CODER_PASSWORD, and CODER_URL are required environment variables")
+		}
+		shouldSkipAuthedTests = true
+		return
 	}
 	u, err := url.Parse(rawURL)
 	if err != nil {
