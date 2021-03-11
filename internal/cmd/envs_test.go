@@ -18,8 +18,8 @@ func Test_envs_ls(t *testing.T) {
 	res.stdoutUnmarshals(t, &envs)
 }
 
-//nolint
 func Test_envs_ls_by_provider(t *testing.T) {
+	skipIfNoAuth(t)
 	for _, test := range []struct {
 		name    string
 		command []string
@@ -39,6 +39,7 @@ func Test_envs_ls_by_provider(t *testing.T) {
 			},
 		},
 	} {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
 			test.assert(execute(t, nil, test.command...))
 		})
