@@ -69,7 +69,7 @@ func lsEnvsCommand() *cobra.Command {
 				return err
 			}
 			if provider != "" {
-				envs, err = getEnvsByProvider(ctx, client, provider)
+				envs, err = getEnvsByProvider(ctx, client, provider, user)
 				if err != nil {
 					return err
 				}

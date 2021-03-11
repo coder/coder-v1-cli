@@ -28,6 +28,7 @@ type resourceTopOptions struct {
 	user            string
 	org             string
 	sortBy          string
+	provider        string
 	showEmptyGroups bool
 }
 
@@ -41,11 +42,13 @@ func resourceTop() *cobra.Command {
 		Example: `coder resources top --group org
 coder resources top --group org --verbose --org DevOps
 coder resources top --group user --verbose --user name@example.com
+coder resources top --group provider --verbose --provider myprovider
 coder resources top --sort-by memory --show-empty`,
 	}
-	cmd.Flags().StringVar(&options.group, "group", "user", "the grouping parameter (user|org)")
+	cmd.Flags().StringVar(&options.group, "group", "user", "the grouping parameter (user|org|provider)")
 	cmd.Flags().StringVar(&options.user, "user", "", "filter by a user email")
 	cmd.Flags().StringVar(&options.org, "org", "", "filter by the name of an organization")
+	cmd.Flags().StringVar(&options.provider, "provider", "", "filter by the name of a workspace provider")
 	cmd.Flags().StringVar(&options.sortBy, "sort-by", "cpu", "field to sort aggregate groups and environments by (cpu|memory)")
 	cmd.Flags().BoolVar(&options.showEmptyGroups, "show-empty", false, "show groups with zero active environments")
 
@@ -84,6 +87,11 @@ func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args [
 			return xerrors.Errorf("get organizations: %w", err)
 		}
 
+		providers, err := client.WorkspaceProviders(ctx)
+		if err != nil {
+			return xerrors.Errorf("get workspace providers: %w", err)
+		}
+
 		var groups []groupable
 		var labeler envLabeler
 		switch options.group {
@@ -91,6 +99,8 @@ func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args [
 			groups, labeler = aggregateByUser(users, orgs, envs, *options)
 		case "org":
 			groups, labeler = aggregateByOrg(users, orgs, envs, *options)
+		case "provider":
+			groups, labeler = aggregateByProvider(providers.Kubernetes, orgs, envs, *options)
 		default:
 			return xerrors.Errorf("unknown --group %q", options.group)
 		}
@@ -141,6 +151,28 @@ func aggregateByOrg(users []coder.User, orgs []coder.Organization, envs []coder.
 		groups = append(groups, orgGrouping{org: o, envs: orgEnvs[o.ID]})
 	}
 	return groups, userLabeler{userIDMap}
+}
+
+func aggregateByProvider(providers []coder.KubernetesProvider, orgs []coder.Organization, envs []coder.Environment, options resourceTopOptions) ([]groupable, envLabeler) {
+	var groups []groupable
+	providerIDMap := make(map[string]coder.KubernetesProvider)
+	for _, p := range providers {
+		providerIDMap[p.ID] = p
+	}
+	providerEnvs := make(map[string][]coder.Environment, len(orgs))
+	for _, e := range envs {
+		if options.user != "" && providerIDMap[e.ResourcePoolID].Name != options.provider {
+			continue
+		}
+		providerEnvs[e.OrganizationID] = append(providerEnvs[e.OrganizationID], e)
+	}
+	for _, o := range orgs {
+		if options.org != "" && o.Name != options.org {
+			continue
+		}
+		groups = append(groups, orgGrouping{org: o, envs: providerEnvs[o.ID]})
+	}
+	return groups, providerLabeler{providerIDMap}
 }
 
 // groupable specifies a structure capable of being an aggregation group of environments (user, org, all).
@@ -285,6 +317,14 @@ type userLabeler struct {
 
 func (u userLabeler) label(e coder.Environment) string {
 	return fmt.Sprintf("[user: %s]", u.userMap[e.UserID].Email)
+}
+
+type providerLabeler struct {
+	providerMap map[string]coder.KubernetesProvider
+}
+
+func (p providerLabeler) label(e coder.Environment) string {
+	return fmt.Sprintf("[provider %s]", p.providerMap[e.ResourcePoolID].Name)
 }
 
 func aggregateEnvResources(envs []coder.Environment) resources {
