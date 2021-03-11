@@ -8,6 +8,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/coder-cli/pkg/clog"
 )
 
@@ -201,4 +202,37 @@ func getUserOrgs(ctx context.Context, client coder.Client, email string) ([]code
 		return nil, xerrors.New("no organizations found")
 	}
 	return lookupUserOrgs(u, orgs), nil
+}
+
+func getEnvsByProvider(ctx context.Context, client coder.Client, wpName, userEmail string) ([]coder.Environment, error) {
+	wp, err := coderutil.ProviderByName(ctx, client, wpName)
+	if err != nil {
+		return nil, err
+	}
+
+	envs, err := client.EnvironmentsByWorkspaceProvider(ctx, wp.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	envs, err = filterEnvsByUser(ctx, client, userEmail, envs)
+	if err != nil {
+		return nil, err
+	}
+	return envs, nil
+}
+
+func filterEnvsByUser(ctx context.Context, client coder.Client, userEmail string, envs []coder.Environment) ([]coder.Environment, error) {
+	user, err := client.UserByEmail(ctx, userEmail)
+	if err != nil {
+		return nil, xerrors.Errorf("get user: %w", err)
+	}
+
+	var filteredEnvs []coder.Environment
+	for _, env := range envs {
+		if env.UserID == user.ID {
+			filteredEnvs = append(filteredEnvs, env)
+		}
+	}
+	return filteredEnvs, nil
 }
