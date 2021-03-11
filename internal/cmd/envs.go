@@ -11,6 +11,7 @@ import (
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/coderutil"
+	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/coder-cli/pkg/tablewriter"
@@ -151,16 +152,17 @@ coder envs --user charlie@coder.com ls -o json \
 
 func createEnvCmd() *cobra.Command {
 	var (
-		org          string
-		cpu          float32
-		memory       float32
-		disk         int
-		gpus         int
-		img          string
-		tag          string
-		follow       bool
-		useCVM       bool
-		providerName string
+		org             string
+		cpu             float32
+		memory          float32
+		disk            int
+		gpus            int
+		img             string
+		tag             string
+		follow          bool
+		useCVM          bool
+		providerName    string
+		enableAutostart bool
 	)
 
 	cmd := &cobra.Command{
@@ -171,6 +173,9 @@ func createEnvCmd() *cobra.Command {
 		Example: `# create a new environment using default resource amounts
 coder envs create my-new-env --image ubuntu
 coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ubuntu`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			autoStartInfo()
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			if img == "" {
@@ -214,17 +219,18 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 
 			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
 			createReq := &coder.CreateEnvironmentRequest{
-				Name:           args[0],
-				ImageID:        importedImg.ID,
-				OrgID:          importedImg.OrganizationID,
-				ImageTag:       tag,
-				CPUCores:       cpu,
-				MemoryGB:       memory,
-				DiskGB:         disk,
-				GPUs:           gpus,
-				UseContainerVM: useCVM,
-				ResourcePoolID: provider.ID,
-				Namespace:      provider.DefaultNamespace,
+				Name:            args[0],
+				ImageID:         importedImg.ID,
+				OrgID:           importedImg.OrganizationID,
+				ImageTag:        tag,
+				CPUCores:        cpu,
+				MemoryGB:        memory,
+				DiskGB:          disk,
+				GPUs:            gpus,
+				UseContainerVM:  useCVM,
+				ResourcePoolID:  provider.ID,
+				Namespace:       provider.DefaultNamespace,
+				EnableAutoStart: enableAutostart,
 			}
 
 			// if any of these defaulted to their zero value we provision
@@ -269,6 +275,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 	cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the environment")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.Flags().BoolVar(&useCVM, "container-based-vm", false, "deploy the environment as a Container-based VM")
+	cmd.Flags().BoolVar(&enableAutostart, "enable-autostart", false, "automatically start this environment at your preferred time.")
 	_ = cmd.MarkFlagRequired("image")
 	return cmd
 }
@@ -417,6 +424,9 @@ func editEnvCmd() *cobra.Command {
 		Example: `coder envs edit back-end-env --cpu 4
 
 coder envs edit back-end-env --disk 20`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			autoStartInfo()
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx)
@@ -643,4 +653,19 @@ func buildUpdateReq(ctx context.Context, client coder.Client, conf updateConf) (
 		updateReq.ImageTag = &conf.imageTag
 	}
 	return &updateReq, nil
+}
+
+// TODO (Grey): Remove education in a future non-patch release.
+func autoStartInfo() {
+	var preferencesURI string
+
+	accessURI, err := config.URL.Read()
+	if err != nil {
+		// Error is fairly benign in this case, fallback to relative URI
+		preferencesURI = "/preferences"
+	} else {
+		preferencesURI = fmt.Sprintf("%s%s", accessURI, "/preferences?tab=autostart")
+	}
+
+	clog.LogInfo("⚡NEW: Automate daily environment startup", "Visit "+preferencesURI+" to configure your preferred time")
 }
