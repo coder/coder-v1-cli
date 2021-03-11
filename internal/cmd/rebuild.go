@@ -124,7 +124,7 @@ func trailBuildLogs(ctx context.Context, client coder.Client, envID string) erro
 			s.Start()
 
 		case coder.BuildLogTypeSubstage:
-			// TODO(@cmoog) add verbose substage printing
+			// TODO(@f0ssel) add verbose substage printing
 			if !verbose {
 				continue
 			}
