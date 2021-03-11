@@ -341,7 +341,7 @@ func (c *DefaultClient) EnvironmentByID(ctx context.Context, id string) (*Enviro
 
 func (c *DefaultClient) EnvironmentsByWorkspaceProvider(ctx context.Context, wpID string) ([]Environment, error) {
 	var envs []Environment
-	if err := c.requestBody(ctx, http.MethodGet, "/api/private/resource-pools/"+wpID+"/environments/", nil, &envs); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/resource-pools/"+wpID+"/environments", nil, &envs); err != nil {
 		return nil, err
 	}
 	return envs, nil

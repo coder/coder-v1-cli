@@ -13,9 +13,10 @@ coder envs ls [flags]
 ### Options
 
 ```
-  -h, --help            help for ls
-  -o, --output string   human | json (default "human")
-      --user string     Specify the user whose resources to target (default "me")
+  -h, --help              help for ls
+  -o, --output string     human | json (default "human")
+  -p, --provider string   Filter environments by a particular workspace provider name.
+      --user string       Specify the user whose resources to target (default "me")
 ```
 
 ### Options inherited from parent commands

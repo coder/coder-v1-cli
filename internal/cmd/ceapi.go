@@ -8,6 +8,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/coder-cli/pkg/clog"
 )
 
@@ -203,22 +204,8 @@ func getUserOrgs(ctx context.Context, client coder.Client, email string) ([]code
 	return lookupUserOrgs(u, orgs), nil
 }
 
-func getProviderByName(ctx context.Context, client coder.Client, wpName string) (*coder.KubernetesProvider, error) {
-	providers, err := client.WorkspaceProviders(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, provider := range providers.Kubernetes {
-		if provider.Name == wpName {
-			return &provider, nil
-		}
-	}
-	return nil, xerrors.Errorf("workspace provider %q not found", wpName)
-}
-
 func getEnvsByProvider(ctx context.Context, client coder.Client, wpName string) ([]coder.Environment, error) {
-	wp, err := getProviderByName(ctx, client, wpName)
+	wp, err := coderutil.ProviderByName(ctx, client, wpName)
 	if err != nil {
 		return nil, err
 	}
