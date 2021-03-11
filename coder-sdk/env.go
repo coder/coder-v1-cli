@@ -117,7 +117,8 @@ type Template = json.RawMessage
 
 // ParseTemplate parses a template config. It support both remote repositories and local files.
 // If a local file is specified then all other values in the request are ignored.
-func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequest) (Template, error) {
+// TODO: @emryk unsure if `orgID` should really be passed as a param this way
+func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequest, orgID string) (Template, error) {
 	const path = "/api/private/environments/template/parse"
 	var (
 		tpl     Template
@@ -125,8 +126,10 @@ func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequ
 		headers = http.Header{}
 	)
 
+	opts = append(opts, withQueryParams(url.Values{"org-id": []string{orgID}}))
+
 	if req.Local == nil {
-		if err := c.requestBody(ctx, http.MethodPost, path, req, &tpl); err != nil {
+		if err := c.requestBody(ctx, http.MethodPost, path, req, &tpl, opts...); err != nil {
 			return tpl, err
 		}
 		return tpl, nil

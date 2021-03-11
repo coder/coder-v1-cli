@@ -79,7 +79,7 @@ type Client interface {
 
 	// ParseTemplate parses a template config. It support both remote repositories and local files.
 	// If a local file is specified then all other values in the request are ignored.
-	ParseTemplate(ctx context.Context, req ParseTemplateRequest) (Template, error)
+	ParseTemplate(ctx context.Context, req ParseTemplateRequest, orgID string) (Template, error)
 
 	// CreateEnvironmentFromRepo sends a request to create an environment from a repository.
 	CreateEnvironmentFromRepo(ctx context.Context, orgID string, req Template) (*Environment, error)

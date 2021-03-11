@@ -359,7 +359,7 @@ coder envs create-from-config -f coder.yaml`,
 				Local:   rd,
 			}
 
-			tpl, err := client.ParseTemplate(ctx, req)
+			tpl, err := client.ParseTemplate(ctx, req, userOrg.ID)
 			if err != nil {
 				return handleAPIError(err)
 			}
