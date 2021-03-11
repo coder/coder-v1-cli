@@ -26,8 +26,8 @@ type Environment struct {
 	CPUCores         float32          `json:"cpu_cores"          table:"CPUCores"`
 	MemoryGB         float32          `json:"memory_gb"          table:"MemoryGB"`
 	DiskGB           int              `json:"disk_gb"            table:"DiskGB"`
-	GPUs             int              `json:"gpus"               table:"GPUs"`
-	Updating         bool             `json:"updating"           table:"Updating"`
+	GPUs             int              `json:"gpus"               table:"-"`
+	Updating         bool             `json:"updating"           table:"-"`
 	LatestStat       EnvironmentStat  `json:"latest_stat"        table:"Status"`
 	RebuildMessages  []RebuildMessage `json:"rebuild_messages"   table:"-"`
 	CreatedAt        time.Time        `json:"created_at"         table:"-"`

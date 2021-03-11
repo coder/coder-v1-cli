@@ -136,6 +136,9 @@ type Client interface {
 	// ImportImage creates a new image and optionally a new registry.
 	ImportImage(ctx context.Context, req ImportImageReq) (*Image, error)
 
+	// ImageByID returns an image entity, fetched by its ID.
+	ImageByID(ctx context.Context, id string) (*Image, error)
+
 	// OrganizationImages returns all of the images imported for orgID.
 	OrganizationImages(ctx context.Context, orgID string) ([]Image, error)
 

@@ -82,7 +82,11 @@ func lsEnvsCommand() *cobra.Command {
 
 			switch outputFmt {
 			case humanOutput:
-				err := tablewriter.WriteTable(cmd.OutOrStdout(), len(envs), func(i int) interface{} {
+				envs, err := coderutil.EnvsHumanTable(ctx, client, envs)
+				if err != nil {
+					return err
+				}
+				err = tablewriter.WriteTable(cmd.OutOrStdout(), len(envs), func(i int) interface{} {
 					return envs[i]
 				})
 				if err != nil {
