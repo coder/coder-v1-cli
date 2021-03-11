@@ -365,7 +365,7 @@ coder envs create-from-config -f coder.yaml`,
 				RepoURL:  repo,
 				Ref:      ref,
 				Local:    rd,
-				OrgID:    org,
+				OrgID:    userOrg,
 				Filepath: ".coder/coder.yaml",
 			}
 
