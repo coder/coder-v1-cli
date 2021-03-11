@@ -161,16 +161,16 @@ func aggregateByProvider(providers []coder.KubernetesProvider, orgs []coder.Orga
 	}
 	providerEnvs := make(map[string][]coder.Environment, len(orgs))
 	for _, e := range envs {
-		if options.user != "" && providerIDMap[e.ResourcePoolID].Name != options.provider {
+		if options.provider != "" && providerIDMap[e.ResourcePoolID].Name != options.provider {
 			continue
 		}
-		providerEnvs[e.OrganizationID] = append(providerEnvs[e.OrganizationID], e)
+		providerEnvs[e.ResourcePoolID] = append(providerEnvs[e.ResourcePoolID], e)
 	}
-	for _, o := range orgs {
-		if options.org != "" && o.Name != options.org {
+	for _, p := range providers {
+		if options.provider != "" && p.Name != options.provider {
 			continue
 		}
-		groups = append(groups, orgGrouping{org: o, envs: providerEnvs[o.ID]})
+		groups = append(groups, providerGrouping{provider: p, envs: providerEnvs[p.ID]})
 	}
 	return groups, providerLabeler{providerIDMap}
 }
@@ -209,6 +209,19 @@ func (o orgGrouping) header() string {
 		plural = ""
 	}
 	return fmt.Sprintf("%s\t(%v member%s)", truncate(o.org.Name, 20, "..."), len(o.org.Members), plural)
+}
+
+type providerGrouping struct {
+	provider coder.KubernetesProvider
+	envs     []coder.Environment
+}
+
+func (p providerGrouping) environments() []coder.Environment {
+	return p.envs
+}
+
+func (p providerGrouping) header() string {
+	return fmt.Sprintf("%s\t", truncate(p.provider.Name, 20, "..."))
 }
 
 func printResourceTop(writer io.Writer, groups []groupable, labeler envLabeler, showEmptyGroups bool, sortBy string) error {
