@@ -337,7 +337,7 @@ type providerLabeler struct {
 }
 
 func (p providerLabeler) label(e coder.Environment) string {
-	return fmt.Sprintf("[provider %s]", p.providerMap[e.ResourcePoolID].Name)
+	return fmt.Sprintf("[provider: %s]", p.providerMap[e.ResourcePoolID].Name)
 }
 
 func aggregateEnvResources(envs []coder.Environment) resources {
