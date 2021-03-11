@@ -114,6 +114,7 @@ func (r result) clogError(t *testing.T) clog.CLIError {
 	return cliErr
 }
 
+//nolint
 func execute(t *testing.T, in io.Reader, args ...string) result {
 	cmd := Make()
 

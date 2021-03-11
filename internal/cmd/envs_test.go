@@ -17,6 +17,7 @@ func Test_envs_ls(t *testing.T) {
 	res.stdoutUnmarshals(t, &envs)
 }
 
+//nolint
 func Test_envs_ls_by_provider(t *testing.T) {
 	for _, test := range []struct {
 		name    string
