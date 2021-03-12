@@ -12,13 +12,13 @@ type WorkspaceProviders struct {
 
 // KubernetesProvider defines an entity capable of deploying and acting as an ingress for Coder environments.
 type KubernetesProvider struct {
-	ID                 string                  `json:"id" table:"-"`
-	Name               string                  `json:"name" table:"Name"`
-	Status             WorkspaceProviderStatus `json:"status" table:"Status"`
-	BuiltIn            bool                    `json:"built_in" table:"-"`
-	EnvproxyAccessURL  string                  `json:"envproxy_access_url" validate:"required" table:"Access URL"`
-	DevurlHost         string                  `json:"devurl_host" table:"Devurl Host"`
-	OrgWhitelist       []string                `json:"org_whitelist" table:"-"`
+	ID                 string                  `json:"id"                  table:"-"`
+	Name               string                  `json:"name"                table:"Name"`
+	Status             WorkspaceProviderStatus `json:"status"              table:"Status"`
+	BuiltIn            bool                    `json:"built_in"            table:"-"`
+	EnvproxyAccessURL  string                  `json:"envproxy_access_url" table:"Access URL" validate:"required"`
+	DevurlHost         string                  `json:"devurl_host"         table:"Devurl Host"`
+	OrgWhitelist       []string                `json:"org_whitelist"       table:"-"`
 	KubeProviderConfig `json:"config" table:"_"`
 }
 

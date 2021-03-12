@@ -2,12 +2,15 @@ package coderutil
 
 import (
 	"context"
+	"fmt"
 	"net/url"
+	"sync"
 
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/pkg/clog"
 )
 
 // DialEnvWsep dials the executor endpoint using the https://github.com/cdr/wsep message protocol.
@@ -71,4 +74,88 @@ func DefaultWorkspaceProvider(ctx context.Context, c coder.Client) (*coder.Kuber
 		}
 	}
 	return nil, coder.ErrNotFound
+}
+
+// EnvTable defines an Environment-like structure with associated entities composed in a human
+// readable form.
+type EnvTable struct {
+	Name     string  `table:"Name"`
+	Image    string  `table:"Image"`
+	CPU      float32 `table:"vCPU"`
+	MemoryGB float32 `table:"MemoryGB"`
+	DiskGB   int     `table:"DiskGB"`
+	Status   string  `table:"Status"`
+	Provider string  `table:"Provider"`
+	CVM      bool    `table:"CVM"`
+}
+
+// EnvsHumanTable performs the composition of each Environment with its associated ProviderName and ImageRepo.
+func EnvsHumanTable(ctx context.Context, client coder.Client, envs []coder.Environment) ([]EnvTable, error) {
+	imageMap, err := makeImageMap(ctx, client, envs)
+	if err != nil {
+		return nil, err
+	}
+
+	pooledEnvs := make([]EnvTable, 0, len(envs))
+	providers, err := client.WorkspaceProviders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	providerMap := make(map[string]coder.KubernetesProvider, len(providers.Kubernetes))
+	for _, p := range providers.Kubernetes {
+		providerMap[p.ID] = p
+	}
+	for _, e := range envs {
+		envProvider, ok := providerMap[e.ResourcePoolID]
+		if !ok {
+			return nil, xerrors.Errorf("fetch env workspace provider: %w", coder.ErrNotFound)
+		}
+		pooledEnvs = append(pooledEnvs, EnvTable{
+			Name:     e.Name,
+			Image:    fmt.Sprintf("%s:%s", imageMap[e.ImageID].Repository, e.ImageTag),
+			CPU:      e.CPUCores,
+			MemoryGB: e.MemoryGB,
+			DiskGB:   e.DiskGB,
+			Status:   string(e.LatestStat.ContainerStatus),
+			Provider: envProvider.Name,
+			CVM:      e.UseContainerVM,
+		})
+	}
+	return pooledEnvs, nil
+}
+
+func makeImageMap(ctx context.Context, client coder.Client, envs []coder.Environment) (map[string]*coder.Image, error) {
+	var (
+		mu     sync.Mutex
+		egroup = clog.LoggedErrGroup()
+	)
+	imageMap := make(map[string]*coder.Image)
+	for _, e := range envs {
+		// put all the image IDs into a map to remove duplicates
+		imageMap[e.ImageID] = nil
+	}
+	ids := make([]string, 0, len(imageMap))
+	for id := range imageMap {
+		// put the deduplicated back into a slice
+		// so we can write to the map while iterating
+		ids = append(ids, id)
+	}
+	for _, id := range ids {
+		id := id
+		egroup.Go(func() error {
+			img, err := client.ImageByID(ctx, id)
+			if err != nil {
+				return err
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			imageMap[id] = img
+
+			return nil
+		})
+	}
+	if err := egroup.Wait(); err != nil {
+		return nil, err
+	}
+	return imageMap, nil
 }

@@ -66,6 +66,15 @@ func (c *DefaultClient) ImportImage(ctx context.Context, req ImportImageReq) (*I
 	return &img, nil
 }
 
+// ImageByID returns an image entity, fetched by its ID.
+func (c *DefaultClient) ImageByID(ctx context.Context, id string) (*Image, error) {
+	var img Image
+	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/images/"+id, nil, &img); err != nil {
+		return nil, err
+	}
+	return &img, nil
+}
+
 // OrganizationImages returns all of the images imported for orgID.
 func (c *DefaultClient) OrganizationImages(ctx context.Context, orgID string) ([]Image, error) {
 	var (
