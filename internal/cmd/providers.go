@@ -91,6 +91,9 @@ helm upgrade coder-workspace-provider coder/workspace-provider \
     --set envproxy.clusterAddress=`+clusterAddress+` \
     --set cemanager.AccessURL=`+cemanagerURL.String()+`
 
+WARNING: The 'envproxy.token' is a secret value that authenticates the workspace provider, 
+make sure not to share this token or make it public. 
+
 Other values can be set on the helm chart to further customize the deployment, see 
 https:/github.com/cdr/enterprise-helm/blob/workspace-providers-envproxy-only/README.md
 `)
