@@ -2,7 +2,6 @@ package coder
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/url"
@@ -88,9 +87,8 @@ type CreateEnvironmentRequest struct {
 	Namespace       string  `json:"namespace"`
 	EnableAutoStart bool    `json:"autostart_enabled"`
 
-	// Template comes from the parse template route on cemanager.
-	// This field should never be manually populated
-	Template Template `json:"template,omitempty"`
+	// TemplateID comes from the parse template route on cemanager.
+	TemplateID string `json:"template_id,omitempty"`
 }
 
 // CreateEnvironment sends a request to create an environment.
@@ -105,31 +103,47 @@ func (c *DefaultClient) CreateEnvironment(ctx context.Context, req CreateEnviron
 // ParseTemplateRequest parses a template. If Local is a non-nil reader
 // it will obviate any other fields on the request.
 type ParseTemplateRequest struct {
-	RepoURL string    `json:"repo_url"`
-	Ref     string    `json:"ref"`
-	Local   io.Reader `json:"-"`
+	RepoURL  string    `json:"repo_url"`
+	Ref      string    `json:"ref"`
+	Filepath string    `json:"filepath"`
+	OrgID    string    `json:"-"`
+	Local    io.Reader `json:"-"`
 }
 
-// Template is a Workspaces As Code (WAC) template.
+// TemplateVersion is a Workspaces As Code (WAC) template.
 // For now, let's not interpret it on the CLI level. We just need
 // to forward this as part of the create env request.
-type Template = json.RawMessage
+type TemplateVersion struct {
+	ID         string `json:"id"`
+	TemplateID string `json:"template_id"`
+	// FileHash is the sha256 hash of the template's file contents.
+	FileHash string `json:"file_hash"`
+	// Commit is the git commit from which the template was derived.
+	Commit        string    `json:"commit"`
+	CommitMessage string    `json:"commit_message"`
+	CreatedAt     time.Time `json:"created_at"`
+}
 
 // ParseTemplate parses a template config. It support both remote repositories and local files.
 // If a local file is specified then all other values in the request are ignored.
-func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequest) (Template, error) {
+func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequest) (*TemplateVersion, error) {
 	const path = "/api/private/environments/template/parse"
 	var (
-		tpl     Template
+		tpl     TemplateVersion
 		opts    []requestOption
 		headers = http.Header{}
+		query   = url.Values{}
 	)
 
+	query.Set("org-id", req.OrgID)
+
+	opts = append(opts, withQueryParams(query))
+
 	if req.Local == nil {
-		if err := c.requestBody(ctx, http.MethodPost, path, req, &tpl); err != nil {
-			return tpl, err
+		if err := c.requestBody(ctx, http.MethodPost, path, req, &tpl, opts...); err != nil {
+			return &tpl, err
 		}
-		return tpl, nil
+		return &tpl, nil
 	}
 
 	headers.Set("Content-Type", "application/octet-stream")
@@ -137,14 +151,14 @@ func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequ
 
 	err := c.requestBody(ctx, http.MethodPost, path, nil, &tpl, opts...)
 	if err != nil {
-		return tpl, err
+		return &tpl, err
 	}
 
-	return tpl, nil
+	return &tpl, nil
 }
 
 // CreateEnvironmentFromRepo sends a request to create an environment from a repository.
-func (c *DefaultClient) CreateEnvironmentFromRepo(ctx context.Context, orgID string, req Template) (*Environment, error) {
+func (c *DefaultClient) CreateEnvironmentFromRepo(ctx context.Context, orgID string, req TemplateVersion) (*Environment, error) {
 	var env Environment
 	if err := c.requestBody(ctx, http.MethodPost, "/api/private/orgs/"+orgID+"/environments/from-repo", req, &env); err != nil {
 		return nil, err
