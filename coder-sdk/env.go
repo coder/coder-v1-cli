@@ -126,7 +126,7 @@ type TemplateVersion struct {
 
 // ParseTemplate parses a template config. It support both remote repositories and local files.
 // If a local file is specified then all other values in the request are ignored.
-func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequest) (TemplateVersion, error) {
+func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequest) (*TemplateVersion, error) {
 	const path = "/api/private/environments/template/parse"
 	var (
 		tpl     TemplateVersion
@@ -141,9 +141,9 @@ func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequ
 
 	if req.Local == nil {
 		if err := c.requestBody(ctx, http.MethodPost, path, req, &tpl, opts...); err != nil {
-			return tpl, err
+			return &tpl, err
 		}
-		return tpl, nil
+		return &tpl, nil
 	}
 
 	headers.Set("Content-Type", "application/octet-stream")
@@ -151,10 +151,10 @@ func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequ
 
 	err := c.requestBody(ctx, http.MethodPost, path, nil, &tpl, opts...)
 	if err != nil {
-		return tpl, err
+		return &tpl, err
 	}
 
-	return tpl, nil
+	return &tpl, nil
 }
 
 // CreateEnvironmentFromRepo sends a request to create an environment from a repository.
