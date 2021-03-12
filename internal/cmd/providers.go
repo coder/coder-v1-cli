@@ -63,12 +63,41 @@ coder providers create my-provider --hostname=https://provider.example.com --clu
 				return xerrors.Errorf("create workspace provider: %w", err)
 			}
 
-			err = tablewriter.WriteTable(cmd.OutOrStdout(), 1, func(i int) interface{} {
+			cemanagerURL := client.BaseURL()
+			version, err := client.APIVersion(ctx)
+			if err != nil {
+				return xerrors.Errorf("get application version: %w", err)
+			}
+
+			clog.LogSuccess(fmt.Sprintf(`
+Created workspace provider "%s"
+`, createReq.Name))
+			_ = tablewriter.WriteTable(cmd.OutOrStdout(), 1, func(i int) interface{} {
 				return *wp
 			})
-			if err != nil {
-				return xerrors.Errorf("write table: %w", err)
-			}
+			_, _ = fmt.Fprint(cmd.OutOrStdout(), `
+Now that the workspace provider is provisioned, it must be deployed into the cluster. To learn more,
+visit https://coder.com/docs/guides/deploying-workspace-provider
+
+When connected to the cluster you wish to deploy onto, use the following helm command:
+
+helm upgrade coder-workspace-provider coder/workspace-provider \
+    --version=`+version+` \
+    --atomic \
+    --install \
+    --force \
+    --set envproxy.token=`+wp.EnvproxyToken+` \
+    --set ingress.host=`+hostname+` \
+    --set envproxy.clusterAddress=`+clusterAddress+` \
+    --set cemanager.AccessURL=`+cemanagerURL.String()+`
+
+WARNING: The 'envproxy.token' is a secret value that authenticates the workspace provider, 
+make sure not to share this token or make it public. 
+
+Other values can be set on the helm chart to further customize the deployment, see 
+https:/github.com/cdr/enterprise-helm/blob/workspace-providers-envproxy-only/README.md
+`)
+
 			return nil
 		},
 	}
