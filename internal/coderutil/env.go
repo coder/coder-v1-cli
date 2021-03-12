@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"sync"
 
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 
@@ -89,17 +91,9 @@ type EnvTable struct {
 
 // EnvsHumanTable performs the composition of each Environment with its associated ProviderName and ImageRepo.
 func EnvsHumanTable(ctx context.Context, client coder.Client, envs []coder.Environment) ([]EnvTable, error) {
-	imageMap := make(map[string]*coder.Image)
-	for _, e := range envs {
-		imageMap[e.ImageID] = nil
-	}
-	// TODO: make this concurrent
-	for id := range imageMap {
-		img, err := client.ImageByID(ctx, id)
-		if err != nil {
-			return nil, err
-		}
-		imageMap[id] = img
+	imageMap, err := makeImageMap(ctx, client, envs)
+	if err != nil {
+		return nil, err
 	}
 
 	pooledEnvs := make([]EnvTable, 0, len(envs))
@@ -128,4 +122,31 @@ func EnvsHumanTable(ctx context.Context, client coder.Client, envs []coder.Envir
 		})
 	}
 	return pooledEnvs, nil
+}
+
+func makeImageMap(ctx context.Context, client coder.Client, envs []coder.Environment) (map[string]*coder.Image, error) {
+	var mu sync.Mutex
+	var egroup errgroup.Group
+	imageMap := make(map[string]*coder.Image)
+	for _, e := range envs {
+		imageMap[e.ImageID] = nil
+	}
+	for id := range imageMap {
+		id := id
+		egroup.Go(func() error {
+			img, err := client.ImageByID(ctx, id)
+			if err != nil {
+				return err
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			imageMap[id] = img
+
+			return nil
+		})
+	}
+	if err := egroup.Wait(); err != nil {
+		return nil, err
+	}
+	return imageMap, nil
 }
