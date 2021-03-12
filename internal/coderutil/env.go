@@ -6,11 +6,11 @@ import (
 	"net/url"
 	"sync"
 
-	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/pkg/clog"
 )
 
 // DialEnvWsep dials the executor endpoint using the https://github.com/cdr/wsep message protocol.
@@ -125,13 +125,22 @@ func EnvsHumanTable(ctx context.Context, client coder.Client, envs []coder.Envir
 }
 
 func makeImageMap(ctx context.Context, client coder.Client, envs []coder.Environment) (map[string]*coder.Image, error) {
-	var mu sync.Mutex
-	var egroup errgroup.Group
+	var (
+		mu     sync.Mutex
+		egroup = clog.LoggedErrGroup()
+	)
 	imageMap := make(map[string]*coder.Image)
 	for _, e := range envs {
+		// put all the image IDs into a map to remove duplicates
 		imageMap[e.ImageID] = nil
 	}
+	ids := make([]string, 0, len(imageMap))
 	for id := range imageMap {
+		// put the deduplicated back into a slice
+		// so we can write to the map while iterating
+		ids = append(ids, id)
+	}
+	for _, id := range ids {
 		id := id
 		egroup.Go(func() error {
 			img, err := client.ImageByID(ctx, id)
