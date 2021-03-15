@@ -153,13 +153,13 @@ func aggregateByOrg(users []coder.User, orgs []coder.Organization, envs []coder.
 	return groups, userLabeler{userIDMap}
 }
 
-func aggregateByProvider(providers []coder.KubernetesProvider, orgs []coder.Organization, envs []coder.Environment, options resourceTopOptions) ([]groupable, envLabeler) {
+func aggregateByProvider(providers []coder.KubernetesProvider, _ []coder.Organization, envs []coder.Environment, options resourceTopOptions) ([]groupable, envLabeler) {
 	var groups []groupable
 	providerIDMap := make(map[string]coder.KubernetesProvider)
 	for _, p := range providers {
 		providerIDMap[p.ID] = p
 	}
-	providerEnvs := make(map[string][]coder.Environment, len(orgs))
+	providerEnvs := make(map[string][]coder.Environment, len(providers))
 	for _, e := range envs {
 		if options.provider != "" && providerIDMap[e.ResourcePoolID].Name != options.provider {
 			continue
