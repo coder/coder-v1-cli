@@ -159,7 +159,7 @@ func aggregateByProvider(providers []coder.KubernetesProvider, orgs []coder.Orga
 	for _, p := range providers {
 		providerIDMap[p.ID] = p
 	}
-	providerEnvs := make(map[string][]coder.Environment, len(orgs))
+	providerEnvs := make(map[string][]coder.Environment, len(providers))
 	for _, e := range envs {
 		if options.provider != "" && providerIDMap[e.ResourcePoolID].Name != options.provider {
 			continue
