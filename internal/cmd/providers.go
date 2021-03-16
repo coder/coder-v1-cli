@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/url"
 
 	"cdr.dev/coder-cli/internal/x/xcobra"
 
@@ -64,6 +65,11 @@ coder providers create my-provider --hostname=https://provider.example.com --clu
 			}
 
 			cemanagerURL := client.BaseURL()
+			ingressHost, err := url.Parse(hostname)
+			if err != nil {
+				return xerrors.Errorf("parse hostname: %w", err)
+			}
+
 			version, err := client.APIVersion(ctx)
 			if err != nil {
 				return xerrors.Errorf("get application version: %w", err)
@@ -87,15 +93,15 @@ helm upgrade coder-workspace-provider coder/workspace-provider \
     --install \
     --force \
     --set envproxy.token=`+wp.EnvproxyToken+` \
-    --set ingress.host=`+hostname+` \
+    --set ingress.host=`+ingressHost.Hostname()+` \
     --set envproxy.clusterAddress=`+clusterAddress+` \
-    --set cemanager.AccessURL=`+cemanagerURL.String()+`
+    --set cemanager.accessURL=`+cemanagerURL.String()+`
 
 WARNING: The 'envproxy.token' is a secret value that authenticates the workspace provider, 
 make sure not to share this token or make it public. 
 
 Other values can be set on the helm chart to further customize the deployment, see 
-https:/github.com/cdr/enterprise-helm/blob/workspace-providers-envproxy-only/README.md
+https://github.com/cdr/enterprise-helm/blob/workspace-providers-envproxy-only/README.md
 `)
 
 			return nil
