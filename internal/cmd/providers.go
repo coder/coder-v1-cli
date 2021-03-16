@@ -83,7 +83,7 @@ Created workspace provider "%s"
 			})
 			_, _ = fmt.Fprint(cmd.OutOrStdout(), `
 Now that the workspace provider is provisioned, it must be deployed into the cluster. To learn more,
-visit https://coder.com/docs/guides/deploying-workspace-provider
+visit https://coder.com/docs/workspace-providers/deployment
 
 When connected to the cluster you wish to deploy onto, use the following helm command:
 
