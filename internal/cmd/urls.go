@@ -24,11 +24,10 @@ func urlCmd() *cobra.Command {
 		Short: "Interact with environment DevURLs",
 	}
 	lsCmd := &cobra.Command{
-		Use:               "ls [environment_name]",
-		Short:             "List all DevURLs for an environment",
-		Args:              xcobra.ExactArgs(1),
-		ValidArgsFunction: getEnvsForCompletion(coder.Me),
-		RunE:              listDevURLsCmd(&outputFmt),
+		Use:   "ls [environment_name]",
+		Short: "List all DevURLs for an environment",
+		Args:  xcobra.ExactArgs(1),
+		RunE:  listDevURLsCmd(&outputFmt),
 	}
 	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", humanOutput, "human|json")
 
