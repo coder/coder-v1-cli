@@ -8,11 +8,12 @@ import (
 	"os/user"
 	"path/filepath"
 
-	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/pkg/clog"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/xerrors"
+
+	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/pkg/clog"
 )
 
 var (
