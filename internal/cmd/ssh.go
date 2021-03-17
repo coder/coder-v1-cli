@@ -21,9 +21,13 @@ var (
 
 func sshCmd() *cobra.Command {
 	cmd := cobra.Command{
-		Use:  "sh",
-		Args: shValidArgs,
-		RunE: shell,
+		Use:   "ssh [environment_name]",
+		Short: "Enter a shell of execute a command over SSH into a Coder environment",
+		Args:  shValidArgs,
+		Example: `coder ssh my-dev
+coder ssh my-dev pwd`,
+		Aliases: []string{"sh"},
+		RunE:    shell,
 	}
 	return &cmd
 }
@@ -83,7 +87,8 @@ func shell(cmd *cobra.Command, args []string) error {
 // special handling for the common case of "coder sh" input without a positional argument.
 func shValidArgs(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	if err := cobra.MinimumNArgs(1)(cmd, args); err != nil {
+	err := cobra.MinimumNArgs(1)(cmd, args)
+	if err != nil {
 		client, err := newClient(ctx)
 		if err != nil {
 			return clog.Error("missing [environment_name] argument")
