@@ -18,7 +18,6 @@ import (
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/coderutil"
-	"cdr.dev/coder-cli/internal/config"
 )
 
 const sshStartToken = "# ------------START-CODER-ENTERPRISE-----------"
@@ -212,19 +211,6 @@ func makeSSHConfig(host, userName, envName, privateKeyFilepath string) string {
    ServerAliveInterval 60
    ServerAliveCountMax 3
 `, envName, host, userName, envName, privateKeyFilepath)
-}
-
-//nolint:deadcode,unused
-func configuredHostname() (string, error) {
-	u, err := config.URL.Read()
-	if err != nil {
-		return "", err
-	}
-	url, err := url.Parse(u)
-	if err != nil {
-		return "", err
-	}
-	return url.Hostname(), nil
 }
 
 func writeStr(filename, data string) error {
