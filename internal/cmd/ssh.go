@@ -22,13 +22,15 @@ var (
 
 func sshCmd() *cobra.Command {
 	cmd := cobra.Command{
-		Use:   "ssh [environment_name]",
+		Use:   "ssh [environment_name] [<command [args...]>]",
 		Short: "Enter a shell of execute a command over SSH into a Coder environment",
 		Args:  shValidArgs,
 		Example: `coder ssh my-dev
 coder ssh my-dev pwd`,
-		Aliases: []string{"sh"},
-		RunE:    shell,
+		Aliases:               []string{"sh"},
+		DisableFlagParsing:    true,
+		DisableFlagsInUseLine: true,
+		RunE:                  shell,
 	}
 	return &cmd
 }

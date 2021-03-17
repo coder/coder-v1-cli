@@ -3,7 +3,7 @@
 Enter a shell of execute a command over SSH into a Coder environment
 
 ```
-coder ssh [environment_name] [flags]
+coder ssh [environment_name] [<command [args...]>]
 ```
 
 ### Examples
