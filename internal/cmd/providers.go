@@ -51,6 +51,21 @@ coder providers create my-provider --hostname=https://provider.example.com --clu
 				return err
 			}
 
+			version, err := client.APIVersion(ctx)
+			if err != nil {
+				return xerrors.Errorf("get application version: %w", err)
+			}
+
+			cemanagerURL := client.BaseURL()
+			ingressHost, err := url.Parse(hostname)
+			if err != nil {
+				return xerrors.Errorf("parse hostname: %w", err)
+			}
+
+			if cemanagerURL.Scheme != ingressHost.Scheme {
+				return xerrors.Errorf("Coder access url and hostname must have matching protocols: coder access url: %s, workspace provider hostname: %s", cemanagerURL.String(), ingressHost.String())
+			}
+
 			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
 			createReq := &coder.CreateWorkspaceProviderReq{
 				Name:           args[0],
@@ -64,15 +79,12 @@ coder providers create my-provider --hostname=https://provider.example.com --clu
 				return xerrors.Errorf("create workspace provider: %w", err)
 			}
 
-			cemanagerURL := client.BaseURL()
-			ingressHost, err := url.Parse(hostname)
-			if err != nil {
-				return xerrors.Errorf("parse hostname: %w", err)
-			}
-
-			version, err := client.APIVersion(ctx)
-			if err != nil {
-				return xerrors.Errorf("get application version: %w", err)
+			var sslNote string
+			if ingressHost.Scheme == "https" {
+				sslNote = `
+NOTE: Since the hostname provided is using https you must ensure the deployment
+has a valid SSL certificate. See https://coder.com/docs/guides/ssl-certificates
+for more information.`
 			}
 
 			clog.LogSuccess(fmt.Sprintf(`
@@ -93,9 +105,11 @@ helm upgrade coder-workspace-provider coder/workspace-provider \
     --install \
     --force \
     --set envproxy.token=`+wp.EnvproxyToken+` \
+    --set envproxy.accessURL=`+ingressHost.String()+` \
     --set ingress.host=`+ingressHost.Hostname()+` \
     --set envproxy.clusterAddress=`+clusterAddress+` \
     --set cemanager.accessURL=`+cemanagerURL.String()+`
+`+sslNote+`
 
 WARNING: The 'envproxy.token' is a secret value that authenticates the workspace provider, 
 make sure not to share this token or make it public. 
