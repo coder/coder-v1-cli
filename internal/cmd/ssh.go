@@ -46,6 +46,13 @@ func shell(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if env.LatestStat.ContainerStatus != coder.EnvironmentOn {
+		return clog.Error("environment not available",
+			fmt.Sprintf("current status: \"%s\"", env.LatestStat.ContainerStatus),
+			clog.BlankLine,
+			clog.Tipf("use \"coder envs rebuild %s\" to rebuild this environment", env.Name),
+		)
+	}
 	wp, err := client.WorkspaceProviderByID(ctx, env.ResourcePoolID)
 	if err != nil {
 		return err
