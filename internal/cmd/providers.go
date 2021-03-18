@@ -36,7 +36,7 @@ func createProviderCmd() *cobra.Command {
 		clusterAddress string
 	)
 	cmd := &cobra.Command{
-		Use:   "create [name] --hostname=[hostname] --clusterAddress=[clusterAddress]",
+		Use:   "create [name] --hostname=[hostname] --cluster-address=[clusterAddress]",
 		Args:  xcobra.ExactArgs(1),
 		Short: "create a new workspace provider.",
 		Long:  "Create a new Coder workspace provider.",

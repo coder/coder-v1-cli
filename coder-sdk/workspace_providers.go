@@ -24,12 +24,11 @@ type KubernetesProvider struct {
 
 // KubeProviderConfig defines Kubernetes-specific configuration options.
 type KubeProviderConfig struct {
-	ClusterAddress      string   `json:"cluster_address" table:"Cluster Address"`
-	DefaultNamespace    string   `json:"default_namespace" table:"Namespace"`
-	StorageClass        string   `json:"storage_class" table:"Storage Class"`
-	ClusterDomainSuffix string   `json:"cluster_domain_suffix" table:"Cluster Domain Suffix"`
-	SSHEnabled          bool     `json:"ssh_enabled" table:"SSH Enabled"`
-	NamespaceWhitelist  []string `json:"namespace_whitelist" table:"Namespace Allowlist"`
+	ClusterAddress      string `json:"cluster_address" table:"Cluster Address"`
+	DefaultNamespace    string `json:"default_namespace" table:"Namespace"`
+	StorageClass        string `json:"storage_class" table:"Storage Class"`
+	ClusterDomainSuffix string `json:"cluster_domain_suffix" table:"Cluster Domain Suffix"`
+	SSHEnabled          bool   `json:"ssh_enabled" table:"SSH Enabled"`
 }
 
 // WorkspaceProviderStatus represents the configuration state of a workspace provider.
