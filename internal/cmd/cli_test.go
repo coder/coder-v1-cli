@@ -23,12 +23,10 @@ import (
 
 var (
 	shouldSkipAuthedTests bool = false
+	testCoderClient       coder.Client
 )
 
-func isCI() bool {
-	_, ok := os.LookupEnv("CI")
-	return ok
-}
+func isCI() bool { _, ok := os.LookupEnv("CI"); return ok }
 
 func skipIfNoAuth(t *testing.T) {
 	if shouldSkipAuthedTests {
@@ -42,9 +40,6 @@ func init() {
 		panic(err)
 	}
 	config.SetRoot(tmpDir)
-
-	// TODO: might need to make this a command scoped option to make assertions against its output
-	clog.SetOutput(ioutil.Discard)
 
 	email := os.Getenv("CODER_EMAIL")
 	password := os.Getenv("CODER_PASSWORD")
@@ -68,6 +63,7 @@ func init() {
 	if err != nil {
 		panic("new client: " + err.Error())
 	}
+	testCoderClient = client
 	if err := config.URL.Write(rawURL); err != nil {
 		panic("write config url: " + err.Error())
 	}
@@ -87,6 +83,11 @@ func (r result) success(t *testing.T) {
 	assert.Success(t, "execute command", r.exitErr)
 }
 
+func (r result) error(t *testing.T) {
+	t.Helper()
+	assert.Error(t, "execute command", r.exitErr)
+}
+
 //nolint
 func (r result) stdoutContains(t *testing.T, substring string) {
 	t.Helper()
@@ -95,7 +96,6 @@ func (r result) stdoutContains(t *testing.T, substring string) {
 	}
 }
 
-//nolint
 func (r result) stdoutUnmarshals(t *testing.T, target interface{}) {
 	t.Helper()
 	err := json.Unmarshal(r.outBuffer.Bytes(), target)
@@ -146,6 +146,10 @@ func execute(t *testing.T, in io.Reader, args ...string) result {
 	cmd.SetOut(&outStream)
 	cmd.SetErr(&errStream)
 
+	// TODO: this *needs* to be moved to function scoped writer arg. As is,
+	// this prevents tests from running in parallel.
+	clog.SetOutput(&errStream)
+
 	err := cmd.Execute()
 
 	slogtest.Debug(t, "execute command",
@@ -154,6 +158,9 @@ func execute(t *testing.T, in io.Reader, args ...string) result {
 		slog.F("args", args),
 		slog.F("execute_error", err),
 	)
+	if err != nil {
+		clog.Log(err)
+	}
 	return result{
 		outBuffer: &outStream,
 		errBuffer: &errStream,
