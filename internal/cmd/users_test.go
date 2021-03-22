@@ -3,9 +3,10 @@ package cmd
 import (
 	"testing"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/slogtest"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 func Test_users(t *testing.T) {

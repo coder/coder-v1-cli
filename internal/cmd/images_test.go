@@ -3,8 +3,9 @@ package cmd
 import (
 	"testing"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/slog/sloggers/slogtest/assert"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 func Test_images(t *testing.T) {
