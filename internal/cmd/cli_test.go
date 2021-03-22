@@ -23,12 +23,10 @@ import (
 
 var (
 	shouldSkipAuthedTests bool = false
+	testCoderClient       coder.Client
 )
 
-func isCI() bool {
-	_, ok := os.LookupEnv("CI")
-	return ok
-}
+func isCI() bool { _, ok := os.LookupEnv("CI"); return ok }
 
 func skipIfNoAuth(t *testing.T) {
 	if shouldSkipAuthedTests {
@@ -65,6 +63,7 @@ func init() {
 	if err != nil {
 		panic("new client: " + err.Error())
 	}
+	testCoderClient = client
 	if err := config.URL.Write(rawURL); err != nil {
 		panic("write config url: " + err.Error())
 	}

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"testing"
 
 	"cdr.dev/slog/sloggers/slogtest/assert"
@@ -10,13 +11,14 @@ import (
 
 func Test_tags(t *testing.T) {
 	t.Skip("TODO: wait for dedicated test API server / DB so we can create an org")
+	ctx := context.Background()
 
 	skipIfNoAuth(t)
 
 	res := execute(t, nil, "tags", "ls")
 	res.error(t)
 
-	// TODO: import image
+	ensureImageImported(ctx, t, testCoderClient, "ubuntu")
 
 	res = execute(t, nil, "tags", "ls", "--image=ubuntu", "--org=default")
 	res.success(t)
