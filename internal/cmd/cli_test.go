@@ -87,6 +87,11 @@ func (r result) success(t *testing.T) {
 	assert.Success(t, "execute command", r.exitErr)
 }
 
+func (r result) error(t *testing.T) {
+	t.Helper()
+	assert.Error(t, "execute command", r.exitErr)
+}
+
 //nolint
 func (r result) stdoutContains(t *testing.T, substring string) {
 	t.Helper()
@@ -95,7 +100,6 @@ func (r result) stdoutContains(t *testing.T, substring string) {
 	}
 }
 
-//nolint
 func (r result) stdoutUnmarshals(t *testing.T, target interface{}) {
 	t.Helper()
 	err := json.Unmarshal(r.outBuffer.Bytes(), target)
@@ -145,6 +149,7 @@ func execute(t *testing.T, in io.Reader, args ...string) result {
 	cmd.SetIn(in)
 	cmd.SetOut(&outStream)
 	cmd.SetErr(&errStream)
+	clog.SetOutput(&errStream)
 
 	err := cmd.Execute()
 
@@ -154,6 +159,9 @@ func execute(t *testing.T, in io.Reader, args ...string) result {
 		slog.F("args", args),
 		slog.F("execute_error", err),
 	)
+	if err != nil {
+		clog.Log(err)
+	}
 	return result{
 		outBuffer: &outStream,
 		errBuffer: &errStream,
