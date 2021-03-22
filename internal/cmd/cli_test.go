@@ -43,9 +43,6 @@ func init() {
 	}
 	config.SetRoot(tmpDir)
 
-	// TODO: might need to make this a command scoped option to make assertions against its output
-	clog.SetOutput(ioutil.Discard)
-
 	email := os.Getenv("CODER_EMAIL")
 	password := os.Getenv("CODER_PASSWORD")
 	rawURL := os.Getenv("CODER_URL")
@@ -149,6 +146,9 @@ func execute(t *testing.T, in io.Reader, args ...string) result {
 	cmd.SetIn(in)
 	cmd.SetOut(&outStream)
 	cmd.SetErr(&errStream)
+
+	// TODO: this *needs* to be moved to function scoped writer arg. As is,
+	// this prevents tests from running in parallel.
 	clog.SetOutput(&errStream)
 
 	err := cmd.Execute()
