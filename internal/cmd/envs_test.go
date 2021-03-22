@@ -150,7 +150,7 @@ var floatComparer = cmp.Comparer(func(x, y float64) bool {
 })
 
 // this is a stopgap until we have support for a `coder images` subcommand
-// until then, we want can use the coder.Client to ensure our integration tests
+// until then, we can use the coder.Client to ensure our integration tests
 // work on fresh deployments.
 func ensureImageImported(ctx context.Context, t *testing.T, client coder.Client, img string) {
 	orgs, err := client.Organizations(ctx)
