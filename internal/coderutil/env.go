@@ -91,7 +91,7 @@ type EnvTable struct {
 
 // EnvsHumanTable performs the composition of each Environment with its associated ProviderName and ImageRepo.
 func EnvsHumanTable(ctx context.Context, client coder.Client, envs []coder.Environment) ([]EnvTable, error) {
-	imageMap, err := makeImageMap(ctx, client, envs)
+	imageMap, err := MakeImageMap(ctx, client, envs)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,8 @@ func EnvsHumanTable(ctx context.Context, client coder.Client, envs []coder.Envir
 	return pooledEnvs, nil
 }
 
-func makeImageMap(ctx context.Context, client coder.Client, envs []coder.Environment) (map[string]*coder.Image, error) {
+// MakeImageMap fetches all image entities specified in the slice of environments, then places them into an ID map.
+func MakeImageMap(ctx context.Context, client coder.Client, envs []coder.Environment) (map[string]*coder.Image, error) {
 	var (
 		mu     sync.Mutex
 		egroup = clog.LoggedErrGroup()
