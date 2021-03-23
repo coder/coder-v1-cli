@@ -165,7 +165,7 @@ func aggregateByOrg(providers []coder.KubernetesProvider, users []coder.User, or
 		}
 		groups = append(groups, orgGrouping{org: o, envs: orgEnvs[o.ID]})
 	}
-	return groups, labelAll(userLabeler(userIDMap), imgLabeler(images), providerLabeler(providerIDMap))
+	return groups, labelAll(imgLabeler(images), userLabeler(userIDMap), providerLabeler(providerIDMap))
 }
 
 func providerIDs(providers []coder.KubernetesProvider) map[string]coder.KubernetesProvider {
@@ -193,7 +193,7 @@ func aggregateByProvider(providers []coder.KubernetesProvider, users []coder.Use
 		}
 		groups = append(groups, providerGrouping{provider: p, envs: providerEnvs[p.ID]})
 	}
-	return groups, labelAll(userLabeler(userIDMap), imgLabeler(images)) // TODO: consider adding an org label here
+	return groups, labelAll(imgLabeler(images), userLabeler(userIDMap)) // TODO: consider adding an org label here
 }
 
 // groupable specifies a structure capable of being an aggregation group of environments (user, org, all).
@@ -398,7 +398,7 @@ type resources struct {
 
 func (a resources) String() string {
 	return fmt.Sprintf(
-		"[cpu: %.1fvCPU]\t[mem: %.1fGB]",
+		"[cpu: %.1f]\t[mem: %.1f GB]",
 		a.cpuAllocation, a.memAllocation,
 	)
 }
