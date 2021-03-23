@@ -1,0 +1,32 @@
+=== TEST: By User
+Second Random    (second-random@coder.com)    [cpu: 104.0]    [mem: 18.0 GB]
+    yet-another-env    [cpu: 100.0]    [mem: 2.0 GB]     [img: archlinux:10.2]    [provider: underground]    [org: NotSoSpecialOrg]
+    another-env        [cpu: 4.0]      [mem: 16.0 GB]    [img: archlinux:10.2]    [provider: underground]    [org: NotSoSpecialOrg]
+
+Random    (random@coder.com)    [cpu: 12.2]    [mem: 64.4 GB]
+    dev-env    [cpu: 12.2]    [mem: 64.4 GB]    [img: ubuntu:20.04]    [provider: mars]    [org: SpecialOrg]
+
+=== TEST: By Org
+NotSoSpecialOrg    (2 members)    [cpu: 104.0]    [mem: 18.0 GB]
+    yet-another-env    [cpu: 100.0]    [mem: 2.0 GB]     [img: archlinux:10.2]    [user: second-random@coder.com]    [provider: underground]
+    another-env        [cpu: 4.0]      [mem: 16.0 GB]    [img: archlinux:10.2]    [user: second-random@coder.com]    [provider: underground]
+
+SpecialOrg    (2 members)    [cpu: 12.2]    [mem: 64.4 GB]
+    dev-env    [cpu: 12.2]    [mem: 64.4 GB]    [img: ubuntu:20.04]    [user: random@coder.com]    [provider: mars]
+
+=== TEST: By Provider
+underground        [cpu: 104.0]    [mem: 18.0 GB]
+    yet-another-env    [cpu: 100.0]    [mem: 2.0 GB]     [img: archlinux:10.2]    [user: second-random@coder.com]
+    another-env        [cpu: 4.0]      [mem: 16.0 GB]    [img: archlinux:10.2]    [user: second-random@coder.com]
+
+mars        [cpu: 12.2]    [mem: 64.4 GB]
+    dev-env    [cpu: 12.2]    [mem: 64.4 GB]    [img: ubuntu:20.04]    [user: random@coder.com]
+
+=== TEST: Sort By Memory
+Random    (random@coder.com)    [cpu: 12.2]    [mem: 64.4 GB]
+    dev-env    [cpu: 12.2]    [mem: 64.4 GB]    [img: ubuntu:20.04]    [provider: mars]    [org: SpecialOrg]
+
+Second Random    (second-random@coder.com)    [cpu: 104.0]    [mem: 18.0 GB]
+    another-env        [cpu: 4.0]      [mem: 16.0 GB]    [img: archlinux:10.2]    [provider: underground]    [org: NotSoSpecialOrg]
+    yet-another-env    [cpu: 100.0]    [mem: 2.0 GB]     [img: archlinux:10.2]    [provider: underground]    [org: NotSoSpecialOrg]
+
