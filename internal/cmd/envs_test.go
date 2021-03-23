@@ -134,6 +134,7 @@ func assertEnv(t *testing.T, name string, envs []coder.Environment) *coder.Envir
 
 var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
+//nolint:unparam
 func randString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyz"
 	b := make([]byte, length)

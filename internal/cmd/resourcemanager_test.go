@@ -7,8 +7,9 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/slog/sloggers/slogtest/assert"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 var write = flag.Bool("write", false, "write to the golden files")
