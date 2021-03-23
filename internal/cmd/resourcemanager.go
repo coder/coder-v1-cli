@@ -130,7 +130,7 @@ func aggregateByUser(providers []coder.KubernetesProvider, users []coder.User, o
 		}
 		groups = append(groups, userGrouping{user: u, envs: userEnvs[u.ID]})
 	}
-	return groups, labelAll(orgLabeler(orgIDMap), providerLabeler{providerIDMap})
+	return groups, labelAll(orgLabeler(orgIDMap), providerLabeler(providerIDMap))
 }
 
 func userIDs(users []coder.User) map[string]coder.User {
@@ -158,7 +158,7 @@ func aggregateByOrg(providers []coder.KubernetesProvider, users []coder.User, or
 		}
 		groups = append(groups, orgGrouping{org: o, envs: orgEnvs[o.ID]})
 	}
-	return groups, labelAll(userLabeler(userIDMap), providerLabeler{providerIDMap})
+	return groups, labelAll(userLabeler(userIDMap), providerLabeler(providerIDMap))
 }
 
 func providerIDs(providers []coder.KubernetesProvider) map[string]coder.KubernetesProvider {
@@ -369,12 +369,10 @@ func (u userLabeler) label(e coder.Environment) string {
 	return fmt.Sprintf("[user: %s]", u[e.UserID].Email)
 }
 
-type providerLabeler struct {
-	providerMap map[string]coder.KubernetesProvider
-}
+type providerLabeler map[string]coder.KubernetesProvider
 
 func (p providerLabeler) label(e coder.Environment) string {
-	return fmt.Sprintf("[provider: %s]", p.providerMap[e.ResourcePoolID].Name)
+	return fmt.Sprintf("[provider: %s]", p[e.ResourcePoolID].Name)
 }
 
 func aggregateEnvResources(envs []coder.Environment) resources {
