@@ -418,6 +418,7 @@ func (a resources) String() string {
 	)
 }
 
+//nolint:unparam
 // truncate the given string and replace the removed chars with some replacement (ex: "...").
 func truncate(str string, max int, replace string) string {
 	if len(str) <= max {
