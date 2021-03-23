@@ -246,7 +246,7 @@ func (o orgGrouping) environments() []coder.Environment {
 
 func (o orgGrouping) header() string {
 	plural := "s"
-	if len(o.org.Members) < 2 && len(o.org.Members) != 0 {
+	if len(o.org.Members) == 1 {
 		plural = ""
 	}
 	return fmt.Sprintf("%s\t(%v member%s)", truncate(o.org.Name, 20, "..."), len(o.org.Members), plural)
