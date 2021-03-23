@@ -99,9 +99,6 @@ func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args [
 		if err != nil {
 			return xerrors.Errorf("get workspace providers: %w", err)
 		}
-
-		var groups []groupable
-		var labeler envLabeler
 		data := entities{
 			providers: providers.Kubernetes,
 			users:     users,
@@ -109,19 +106,27 @@ func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args [
 			envs:      envs,
 			images:    images,
 		}
-		switch options.group {
-		case "user":
-			groups, labeler = aggregateByUser(data, *options)
-		case "org":
-			groups, labeler = aggregateByOrg(data, *options)
-		case "provider":
-			groups, labeler = aggregateByProvider(data, *options)
-		default:
-			return xerrors.Errorf("unknown --group %q", options.group)
-		}
-
-		return printResourceTop(cmd.OutOrStdout(), groups, labeler, options.showEmptyGroups, options.sortBy)
+		return presentEntites(cmd.OutOrStdout(), data, *options)
 	}
+}
+
+func presentEntites(w io.Writer, data entities, options resourceTopOptions) error {
+	var (
+		groups  []groupable
+		labeler envLabeler
+	)
+	switch options.group {
+	case "user":
+		groups, labeler = aggregateByUser(data, options)
+	case "org":
+		groups, labeler = aggregateByOrg(data, options)
+	case "provider":
+		groups, labeler = aggregateByProvider(data, options)
+	default:
+		return xerrors.Errorf("unknown --group %q", options.group)
+	}
+
+	return printResourceTop(w, groups, labeler, options.showEmptyGroups, options.sortBy)
 }
 
 type entities struct {
@@ -241,7 +246,7 @@ func (o orgGrouping) environments() []coder.Environment {
 
 func (o orgGrouping) header() string {
 	plural := "s"
-	if len(o.org.Members) < 2 {
+	if len(o.org.Members) < 2 && len(o.org.Members) != 0 {
 		plural = ""
 	}
 	return fmt.Sprintf("%s\t(%v member%s)", truncate(o.org.Name, 20, "..."), len(o.org.Members), plural)
