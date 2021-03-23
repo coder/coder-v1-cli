@@ -130,7 +130,7 @@ func aggregateByUser(providers []coder.KubernetesProvider, users []coder.User, o
 		}
 		groups = append(groups, userGrouping{user: u, envs: userEnvs[u.ID]})
 	}
-	return groups, labelAll(orgLabeler{orgIDMap}, providerLabeler{providerIDMap})
+	return groups, labelAll(orgLabeler(orgIDMap), providerLabeler{providerIDMap})
 }
 
 func userIDs(users []coder.User) map[string]coder.User {
@@ -158,7 +158,7 @@ func aggregateByOrg(providers []coder.KubernetesProvider, users []coder.User, or
 		}
 		groups = append(groups, orgGrouping{org: o, envs: orgEnvs[o.ID]})
 	}
-	return groups, labelAll(userLabeler{userIDMap}, providerLabeler{providerIDMap})
+	return groups, labelAll(userLabeler(userIDMap), providerLabeler{providerIDMap})
 }
 
 func providerIDs(providers []coder.KubernetesProvider) map[string]coder.KubernetesProvider {
@@ -186,7 +186,7 @@ func aggregateByProvider(providers []coder.KubernetesProvider, users []coder.Use
 		}
 		groups = append(groups, providerGrouping{provider: p, envs: providerEnvs[p.ID]})
 	}
-	return groups, labelAll(userLabeler{userIDMap}) // TODO: consider adding an org label here
+	return groups, labelAll(userLabeler(userIDMap)) // TODO: consider adding an org label here
 }
 
 // groupable specifies a structure capable of being an aggregation group of environments (user, org, all).
@@ -330,33 +330,25 @@ type envLabeler interface {
 	label(coder.Environment) string
 }
 
-func labelAll(labels ...envLabeler) envLabeler {
-	return multiLabeler{
-		labelers: labels,
-	}
-}
+func labelAll(labels ...envLabeler) envLabeler { return multiLabeler(labels) }
 
-type multiLabeler struct {
-	labelers []envLabeler
-}
+type multiLabeler []envLabeler
 
 func (m multiLabeler) label(e coder.Environment) string {
 	var str strings.Builder
-	for i, l := range m.labelers {
+	for i, labeler := range m {
 		if i != 0 {
 			str.WriteString("\t")
 		}
-		str.WriteString(l.label(e))
+		str.WriteString(labeler.label(e))
 	}
 	return str.String()
 }
 
-type orgLabeler struct {
-	orgMap map[string]coder.Organization
-}
+type orgLabeler map[string]coder.Organization
 
 func (o orgLabeler) label(e coder.Environment) string {
-	return fmt.Sprintf("[org: %s]", o.orgMap[e.OrganizationID].Name)
+	return fmt.Sprintf("[org: %s]", o[e.OrganizationID].Name)
 }
 
 // TODO: implement
@@ -371,12 +363,10 @@ func (i imgLabeler) label(e coder.Environment) string {
 	return fmt.Sprintf("[img: %s:%s]", i.imgMap[e.ImageID].Repository, e.ImageTag)
 }
 
-type userLabeler struct {
-	userMap map[string]coder.User
-}
+type userLabeler map[string]coder.User
 
 func (u userLabeler) label(e coder.Environment) string {
-	return fmt.Sprintf("[user: %s]", u.userMap[e.UserID].Email)
+	return fmt.Sprintf("[user: %s]", u[e.UserID].Email)
 }
 
 type providerLabeler struct {
