@@ -11,6 +11,8 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/internal/coderutil"
+	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/pkg/clog"
 )
 
@@ -40,6 +42,7 @@ func resourceTop() *cobra.Command {
 		Use:   "top",
 		Short: "resource viewer with Coder platform annotations",
 		RunE:  runResourceTop(&options),
+		Args:  xcobra.ExactArgs(0),
 		Example: `coder resources top --group org
 coder resources top --group org --verbose --org DevOps
 coder resources top --group user --verbose --user name@example.com
@@ -82,6 +85,10 @@ func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args [
 		if err != nil {
 			return xerrors.Errorf("get users: %w", err)
 		}
+		images, err := coderutil.MakeImageMap(ctx, client, envs)
+		if err != nil {
+			return xerrors.Errorf("get images: %w", err)
+		}
 
 		orgs, err := client.Organizations(ctx)
 		if err != nil {
@@ -97,11 +104,11 @@ func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args [
 		var labeler envLabeler
 		switch options.group {
 		case "user":
-			groups, labeler = aggregateByUser(providers.Kubernetes, users, orgs, envs, *options)
+			groups, labeler = aggregateByUser(providers.Kubernetes, users, orgs, envs, images, *options)
 		case "org":
-			groups, labeler = aggregateByOrg(providers.Kubernetes, users, orgs, envs, *options)
+			groups, labeler = aggregateByOrg(providers.Kubernetes, users, orgs, envs, images, *options)
 		case "provider":
-			groups, labeler = aggregateByProvider(providers.Kubernetes, users, orgs, envs, *options)
+			groups, labeler = aggregateByProvider(providers.Kubernetes, users, orgs, envs, images, *options)
 		default:
 			return xerrors.Errorf("unknown --group %q", options.group)
 		}
@@ -110,7 +117,7 @@ func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args [
 	}
 }
 
-func aggregateByUser(providers []coder.KubernetesProvider, users []coder.User, orgs []coder.Organization, envs []coder.Environment, options resourceTopOptions) ([]groupable, envLabeler) {
+func aggregateByUser(providers []coder.KubernetesProvider, users []coder.User, orgs []coder.Organization, envs []coder.Environment, images map[string]*coder.Image, options resourceTopOptions) ([]groupable, envLabeler) {
 	var groups []groupable
 	providerIDMap := providerIDs(providers)
 	orgIDMap := make(map[string]coder.Organization)
@@ -130,7 +137,7 @@ func aggregateByUser(providers []coder.KubernetesProvider, users []coder.User, o
 		}
 		groups = append(groups, userGrouping{user: u, envs: userEnvs[u.ID]})
 	}
-	return groups, labelAll(orgLabeler(orgIDMap), providerLabeler(providerIDMap))
+	return groups, labelAll(imgLabeler(images), providerLabeler(providerIDMap), orgLabeler(orgIDMap))
 }
 
 func userIDs(users []coder.User) map[string]coder.User {
@@ -141,7 +148,7 @@ func userIDs(users []coder.User) map[string]coder.User {
 	return userIDMap
 }
 
-func aggregateByOrg(providers []coder.KubernetesProvider, users []coder.User, orgs []coder.Organization, envs []coder.Environment, options resourceTopOptions) ([]groupable, envLabeler) {
+func aggregateByOrg(providers []coder.KubernetesProvider, users []coder.User, orgs []coder.Organization, envs []coder.Environment, images map[string]*coder.Image, options resourceTopOptions) ([]groupable, envLabeler) {
 	var groups []groupable
 	providerIDMap := providerIDs(providers)
 	orgEnvs := make(map[string][]coder.Environment, len(orgs))
@@ -158,7 +165,7 @@ func aggregateByOrg(providers []coder.KubernetesProvider, users []coder.User, or
 		}
 		groups = append(groups, orgGrouping{org: o, envs: orgEnvs[o.ID]})
 	}
-	return groups, labelAll(userLabeler(userIDMap), providerLabeler(providerIDMap))
+	return groups, labelAll(userLabeler(userIDMap), imgLabeler(images), providerLabeler(providerIDMap))
 }
 
 func providerIDs(providers []coder.KubernetesProvider) map[string]coder.KubernetesProvider {
@@ -169,7 +176,7 @@ func providerIDs(providers []coder.KubernetesProvider) map[string]coder.Kubernet
 	return providerIDMap
 }
 
-func aggregateByProvider(providers []coder.KubernetesProvider, users []coder.User, _ []coder.Organization, envs []coder.Environment, options resourceTopOptions) ([]groupable, envLabeler) {
+func aggregateByProvider(providers []coder.KubernetesProvider, users []coder.User, _ []coder.Organization, envs []coder.Environment, images map[string]*coder.Image, options resourceTopOptions) ([]groupable, envLabeler) {
 	var groups []groupable
 	providerIDMap := providerIDs(providers)
 	userIDMap := userIDs(users)
@@ -186,7 +193,7 @@ func aggregateByProvider(providers []coder.KubernetesProvider, users []coder.Use
 		}
 		groups = append(groups, providerGrouping{provider: p, envs: providerEnvs[p.ID]})
 	}
-	return groups, labelAll(userLabeler(userIDMap)) // TODO: consider adding an org label here
+	return groups, labelAll(userLabeler(userIDMap), imgLabeler(images)) // TODO: consider adding an org label here
 }
 
 // groupable specifies a structure capable of being an aggregation group of environments (user, org, all).
@@ -351,16 +358,10 @@ func (o orgLabeler) label(e coder.Environment) string {
 	return fmt.Sprintf("[org: %s]", o[e.OrganizationID].Name)
 }
 
-// TODO: implement
-//nolint
-type imgLabeler struct {
-	imgMap map[string]coder.Image
-}
+type imgLabeler map[string]*coder.Image
 
-// TODO: implement
-//nolint
 func (i imgLabeler) label(e coder.Environment) string {
-	return fmt.Sprintf("[img: %s:%s]", i.imgMap[e.ImageID].Repository, e.ImageTag)
+	return fmt.Sprintf("[img: %s:%s]", i[e.ImageID].Repository, e.ImageTag)
 }
 
 type userLabeler map[string]coder.User
@@ -387,33 +388,19 @@ func aggregateEnvResources(envs []coder.Environment) resources {
 }
 
 type resources struct {
-	cpuAllocation  float32
+	cpuAllocation float32
+	memAllocation float32
+
+	// TODO: consider using these
 	cpuUtilization float32
-	memAllocation  float32
 	memUtilization float32
 }
 
 func (a resources) String() string {
 	return fmt.Sprintf(
-		"[cpu: alloc=%.1fvCPU]\t[mem: alloc=%.1fGB]",
+		"[cpu: %.1fvCPU]\t[mem: %.1fGB]",
 		a.cpuAllocation, a.memAllocation,
 	)
-}
-
-//nolint:unused
-func (a resources) cpuUtilPercentage() string {
-	if a.cpuAllocation == 0 {
-		return "N/A"
-	}
-	return fmt.Sprintf("%.1f%%", a.cpuUtilization/a.cpuAllocation*100)
-}
-
-//nolint:unused
-func (a resources) memUtilPercentage() string {
-	if a.memAllocation == 0 {
-		return "N/A"
-	}
-	return fmt.Sprintf("%.1f%%", a.memUtilization/a.memAllocation*100)
 }
 
 // truncate the given string and replace the removed chars with some replacement (ex: "...").
