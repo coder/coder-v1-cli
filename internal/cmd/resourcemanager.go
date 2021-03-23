@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -96,11 +97,11 @@ func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args [
 		var labeler envLabeler
 		switch options.group {
 		case "user":
-			groups, labeler = aggregateByUser(users, orgs, envs, *options)
+			groups, labeler = aggregateByUser(providers.Kubernetes, users, orgs, envs, *options)
 		case "org":
-			groups, labeler = aggregateByOrg(users, orgs, envs, *options)
+			groups, labeler = aggregateByOrg(providers.Kubernetes, users, orgs, envs, *options)
 		case "provider":
-			groups, labeler = aggregateByProvider(providers.Kubernetes, orgs, envs, *options)
+			groups, labeler = aggregateByProvider(providers.Kubernetes, users, orgs, envs, *options)
 		default:
 			return xerrors.Errorf("unknown --group %q", options.group)
 		}
@@ -109,8 +110,9 @@ func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args [
 	}
 }
 
-func aggregateByUser(users []coder.User, orgs []coder.Organization, envs []coder.Environment, options resourceTopOptions) ([]groupable, envLabeler) {
+func aggregateByUser(providers []coder.KubernetesProvider, users []coder.User, orgs []coder.Organization, envs []coder.Environment, options resourceTopOptions) ([]groupable, envLabeler) {
 	var groups []groupable
+	providerIDMap := providerIDs(providers)
 	orgIDMap := make(map[string]coder.Organization)
 	for _, o := range orgs {
 		orgIDMap[o.ID] = o
@@ -128,16 +130,22 @@ func aggregateByUser(users []coder.User, orgs []coder.Organization, envs []coder
 		}
 		groups = append(groups, userGrouping{user: u, envs: userEnvs[u.ID]})
 	}
-	return groups, orgLabeler{orgIDMap}
+	return groups, labelAll(orgLabeler{orgIDMap}, providerLabeler{providerIDMap})
 }
 
-func aggregateByOrg(users []coder.User, orgs []coder.Organization, envs []coder.Environment, options resourceTopOptions) ([]groupable, envLabeler) {
-	var groups []groupable
+func userIDs(users []coder.User) map[string]coder.User {
 	userIDMap := make(map[string]coder.User)
 	for _, u := range users {
 		userIDMap[u.ID] = u
 	}
+	return userIDMap
+}
+
+func aggregateByOrg(providers []coder.KubernetesProvider, users []coder.User, orgs []coder.Organization, envs []coder.Environment, options resourceTopOptions) ([]groupable, envLabeler) {
+	var groups []groupable
+	providerIDMap := providerIDs(providers)
 	orgEnvs := make(map[string][]coder.Environment, len(orgs))
+	userIDMap := userIDs(users)
 	for _, e := range envs {
 		if options.user != "" && userIDMap[e.UserID].Email != options.user {
 			continue
@@ -150,15 +158,21 @@ func aggregateByOrg(users []coder.User, orgs []coder.Organization, envs []coder.
 		}
 		groups = append(groups, orgGrouping{org: o, envs: orgEnvs[o.ID]})
 	}
-	return groups, userLabeler{userIDMap}
+	return groups, labelAll(userLabeler{userIDMap}, providerLabeler{providerIDMap})
 }
 
-func aggregateByProvider(providers []coder.KubernetesProvider, _ []coder.Organization, envs []coder.Environment, options resourceTopOptions) ([]groupable, envLabeler) {
-	var groups []groupable
+func providerIDs(providers []coder.KubernetesProvider) map[string]coder.KubernetesProvider {
 	providerIDMap := make(map[string]coder.KubernetesProvider)
 	for _, p := range providers {
 		providerIDMap[p.ID] = p
 	}
+	return providerIDMap
+}
+
+func aggregateByProvider(providers []coder.KubernetesProvider, users []coder.User, _ []coder.Organization, envs []coder.Environment, options resourceTopOptions) ([]groupable, envLabeler) {
+	var groups []groupable
+	providerIDMap := providerIDs(providers)
+	userIDMap := userIDs(users)
 	providerEnvs := make(map[string][]coder.Environment, len(providers))
 	for _, e := range envs {
 		if options.provider != "" && providerIDMap[e.ResourcePoolID].Name != options.provider {
@@ -172,7 +186,7 @@ func aggregateByProvider(providers []coder.KubernetesProvider, _ []coder.Organiz
 		}
 		groups = append(groups, providerGrouping{provider: p, envs: providerEnvs[p.ID]})
 	}
-	return groups, providerLabeler{providerIDMap}
+	return groups, labelAll(userLabeler{userIDMap}) // TODO: consider adding an org label here
 }
 
 // groupable specifies a structure capable of being an aggregation group of environments (user, org, all).
@@ -316,12 +330,45 @@ type envLabeler interface {
 	label(coder.Environment) string
 }
 
+func labelAll(labels ...envLabeler) envLabeler {
+	return multiLabeler{
+		labelers: labels,
+	}
+}
+
+type multiLabeler struct {
+	labelers []envLabeler
+}
+
+func (m multiLabeler) label(e coder.Environment) string {
+	var str strings.Builder
+	for i, l := range m.labelers {
+		if i != 0 {
+			str.WriteString("\t")
+		}
+		str.WriteString(l.label(e))
+	}
+	return str.String()
+}
+
 type orgLabeler struct {
 	orgMap map[string]coder.Organization
 }
 
 func (o orgLabeler) label(e coder.Environment) string {
 	return fmt.Sprintf("[org: %s]", o.orgMap[e.OrganizationID].Name)
+}
+
+// TODO: implement
+//nolint
+type imgLabeler struct {
+	imgMap map[string]coder.Image
+}
+
+// TODO: implement
+//nolint
+func (i imgLabeler) label(e coder.Environment) string {
+	return fmt.Sprintf("[img: %s:%s]", i.imgMap[e.ImageID].Repository, e.ImageTag)
 }
 
 type userLabeler struct {
