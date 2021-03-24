@@ -98,3 +98,27 @@ func (c *DefaultClient) CreateWorkspaceProvider(ctx context.Context, req CreateW
 func (c *DefaultClient) DeleteWorkspaceProviderByID(ctx context.Context, id string) error {
 	return c.requestBody(ctx, http.MethodDelete, "/api/private/resource-pools/"+id, nil, nil)
 }
+
+// CordoneWorkspaceProviderReq defines the request parameters for creating a new workspace provider entity.
+type CordoneWorkspaceProviderReq struct {
+	Reason string `json:"reason"`
+}
+
+// CordonWorkspaceProvider prevents the provider from having any more workspaces placed on it.
+func (c *DefaultClient) CordonWorkspaceProvider(ctx context.Context, id, reason string) error {
+	req := CordoneWorkspaceProviderReq{Reason: reason}
+	err := c.requestBody(ctx, http.MethodPost, "/api/private/resource-pools/"+id+"/cordon", req, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// UnCordonWorkspaceProvider prevents the provider from having any more workspaces placed on it.
+func (c *DefaultClient) UnCordonWorkspaceProvider(ctx context.Context, id string) error {
+	err := c.requestBody(ctx, http.MethodPost, "/api/private/resource-pools/"+id+"/uncordon", nil, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
