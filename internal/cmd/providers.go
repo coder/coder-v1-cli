@@ -278,7 +278,7 @@ coder providers uncordon my-workspace-provider`,
 			if err := client.UnCordonWorkspaceProvider(ctx, provider.ID); err != nil {
 				return err
 			}
-			clog.LogSuccess(fmt.Sprintf("provider %q successfully cordoned - you can now create workspaces on this provider", wpName))
+			clog.LogSuccess(fmt.Sprintf("provider %q successfully uncordoned - you can now create workspaces on this provider", wpName))
 			return nil
 		},
 	}
