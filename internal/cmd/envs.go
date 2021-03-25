@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/url"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/coderutil"
@@ -300,6 +299,7 @@ func createEnvFromRepoCmd() *cobra.Command {
 		filepath     string
 		org          string
 		providerName string
+		envName      string
 	)
 
 	cmd := &cobra.Command{
@@ -308,21 +308,14 @@ func createEnvFromRepoCmd() *cobra.Command {
 		Long:   "Create a new Coder environment from a config file.",
 		Hidden: true,
 		Example: `# create a new environment from git repository template
-coder envs create-from-config --repo-url github.com/cdr/m --branch my-branch
-coder envs create-from-config -f coder.yaml`,
+coder envs create-from-config --name="dev-env" --repo-url github.com/cdr/m --branch my-branch
+coder envs create-from-config --name="dev-env" -f coder.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
 			client, err := newClient(ctx)
 			if err != nil {
 				return err
-			}
-
-			if repo != "" {
-				_, err = url.Parse(repo)
-				if err != nil {
-					return xerrors.Errorf("'repo' must be a valid url: %w", err)
-				}
 			}
 
 			orgs, err := getUserOrgs(ctx, client, coder.Me)
@@ -388,6 +381,7 @@ coder envs create-from-config -f coder.yaml`,
 				TemplateID:     version.TemplateID,
 				ResourcePoolID: provider.ID,
 				Namespace:      provider.DefaultNamespace,
+				Name:           envName,
 			})
 			if err != nil {
 				return handleAPIError(err)
@@ -414,6 +408,7 @@ coder envs create-from-config -f coder.yaml`,
 	cmd.Flags().StringVarP(&repo, "repo-url", "r", "", "URL of the git repository to pull the config from. Config file must live in '.coder/coder.yaml'.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the environment")
+	cmd.Flags().StringVar(&envName, "name", "", "name of the environment to be created")
 	return cmd
 }
 
