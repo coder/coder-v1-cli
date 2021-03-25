@@ -100,14 +100,6 @@ func TestCoderCLI(t *testing.T) {
 		c.Run(ctx, "coder tokens ls").Assert(t,
 			tcli.Error(),
 		)
-
-		c.Run(ctx, "coder providers cordon --reason \"cloud cost\" built-in").Assert(t,
-			tcli.Success(),
-		)
-
-		c.Run(ctx, "coder providers uncordon built-in").Assert(t,
-			tcli.Success(),
-		)
 	})
 }
 
