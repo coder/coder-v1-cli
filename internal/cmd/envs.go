@@ -316,7 +316,7 @@ coder envs create-from-config --name="dev-env" -f coder.yaml`,
 			if envName == "" {
 				return clog.Error("Must provide a environment name.",
 					clog.BlankLine,
-					clog.Tipf("Use --name=<env-name> to name your enviornment"),
+					clog.Tipf("Use --name=<env-name> to name your environment"),
 				)
 			}
 
