@@ -308,10 +308,17 @@ func createEnvFromRepoCmd() *cobra.Command {
 		Long:   "Create a new Coder environment from a config file.",
 		Hidden: true,
 		Example: `# create a new environment from git repository template
-coder envs create-from-config --name="dev-env" --repo-url github.com/cdr/m --branch my-branch
+coder envs create-from-config --name="dev-env" --repo-url github.com/cdr/m --ref my-branch
 coder envs create-from-config --name="dev-env" -f coder.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+
+			if envName == "" {
+				return clog.Error("Must provide a environment name.",
+					clog.BlankLine,
+					clog.Tipf("Use --name=<env-name> to name your enviornment"),
+				)
+			}
 
 			client, err := newClient(ctx)
 			if err != nil {
