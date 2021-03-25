@@ -229,6 +229,7 @@ type Client interface {
 	// CordonWorkspaceProvider prevents the provider from having any more workspaces placed on it.
 	CordonWorkspaceProvider(ctx context.Context, id, reason string) error
 
-	// UnCordonWorkspaceProvider prevents the provider from having any more workspaces placed on it.
+	// UnCordonWorkspaceProvider changes an existing cordoned providers status to 'Ready';
+	// allowing it to continue creating new workspaces and provisioning resources for them.
 	UnCordonWorkspaceProvider(ctx context.Context, id string) error
 }

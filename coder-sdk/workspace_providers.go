@@ -114,7 +114,8 @@ func (c *DefaultClient) CordonWorkspaceProvider(ctx context.Context, id, reason 
 	return nil
 }
 
-// UnCordonWorkspaceProvider prevents the provider from having any more workspaces placed on it.
+// UnCordonWorkspaceProvider changes an existing cordoned providers status to 'Ready';
+// allowing it to continue creating new workspaces and provisioning resources for them.
 func (c *DefaultClient) UnCordonWorkspaceProvider(ctx context.Context, id string) error {
 	err := c.requestBody(ctx, http.MethodPost, "/api/private/resource-pools/"+id+"/uncordon", nil, nil)
 	if err != nil {
