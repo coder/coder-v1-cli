@@ -224,6 +224,7 @@ func cordonProviderCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "cordon [workspace_provider_name]",
+		Args:  xcobra.ExactArgs(1),
 		Short: "cordon a workspace provider.",
 		Long:  "Prevent an existing Coder workspace provider from supporting any additional workspaces.",
 		Example: `# cordon an existing workspace provider by name
@@ -235,11 +236,17 @@ coder providers cordon my-workspace-provider --reason "limit cloud clost"`,
 				return err
 			}
 
-			provider, err := coderutil.ProviderByName(ctx, client, args[0])
+			wpName := args[0]
+			provider, err := coderutil.ProviderByName(ctx, client, wpName)
 			if err != nil {
 				return err
 			}
-			return client.CordonWorkspaceProvider(ctx, provider.ID, reason)
+
+			if err := client.CordonWorkspaceProvider(ctx, provider.ID, reason); err != nil {
+				return err
+			}
+			clog.LogSuccess(fmt.Sprintf("provider %q successfully cordoned - you can no longer create workspaces on this provider without uncordoning first", wpName))
+			return nil
 		},
 	}
 	cmd.Flags().StringVar(&reason, "reason", "", "reason for cordoning the provider")
@@ -250,6 +257,7 @@ coder providers cordon my-workspace-provider --reason "limit cloud clost"`,
 func unCordonProviderCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "uncordon [workspace_provider_name]",
+		Args:  xcobra.ExactArgs(1),
 		Short: "uncordon a workspace provider.",
 		Long:  "Set a currently cordoned provider as ready; enabling it to continue provisioning resources for new workspaces.",
 		Example: `# uncordon an existing workspace provider by name
@@ -261,11 +269,17 @@ coder providers uncordon my-workspace-provider`,
 				return err
 			}
 
-			provider, err := coderutil.ProviderByName(ctx, client, args[0])
+			wpName := args[0]
+			provider, err := coderutil.ProviderByName(ctx, client, wpName)
 			if err != nil {
 				return err
 			}
-			return client.UnCordonWorkspaceProvider(ctx, provider.ID)
+
+			if err := client.UnCordonWorkspaceProvider(ctx, provider.ID); err != nil {
+				return err
+			}
+			clog.LogSuccess(fmt.Sprintf("provider %q successfully cordoned - you can now create workspaces on this provider", wpName))
+			return nil
 		},
 	}
 	return cmd

@@ -8,7 +8,6 @@ import (
 
 	"cdr.dev/slog/sloggers/slogtest/assert"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/pkg/tcli"
 )
 
@@ -102,10 +101,8 @@ func TestCoderCLI(t *testing.T) {
 			tcli.Error(),
 		)
 
-		var updatedProvider coder.KubernetesProvider
 		c.Run(ctx, "coder providers cordon --reason \"cloud cost\" built-in").Assert(t,
 			tcli.Success(),
-			tcli.StdoutJSONUnmarshal(&updatedProvider),
 		)
 
 		c.Run(ctx, "coder providers uncordon built-in").Assert(t,
