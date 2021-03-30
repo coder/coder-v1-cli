@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// APIToken describes a Coder Enterprise APIToken resource for use in API requests.
+// APIToken describes a Coder APIToken resource for use in API requests.
 type APIToken struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
@@ -24,7 +24,7 @@ type createAPITokenResp struct {
 	Key string `json:"key"`
 }
 
-// CreateAPIToken creates a new APIToken for making authenticated requests to Coder Enterprise.
+// CreateAPIToken creates a new APIToken for making authenticated requests to Coder.
 func (c *DefaultClient) CreateAPIToken(ctx context.Context, userID string, req CreateAPITokenReq) (token string, _ error) {
 	var resp createAPITokenResp
 	err := c.requestBody(ctx, http.MethodPost, "/api/v0/api-keys/"+userID, req, &resp)

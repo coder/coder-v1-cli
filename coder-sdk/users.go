@@ -20,7 +20,7 @@ type User struct {
 	UpdatedAt         time.Time `json:"updated_at"         table:"-"`
 }
 
-// Role defines a Coder Enterprise permissions role group.
+// Role defines a Coder permissions role group.
 type Role string
 
 // Site Roles.

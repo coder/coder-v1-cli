@@ -3,7 +3,7 @@
 Authenticate this client for future operations
 
 ```
-coder login [Coder Enterprise URL eg. https://my.coder.domain/] [flags]
+coder login [Coder URL eg. https://my.coder.domain/] [flags]
 ```
 
 ### Options
@@ -20,5 +20,5 @@ coder login [Coder Enterprise URL eg. https://my.coder.domain/] [flags]
 
 ### SEE ALSO
 
-* [coder](coder.md)	 - coder provides a CLI for working with an existing Coder Enterprise installation
+* [coder](coder.md)	 - coder provides a CLI for working with an existing Coder installation
 
