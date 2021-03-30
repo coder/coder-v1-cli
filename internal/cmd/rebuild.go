@@ -43,7 +43,7 @@ coder envs rebuild backend-env --force`,
 
 			if !force && env.LatestStat.ContainerStatus == coder.EnvironmentOn {
 				_, err = (&promptui.Prompt{
-					Label:     fmt.Sprintf("Rebuild environment \"%s\"? (will destroy any work outside of /home)", env.Name),
+					Label:     fmt.Sprintf("Rebuild environment %q? (will destroy any work outside of your home directory)", env.Name),
 					IsConfirm: true,
 				}).Run()
 				if err != nil {

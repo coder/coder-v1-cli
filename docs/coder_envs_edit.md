@@ -24,6 +24,7 @@ coder envs edit back-end-env --disk 20
   -c, --cpu float32      The number of cpu cores the environment should be provisioned with.
   -d, --disk int         The amount of disk storage an environment should be provisioned with.
       --follow           follow buildlog after initiating rebuild
+      --force            force rebuild without showing a confirmation prompt
   -g, --gpu int          The amount of disk storage to provision the environment with.
   -h, --help             help for edit
   -i, --image string     name of the image you want the environment to be based off of.

@@ -108,7 +108,7 @@ func Test_env_create(t *testing.T) {
 
 	// edit the CPU of the environment
 	cpu = 2.1
-	res = execute(t, nil, "envs", "edit", name, fmt.Sprintf("--cpu=%f", cpu), "--follow")
+	res = execute(t, nil, "envs", "edit", name, fmt.Sprintf("--cpu=%f", cpu), "--follow", "--force")
 	res.success(t)
 
 	// assert that the CPU actually did change after edit

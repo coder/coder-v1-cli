@@ -430,6 +430,7 @@ func editEnvCmd() *cobra.Command {
 		gpus   int
 		follow bool
 		user   string
+		force  bool
 	)
 
 	cmd := &cobra.Command{
@@ -482,6 +483,19 @@ coder envs edit back-end-env --disk 20`,
 				return err
 			}
 
+			if !force && env.LatestStat.ContainerStatus == coder.EnvironmentOn {
+				_, err = (&promptui.Prompt{
+					Label:     fmt.Sprintf("Rebuild environment %q? (will destroy any work outside of your home directory)", env.Name),
+					IsConfirm: true,
+				}).Run()
+				if err != nil {
+					return clog.Fatal(
+						"failed to confirm prompt", clog.BlankLine,
+						clog.Tipf(`use "--force" to rebuild without a confirmation prompt`),
+					)
+				}
+			}
+
 			if err := client.EditEnvironment(ctx, env.ID, *req); err != nil {
 				return xerrors.Errorf("failed to apply changes to environment %q: %w", envName, err)
 			}
@@ -510,6 +524,7 @@ coder envs edit back-end-env --disk 20`,
 	cmd.Flags().IntVarP(&gpus, "gpu", "g", 0, "The amount of disk storage to provision the environment with.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
+	cmd.Flags().BoolVar(&force, "force", false, "force rebuild without showing a confirmation prompt")
 	return cmd
 }
 
