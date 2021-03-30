@@ -36,7 +36,7 @@ func envsCmd() *cobra.Command {
 		watchBuildLogCommand(),
 		rebuildEnvCommand(),
 		createEnvCmd(),
-		createEnvFromRepoCmd(),
+		createEnvFromConfigCmd(),
 		editEnvCmd(),
 	)
 	return cmd
@@ -291,7 +291,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 	return cmd
 }
 
-func createEnvFromRepoCmd() *cobra.Command {
+func createEnvFromConfigCmd() *cobra.Command {
 	var (
 		ref          string
 		repo         string
@@ -303,12 +303,11 @@ func createEnvFromRepoCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:    "create-from-config",
-		Short:  "create a new environment from a config file.",
-		Long:   "Create a new Coder environment from a config file.",
-		Hidden: true,
-		Example: `# create a new environment from git repository template
-coder envs create-from-config --name="dev-env" --repo-url github.com/cdr/m --ref my-branch
+		Use:   "create-from-config",
+		Short: "create a new environment from a template",
+		Long:  "Create a new Coder environment using a Workspaces As Code template.",
+		Example: `# create a new environment from git repository
+coder envs create-from-config --name="dev-env" --repo-url https://github.com/cdr/m --ref my-branch
 coder envs create-from-config --name="dev-env" -f coder.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
