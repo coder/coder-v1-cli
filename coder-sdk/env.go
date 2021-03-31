@@ -111,12 +111,14 @@ type ParseTemplateRequest struct {
 	Local    io.Reader `json:"-"`
 }
 
+// TrackedTemplate represents a WaC template that is stored in coder db.
 type TrackedTemplate struct {
 	Repo     *GitRepo         `json:"repo"`
 	Template *Template        `json:"template"`
 	Version  *TemplateVersion `json:"template_version"`
 }
 
+// GitRepo represents a git repo (that contains a WaC template).
 type GitRepo struct {
 	ID        string    `json:"id"`
 	Scheme    string    `json:"scheme"`
@@ -128,6 +130,7 @@ type GitRepo struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// Template represents a WaC template.
 type Template struct {
 	ID        string       `json:"id"`
 	GitRepoID string       `json:"git_repo_id"`
@@ -138,16 +141,17 @@ type Template struct {
 	UpdatedAt time.Time    `json:"updated_at"`
 }
 
+// TemplateType represents the source of a WaC template.
 type TemplateType string
 
 const (
-	// Environment created via uploading a local template file
+	// TemplateTypeLocal represents an environment created via uploading a local template file.
 	TemplateTypeLocal TemplateType = "local"
 
-	// Environment created via web ui create form
+	// TemplateTypeLegacy represents an environment created via web ui create form.
 	TemplateTypeLegacy TemplateType = "legacy"
 
-	// Environment created via fetching a template from a remote reference (e.g. git repo)
+	// TemplateTypeRemote represents an environment created via fetching a template from a remote reference (e.g. git repo).
 	TemplateTypeRemote TemplateType = "remote"
 )
 
@@ -181,7 +185,7 @@ func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequ
 	opts = append(opts, withQueryParams(query))
 
 	if req.Local == nil {
-		if err := c.requestBody(ctx, http.MethodPost, path, req, &tpl, opts...); err != nil {
+		if err := c.requestBody(ctx, http.MethodPost, path, req, &tpl, opqts...); err != nil {
 			return &tpl, err
 		}
 		return &tpl, nil
@@ -198,6 +202,7 @@ func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequ
 	return &tpl, nil
 }
 
+// QueryTemplate fetches tracked templates with the given templateVersionID.
 func (c *DefaultClient) QueryTemplate(ctx context.Context, templateVersionID string) ([]*TrackedTemplate, error) {
 	const path = "/api/private/environments/template/"
 	var (
