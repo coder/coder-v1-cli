@@ -21,7 +21,7 @@ import (
 
 func loginCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "login [Coder Enterprise URL eg. https://my.coder.domain/]",
+		Use:   "login [Coder URL eg. https://my.coder.domain/]",
 		Short: "Authenticate this client for future operations",
 		Args:  xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

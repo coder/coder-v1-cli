@@ -15,14 +15,14 @@ const (
 	AuthProviderOIDC    AuthProviderType = "oidc"
 )
 
-// ConfigAuth describes the authentication configuration for a Coder Enterprise deployment.
+// ConfigAuth describes the authentication configuration for a Coder deployment.
 type ConfigAuth struct {
 	ProviderType *AuthProviderType `json:"provider_type"`
 	OIDC         *ConfigOIDC       `json:"oidc"`
 	SAML         *ConfigSAML       `json:"saml"`
 }
 
-// ConfigOIDC describes the OIDC configuration for single-signon support in Coder Enterprise.
+// ConfigOIDC describes the OIDC configuration for single-signon support in Coder.
 type ConfigOIDC struct {
 	ClientID     *string `json:"client_id"`
 	ClientSecret *string `json:"client_secret"`
@@ -38,26 +38,26 @@ type ConfigSAML struct {
 	PublicKeyCertificate        *string `json:"public_key_certificate"`
 }
 
-// ConfigOAuthBitbucketServer describes the Bitbucket integration configuration for a Coder Enterprise deployment.
+// ConfigOAuthBitbucketServer describes the Bitbucket integration configuration for a Coder deployment.
 type ConfigOAuthBitbucketServer struct {
 	BaseURL string `json:"base_url" diff:"oauth.bitbucket_server.base_url"`
 }
 
-// ConfigOAuthGitHub describes the Github integration configuration for a Coder Enterprise deployment.
+// ConfigOAuthGitHub describes the Github integration configuration for a Coder deployment.
 type ConfigOAuthGitHub struct {
 	BaseURL      string `json:"base_url"`
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
 }
 
-// ConfigOAuthGitLab describes the GitLab integration configuration for a Coder Enterprise deployment.
+// ConfigOAuthGitLab describes the GitLab integration configuration for a Coder deployment.
 type ConfigOAuthGitLab struct {
 	BaseURL      string `json:"base_url"`
 	ClientID     string `json:"client_id" `
 	ClientSecret string `json:"client_secret"`
 }
 
-// ConfigOAuth describes the aggregate git integration configuration for a Coder Enterprise deployment.
+// ConfigOAuth describes the aggregate git integration configuration for a Coder deployment.
 type ConfigOAuth struct {
 	BitbucketServer ConfigOAuthBitbucketServer `json:"bitbucket_server"`
 	GitHub          ConfigOAuthGitHub          `json:"github"`
@@ -96,7 +96,7 @@ type configSetupMode struct {
 	SetupMode bool `json:"setup_mode"`
 }
 
-// SiteSetupModeEnabled fetches the current setup_mode state of a Coder Enterprise deployment.
+// SiteSetupModeEnabled fetches the current setup_mode state of a Coder deployment.
 func (c *DefaultClient) SiteSetupModeEnabled(ctx context.Context) (bool, error) {
 	var conf configSetupMode
 	if err := c.requestBody(ctx, http.MethodGet, "/api/private/config/setup-mode", nil, &conf); err != nil {

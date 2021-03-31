@@ -12,7 +12,7 @@ import (
 	"cdr.dev/coder-cli/pkg/clog"
 )
 
-// Helpers for working with the Coder Enterprise API.
+// Helpers for working with the Coder API.
 
 // lookupUserOrgs gets a list of orgs the user is apart of.
 func lookupUserOrgs(user *coder.User, orgs []coder.Organization) []coder.Organization {
