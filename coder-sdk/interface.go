@@ -81,6 +81,8 @@ type Client interface {
 	// If a local file is specified then all other values in the request are ignored.
 	ParseTemplate(ctx context.Context, req ParseTemplateRequest) (*TemplateVersion, error)
 
+	QueryTemplate(ctx context.Context, templateVersionID string) ([]*TrackedTemplate, error)
+
 	// CreateEnvironmentFromRepo sends a request to create an environment from a repository.
 	CreateEnvironmentFromRepo(ctx context.Context, orgID string, req TemplateVersion) (*Environment, error)
 

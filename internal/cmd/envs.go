@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"sort"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/coderutil"
@@ -455,6 +456,22 @@ coder envs edit back-end-env --disk 20`,
 			env, err := findEnv(ctx, client, envName, user)
 			if err != nil {
 				return err
+			}
+
+			// CLI updates for environments that were created via templates should not work
+			tt, err := client.QueryTemplate(ctx, env.TemplateVersionID)
+			if err == nil && len(tt) != 0 {
+				sort.Slice(tt, func(i, j int) bool { return tt[i].Template.CreatedAt.Before(tt[j].Template.CreatedAt) })
+				latest := tt[len(tt)-1]
+				if latest.Template.Type != coder.TemplateTypeLegacy {
+					var tip string
+					if latest.Template.Type == coder.TemplateTypeRemote {
+						tip = fmt.Sprintf("Update the template at %s://%s/%s/%s", latest.Repo.Scheme, latest.Repo.Host, latest.Repo.Owner, latest.Repo.Repo)
+					} else if latest.Template.Type == coder.TemplateTypeLocal {
+						tip = "Upload a new local template"
+					}
+					return clog.Fatal("Cannot update environments that were created from a template", clog.BlankLine, clog.Tipf(tip))
+				}
 			}
 
 			multiOrgMember, err := isMultiOrgMember(ctx, client, user)

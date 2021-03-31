@@ -15,27 +15,28 @@ import (
 
 // Environment describes a Coder environment.
 type Environment struct {
-	ID               string           `json:"id"                 table:"-"`
-	Name             string           `json:"name"               table:"Name"`
-	ImageID          string           `json:"image_id"           table:"-"`
-	ImageTag         string           `json:"image_tag"          table:"ImageTag"`
-	OrganizationID   string           `json:"organization_id"    table:"-"`
-	UserID           string           `json:"user_id"            table:"-"`
-	LastBuiltAt      time.Time        `json:"last_built_at"      table:"-"`
-	CPUCores         float32          `json:"cpu_cores"          table:"CPUCores"`
-	MemoryGB         float32          `json:"memory_gb"          table:"MemoryGB"`
-	DiskGB           int              `json:"disk_gb"            table:"DiskGB"`
-	GPUs             int              `json:"gpus"               table:"-"`
-	Updating         bool             `json:"updating"           table:"-"`
-	LatestStat       EnvironmentStat  `json:"latest_stat"        table:"Status"`
-	RebuildMessages  []RebuildMessage `json:"rebuild_messages"   table:"-"`
-	CreatedAt        time.Time        `json:"created_at"         table:"-"`
-	UpdatedAt        time.Time        `json:"updated_at"         table:"-"`
-	LastOpenedAt     time.Time        `json:"last_opened_at"     table:"-"`
-	LastConnectionAt time.Time        `json:"last_connection_at" table:"-"`
-	AutoOffThreshold Duration         `json:"auto_off_threshold" table:"-"`
-	UseContainerVM   bool             `json:"use_container_vm"   table:"CVM"`
-	ResourcePoolID   string           `json:"resource_pool_id"   table:"-"`
+	ID                string           `json:"id"                 table:"-"`
+	Name              string           `json:"name"               table:"Name"`
+	ImageID           string           `json:"image_id"           table:"-"`
+	ImageTag          string           `json:"image_tag"          table:"ImageTag"`
+	OrganizationID    string           `json:"organization_id"    table:"-"`
+	UserID            string           `json:"user_id"            table:"-"`
+	LastBuiltAt       time.Time        `json:"last_built_at"      table:"-"`
+	CPUCores          float32          `json:"cpu_cores"          table:"CPUCores"`
+	MemoryGB          float32          `json:"memory_gb"          table:"MemoryGB"`
+	DiskGB            int              `json:"disk_gb"            table:"DiskGB"`
+	GPUs              int              `json:"gpus"               table:"-"`
+	Updating          bool             `json:"updating"           table:"-"`
+	LatestStat        EnvironmentStat  `json:"latest_stat"        table:"Status"`
+	RebuildMessages   []RebuildMessage `json:"rebuild_messages"   table:"-"`
+	CreatedAt         time.Time        `json:"created_at"         table:"-"`
+	UpdatedAt         time.Time        `json:"updated_at"         table:"-"`
+	LastOpenedAt      time.Time        `json:"last_opened_at"     table:"-"`
+	LastConnectionAt  time.Time        `json:"last_connection_at" table:"-"`
+	AutoOffThreshold  Duration         `json:"auto_off_threshold" table:"-"`
+	UseContainerVM    bool             `json:"use_container_vm"   table:"CVM"`
+	ResourcePoolID    string           `json:"resource_pool_id"   table:"-"`
+	TemplateVersionID string           `json:"template_version_id" table:"-"`
 }
 
 // RebuildMessage defines the message shown when an Environment requires a rebuild for it can be accessed.
@@ -110,6 +111,46 @@ type ParseTemplateRequest struct {
 	Local    io.Reader `json:"-"`
 }
 
+type TrackedTemplate struct {
+	Repo     *GitRepo         `json:"repo"`
+	Template *Template        `json:"template"`
+	Version  *TemplateVersion `json:"template_version"`
+}
+
+type GitRepo struct {
+	ID        string    `json:"id"`
+	Scheme    string    `json:"scheme"`
+	Host      string    `json:"host"`
+	Owner     string    `json:"owner"`
+	Repo      string    `json:"repo"`
+	Type      string    `json:"type"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type Template struct {
+	ID        string       `json:"id"`
+	GitRepoID string       `json:"git_repo_id"`
+	Filepath  string       `json:"filepath"`
+	Ref       string       `json:"ref"`
+	Type      TemplateType `json:"type"`
+	CreatedAt time.Time    `json:"created_at"`
+	UpdatedAt time.Time    `json:"updated_at"`
+}
+
+type TemplateType string
+
+const (
+	// Environment created via uploading a local template file
+	TemplateTypeLocal TemplateType = "local"
+
+	// Environment created via web ui create form
+	TemplateTypeLegacy TemplateType = "legacy"
+
+	// Environment created via fetching a template from a remote reference (e.g. git repo)
+	TemplateTypeRemote TemplateType = "remote"
+)
+
 // TemplateVersion is a Workspaces As Code (WAC) template.
 // For now, let's not interpret it on the CLI level. We just need
 // to forward this as part of the create env request.
@@ -155,6 +196,24 @@ func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequ
 	}
 
 	return &tpl, nil
+}
+
+func (c *DefaultClient) QueryTemplate(ctx context.Context, templateVersionID string) ([]*TrackedTemplate, error) {
+	const path = "/api/private/environments/template/"
+	var (
+		tts   []*TrackedTemplate
+		opts  []requestOption
+		query = url.Values{}
+	)
+
+	query.Set("version-id", templateVersionID)
+	opts = append(opts, withQueryParams(query))
+
+	if err := c.requestBody(ctx, http.MethodGet, path, nil, &tts, opts...); err != nil {
+		return tts, err
+	}
+
+	return tts, nil
 }
 
 // CreateEnvironmentFromRepo sends a request to create an environment from a repository.
