@@ -185,7 +185,7 @@ func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequ
 	opts = append(opts, withQueryParams(query))
 
 	if req.Local == nil {
-		if err := c.requestBody(ctx, http.MethodPost, path, req, &tpl, opqts...); err != nil {
+		if err := c.requestBody(ctx, http.MethodPost, path, req, &tpl, opts...); err != nil {
 			return &tpl, err
 		}
 		return &tpl, nil
