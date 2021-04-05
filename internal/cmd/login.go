@@ -74,12 +74,9 @@ func login(cmd *cobra.Command, envURL *url.URL) error {
 
 	fmt.Print("Paste token here: ")
 	var token string
-
 	scanner := bufio.NewScanner(cmd.InOrStdin())
 	scanner.Scan()
-
 	token = scanner.Text()
-
 	if err := scanner.Err(); err != nil {
 		return xerrors.Errorf("reading standard input: %w", err)
 	}
