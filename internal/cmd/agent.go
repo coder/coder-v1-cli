@@ -86,11 +86,11 @@ coder agent start https://my-coder.com
 			ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
 			defer cancelFunc()
 			log.Info(ctx, "connecting to broker", slog.F("url", u.String()))
-			conn, res, err := websocket.Dial(ctx, u.String(), nil)
+			// nolint: bodyclose
+			conn, _, err := websocket.Dial(ctx, u.String(), nil)
 			if err != nil {
 				return fmt.Errorf("dial: %w", err)
 			}
-			_ = res.Body.Close()
 			nc := websocket.NetConn(context.Background(), conn, websocket.MessageBinary)
 			session, err := yamux.Server(nc, nil)
 			if err != nil {
