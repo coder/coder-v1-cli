@@ -38,6 +38,7 @@ func Make() *cobra.Command {
 		providersCmd(),
 		genDocsCmd(app),
 		agentCmd(),
+		tunnelCmd(),
 	)
 	app.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "show verbose output")
 	return app

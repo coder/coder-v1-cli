@@ -19,7 +19,6 @@ import (
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 
-	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/internal/x/xwebrtc"
 	"cdr.dev/coder-cli/pkg/proto"
 )
@@ -40,36 +39,55 @@ func agentCmd() *cobra.Command {
 
 func startCmd() *cobra.Command {
 	var (
-		token string
+		token    string
+		coderURL string
 	)
 	cmd := &cobra.Command{
-		Use:   "start [coderURL] --token=[token]",
-		Args:  xcobra.ExactArgs(1),
+		Use:   "start --coder-url=[coder_url] --token=[token]",
 		Short: "starts the coder agent",
 		Long:  "starts the coder agent",
-		Example: `# start the agent and connect with a Coder agent token
+		Example: `# start the agent and use CODER_URL and CODER_AGENT_TOKEN env vars
 
-coder agent start https://my-coder.com --token xxxx-xxxx
+coder agent start
 
-# start the agent and use CODER_AGENT_TOKEN env var for auth token
+# start the agent and connect with a specified url and agent token
 
-coder agent start https://my-coder.com
+coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			log := slog.Make(sloghuman.Sink(cmd.OutOrStdout()))
 
-			// Pull the URL from the args and do some sanity check.
-			rawURL := args[0]
-			if rawURL == "" || !strings.HasPrefix(rawURL, "http") {
+			if coderURL == "" {
+				var ok bool
+				token, ok = os.LookupEnv("CODER_URL")
+				if !ok {
+					client, err := newClient(ctx)
+					if err != nil {
+						return xerrors.New("must login, pass --coder-url flag, or set the CODER_URL env variable")
+					}
+					burl := client.BaseURL()
+					coderURL = burl.String()
+				}
+			}
+
+			if !strings.HasPrefix(coderURL, "http") {
 				return xerrors.Errorf("invalid URL")
 			}
-			u, err := url.Parse(rawURL)
+			u, err := url.Parse(coderURL)
 			if err != nil {
 				return xerrors.Errorf("parse url: %w", err)
 			}
 			// Remove the trailing '/' if any.
 			u.Path = "/api/private/envagent/listen"
+
+			if token == "" {
+				var ok bool
+				token, ok = os.LookupEnv("CODER_AGENT_TOKEN")
+				if !ok {
+					return xerrors.New("must pass --token or set the CODER_AGENT_TOKEN env variable")
+				}
+			}
 
 			if token == "" {
 				var ok bool
@@ -86,11 +104,11 @@ coder agent start https://my-coder.com
 			ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
 			defer cancelFunc()
 			log.Info(ctx, "connecting to broker", slog.F("url", u.String()))
-			conn, res, err := websocket.Dial(ctx, u.String(), nil)
+			// nolint: bodyclose
+			conn, _, err := websocket.Dial(ctx, u.String(), nil)
 			if err != nil {
 				return fmt.Errorf("dial: %w", err)
 			}
-			_ = res.Body.Close()
 			nc := websocket.NetConn(context.Background(), conn, websocket.MessageBinary)
 			session, err := yamux.Server(nc, nil)
 			if err != nil {
@@ -112,6 +130,8 @@ coder agent start https://my-coder.com
 	}
 
 	cmd.Flags().StringVar(&token, "token", "", "coder agent token")
+	cmd.Flags().StringVar(&coderURL, "coder-url", "", "coder access url")
+
 	return cmd
 }
 

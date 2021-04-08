@@ -15,6 +15,7 @@ coder config-ssh [flags]
 ```
       --filepath string   override the default path of your ssh config file (default "~/.ssh/config")
   -h, --help              help for config-ssh
+      --p2p               (experimental) uses coder tunnel to proxy ssh connection
       --remove            remove the auto-generated Coder ssh config
 ```
 
