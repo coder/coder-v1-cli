@@ -131,8 +131,16 @@ func (s *stream) processDataChannel(channel *webrtc.DataChannel) {
 				return
 			}
 			d := make([]byte, 64)
-			_, _ = rw.Read(d)
-			_, _ = rw.Write(d)
+			_, err = rw.Read(d)
+			if err != nil {
+				s.logger.Error(context.Background(), "read ping", slog.Error(err))
+				return
+			}
+			_, err = rw.Write(d)
+			if err != nil {
+				s.logger.Error(context.Background(), "write ping", slog.Error(err))
+				return
+			}
 		})
 		return
 	}
@@ -162,10 +170,16 @@ func (s *stream) processDataChannel(channel *webrtc.DataChannel) {
 			return
 		}
 		go func() {
-			_, _ = io.Copy(rw, conn)
+			_, err = io.Copy(rw, conn)
+			if err != nil {
+				s.logger.Error(context.Background(), "copy to conn", slog.Error(err))
+			}
 		}()
 		go func() {
 			_, _ = io.Copy(conn, rw)
+			if err != nil {
+				s.logger.Error(context.Background(), "copy from conn", slog.Error(err))
+			}
 		}()
 	})
 }
