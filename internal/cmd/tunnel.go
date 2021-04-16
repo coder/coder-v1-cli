@@ -121,6 +121,8 @@ func (c *client) start() error {
 	if err != nil {
 		return fmt.Errorf("parse url: %w", err)
 	}
+
+	c.logger.Info(context.Background(), "stun", slog.F("url", stunURL.Hostname() + ":3478"))
 	rtc, err := xwebrtc.NewPeerConnection(stunURL.Hostname() + ":3478")
 	if err != nil {
 		return fmt.Errorf("create connection: %w", err)

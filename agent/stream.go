@@ -84,6 +84,7 @@ func (s *stream) processMessage(msg proto.Message) {
 	}
 
 	if msg.Offer != nil {
+		s.logger.Info(context.Background(), "stun", slog.F("url", s.stunServer + ":3478"))
 		rtc, err := xwebrtc.NewPeerConnection(s.stunServer + ":3478")
 		if err != nil {
 			s.fatal(fmt.Errorf("create connection: %w", err))

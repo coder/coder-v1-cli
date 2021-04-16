@@ -60,6 +60,7 @@ func (s *Server) Run(ctx context.Context) error {
 		}
 		s.log.Info(ctx, "connected to coder. awaiting connection requests")
 
+		s.log.Info(context.Background(), "stun", slog.F("url", s.listenURL.Hostname() + ":3478"))
 		for {
 			st, err := session.AcceptStream()
 			if err != nil {
