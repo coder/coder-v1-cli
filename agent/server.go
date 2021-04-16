@@ -59,6 +59,7 @@ func (s *Server) Run(ctx context.Context) error {
 			return fmt.Errorf("open: %w", err)
 		}
 		s.log.Info(ctx, "connected to coder. awaiting connection requests")
+
 		for {
 			st, err := session.AcceptStream()
 			if err != nil {
@@ -67,6 +68,7 @@ func (s *Server) Run(ctx context.Context) error {
 			stream := &stream{
 				logger: s.log.Named(fmt.Sprintf("stream %d", st.StreamID())),
 				stream: st,
+				stunServer: s.listenURL.Hostname(),
 			}
 			go stream.listen()
 		}

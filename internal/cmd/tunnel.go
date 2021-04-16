@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -107,16 +108,20 @@ type client struct {
 }
 
 func (c *client) start() error {
-	url := fmt.Sprintf("%s%s%s%s%s", c.brokerAddr, "/api/private/envagent/", c.id, "/connect?session_token=", c.token)
-	c.logger.Info(c.ctx, "connecting to broker", slog.F("url", url))
+	u := fmt.Sprintf("%s%s%s%s%s", c.brokerAddr, "/api/private/envagent/", c.id, "/connect?session_token=", c.token)
+	c.logger.Info(c.ctx, "connecting to broker", slog.F("u", u))
 
-	conn, _, err := websocket.Dial(c.ctx, url, nil)
+	conn, _, err := websocket.Dial(c.ctx, u, nil)
 	if err != nil {
 		return fmt.Errorf("dial: %w", err)
 	}
 	nconn := websocket.NetConn(context.Background(), conn, websocket.MessageBinary)
 
-	rtc, err := xwebrtc.NewPeerConnection()
+	stunURL, err := url.Parse(c.brokerAddr)
+	if err != nil {
+		return fmt.Errorf("parse url: %w", err)
+	}
+	rtc, err := xwebrtc.NewPeerConnection(stunURL.Hostname() + ":3478")
 	if err != nil {
 		return fmt.Errorf("create connection: %w", err)
 	}

@@ -19,6 +19,7 @@ import (
 type stream struct {
 	stream *yamux.Stream
 	logger slog.Logger
+	stunServer string
 
 	rtc *webrtc.PeerConnection
 }
@@ -83,7 +84,7 @@ func (s *stream) processMessage(msg proto.Message) {
 	}
 
 	if msg.Offer != nil {
-		rtc, err := xwebrtc.NewPeerConnection()
+		rtc, err := xwebrtc.NewPeerConnection(s.stunServer + ":3478")
 		if err != nil {
 			s.fatal(fmt.Errorf("create connection: %w", err))
 			return
