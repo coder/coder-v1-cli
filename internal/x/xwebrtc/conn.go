@@ -11,7 +11,7 @@ func NewPeerConnection(stunServer string) (*webrtc.PeerConnection, error) {
 	return api.NewPeerConnection(webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{
-				URLs: []string{"stun:stun.l.google.com:19302?transport=tcp"},
+				URLs: []string{"stun:stun.stunprotocol.org:3478?transport=tcp"},
 			},
 		},
 	})
