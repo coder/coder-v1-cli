@@ -17,6 +17,7 @@ require (
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 	github.com/rjeczalik/notify v0.9.2
 	github.com/spf13/cobra v1.1.3
+	go.coder.com/retry v1.2.0
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/sys v0.0.0-20210315160823-c6e025ad8005
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
