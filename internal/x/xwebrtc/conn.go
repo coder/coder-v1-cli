@@ -8,7 +8,7 @@ func NewPeerConnection(stunServer string) (*webrtc.PeerConnection, error) {
 	se.DetachDataChannels()
 	api := webrtc.NewAPI(webrtc.WithSettingEngine(se))
 
-	stunServer = "stun:stun.stunprotocol.org"
+	stunServer = "stun:stun.stunprotocol.org:3478?transport=tcp"
 	return api.NewPeerConnection(webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{
