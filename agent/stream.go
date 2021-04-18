@@ -50,6 +50,7 @@ func (s *stream) listen() {
 }
 
 func (s *stream) write(msg proto.Message) error {
+	s.logger.Info(context.Background(), "writing message", slog.F("msg", msg))
 	d, err := json.Marshal(&msg)
 	if err != nil {
 		return err

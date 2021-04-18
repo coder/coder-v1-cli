@@ -37,6 +37,7 @@ coder tunnel my-dev 3000 3000
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			log := slog.Make(sloghuman.Sink(os.Stderr))
+			log.Leveled(slog.LevelDebug)
 
 			remotePort, err := strconv.ParseUint(args[1], 10, 16)
 			if err != nil {

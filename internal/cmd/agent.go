@@ -47,6 +47,7 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			log := slog.Make(sloghuman.Sink(cmd.OutOrStdout()))
+			log.Leveled(slog.LevelDebug)
 
 			if coderURL == "" {
 				var ok bool
