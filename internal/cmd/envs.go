@@ -10,7 +10,6 @@ import (
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/coderutil"
-	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/coder-cli/pkg/tablewriter"
@@ -184,9 +183,6 @@ func createEnvCmd() *cobra.Command {
 		Example: `# create a new environment using default resource amounts
 coder envs create my-new-env --image ubuntu
 coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ubuntu`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			autoStartInfo()
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			if img == "" {
@@ -440,9 +436,6 @@ func editEnvCmd() *cobra.Command {
 		Example: `coder envs edit back-end-env --cpu 4
 
 coder envs edit back-end-env --disk 20`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			autoStartInfo()
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx)
@@ -683,19 +676,4 @@ func buildUpdateReq(ctx context.Context, client coder.Client, conf updateConf) (
 		updateReq.ImageTag = &conf.imageTag
 	}
 	return &updateReq, nil
-}
-
-// TODO (Grey): Remove education in a future non-patch release.
-func autoStartInfo() {
-	var preferencesURI string
-
-	accessURI, err := config.URL.Read()
-	if err != nil {
-		// Error is fairly benign in this case, fallback to relative URI
-		preferencesURI = "/preferences"
-	} else {
-		preferencesURI = fmt.Sprintf("%s%s", accessURI, "/preferences?tab=autostart")
-	}
-
-	clog.LogInfo("⚡NEW: Automate daily environment startup", "Visit "+preferencesURI+" to configure your preferred time")
 }
