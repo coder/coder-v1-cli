@@ -233,6 +233,6 @@ type Client interface {
 	// allowing it to continue creating new workspaces and provisioning resources for them.
 	UnCordonWorkspaceProvider(ctx context.Context, id string) error
 
-	// RenameWorkspaceProvider changes an existing cordoned providers name field.
+	// RenameWorkspaceProvider changes an existing providers name field.
 	RenameWorkspaceProvider(ctx context.Context, id string, name string) error
 }
