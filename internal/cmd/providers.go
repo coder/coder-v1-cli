@@ -29,6 +29,7 @@ func providersCmd() *cobra.Command {
 		deleteProviderCmd(),
 		cordonProviderCmd(),
 		unCordonProviderCmd(),
+		renameProviderCmd(),
 	)
 	return cmd
 }
@@ -279,6 +280,38 @@ coder providers uncordon my-workspace-provider`,
 				return err
 			}
 			clog.LogSuccess(fmt.Sprintf("provider %q successfully uncordoned - you can now create workspaces on this provider", wpName))
+			return nil
+		},
+	}
+	return cmd
+}
+
+func renameProviderCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "rename [old_name] [new_name]",
+		Args:  xcobra.ExactArgs(2),
+		Short: "rename a workspace provider.",
+		Long:  "Changes the name field of an existing workspace provider.",
+		Example: `# rename a workspace provider from 'built-in' to 'us-east-1'
+coder providers rename build-in us-east-1`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			client, err := newClient(ctx)
+			if err != nil {
+				return err
+			}
+
+			oldName := args[0]
+			newName := args[1]
+			provider, err := coderutil.ProviderByName(ctx, client, oldName)
+			if err != nil {
+				return err
+			}
+
+			if err := client.RenameWorkspaceProvider(ctx, provider.ID, newName); err != nil {
+				return err
+			}
+			clog.LogSuccess(fmt.Sprintf("provider %s successfully renamed to %s", oldName, newName))
 			return nil
 		},
 	}
