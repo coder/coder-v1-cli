@@ -110,9 +110,8 @@ type client struct {
 
 func (c *client) start() error {
 	url := fmt.Sprintf("%s%s%s%s%s", c.brokerAddr.String(), "/api/private/envagent/", c.id, "/connect?session_token=", c.token)
-	tcpProxy := fmt.Sprintf("turn:%s:5349?transport=tcp", c.brokerAddr.Host)
+	tcpProxy := fmt.Sprintf("turns:%s:5349?transport=tcp", c.brokerAddr.Host)
 	c.logger.Info(c.ctx, "connecting to broker", slog.F("url", url), slog.F("tcp-proxy", tcpProxy))
-
 	conn, resp, err := websocket.Dial(c.ctx, url, nil)
 	if err != nil && resp == nil {
 		return fmt.Errorf("dial: %w", err)
