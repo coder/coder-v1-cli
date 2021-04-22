@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"time"
 
+	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/slog"
 	"github.com/hashicorp/yamux"
 	"go.coder.com/retry"
@@ -45,32 +46,48 @@ func NewServer(args ServerArgs) (*Server, error) {
 
 // Run will listen and proxy new peer connections on a retry loop.
 func (s *Server) Run(ctx context.Context) error {
-	err := retry.New(time.Second).Context(ctx).Backoff(15 * time.Second).Run(func() error {
-		ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
-		defer cancelFunc()
-		s.log.Info(ctx, "connecting to coder", slog.F("url", s.listenURL.String()))
-		conn, _, err := websocket.Dial(ctx, s.listenURL.String(), nil)
-		if err != nil {
-			return fmt.Errorf("dial: %w", err)
-		}
-		nc := websocket.NetConn(context.Background(), conn, websocket.MessageBinary)
-		session, err := yamux.Server(nc, nil)
-		if err != nil {
-			return fmt.Errorf("open: %w", err)
-		}
-		s.log.Info(ctx, "connected to coder. awaiting connection requests")
-		for {
-			st, err := session.AcceptStream()
+	err := retry.New(time.Second).
+		Context(ctx).
+		Backoff(15 * time.Second).
+		Conditions(
+			retry.Condition(func(err error) bool {
+				if err != nil {
+					s.log.Error(ctx, "failed to connect", slog.Error(err))
+				}
+				return true
+			}),
+		).Run(
+		func() error {
+			ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
+			defer cancelFunc()
+			s.log.Info(ctx, "connecting to coder", slog.F("url", s.listenURL.String()))
+			conn, resp, err := websocket.Dial(ctx, s.listenURL.String(), nil)
+			if err != nil && resp == nil {
+				return fmt.Errorf("dial: %w", err)
+			}
+			if err != nil && resp != nil {
+				return &coder.HTTPError{
+					Response: resp,
+				}
+			}
+			nc := websocket.NetConn(context.Background(), conn, websocket.MessageBinary)
+			session, err := yamux.Server(nc, nil)
 			if err != nil {
-				return fmt.Errorf("accept stream: %w", err)
+				return fmt.Errorf("open: %w", err)
 			}
-			stream := &stream{
-				logger: s.log.Named(fmt.Sprintf("stream %d", st.StreamID())),
-				stream: st,
+			s.log.Info(ctx, "connected to coder. awaiting connection requests")
+			for {
+				st, err := session.AcceptStream()
+				if err != nil {
+					return fmt.Errorf("accept stream: %w", err)
+				}
+				stream := &stream{
+					logger: s.log.Named(fmt.Sprintf("stream %d", st.StreamID())),
+					stream: st,
+				}
+				go stream.listen()
 			}
-			go stream.listen()
-		}
-	})
+		})
 
 	return err
 }

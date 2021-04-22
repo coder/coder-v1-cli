@@ -17,6 +17,7 @@ import (
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 
+	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/internal/x/xwebrtc"
 	"cdr.dev/coder-cli/pkg/proto"
@@ -110,9 +111,14 @@ func (c *client) start() error {
 	url := fmt.Sprintf("%s%s%s%s%s", c.brokerAddr, "/api/private/envagent/", c.id, "/connect?session_token=", c.token)
 	c.logger.Info(c.ctx, "connecting to broker", slog.F("url", url))
 
-	conn, _, err := websocket.Dial(c.ctx, url, nil)
-	if err != nil {
+	conn, resp, err := websocket.Dial(c.ctx, url, nil)
+	if err != nil && resp == nil {
 		return fmt.Errorf("dial: %w", err)
+	}
+	if err != nil && resp != nil {
+		return &coder.HTTPError{
+			Response: resp,
+		}
 	}
 	nconn := websocket.NetConn(context.Background(), conn, websocket.MessageBinary)
 
