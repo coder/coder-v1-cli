@@ -13,6 +13,7 @@ type Message struct {
 	Error     string                     `json:"error"`
 	Candidate string                     `json:"candidate"`
 	Offer     *webrtc.SessionDescription `json:"offer"`
+	Servers   []webrtc.ICEServer         `json:"servers"`
 	Answer    *webrtc.SessionDescription `json:"answer"`
 }
 

@@ -83,7 +83,11 @@ func (s *stream) processMessage(msg proto.Message) {
 	}
 
 	if msg.Offer != nil {
-		rtc, err := xwebrtc.NewPeerConnection()
+		if msg.Servers == nil {
+			s.fatal(fmt.Errorf("servers must be sent with offer"))
+			return
+		}
+		rtc, err := xwebrtc.NewPeerConnection(msg.Servers)
 		if err != nil {
 			s.fatal(fmt.Errorf("create connection: %w", err))
 			return
