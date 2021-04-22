@@ -6,12 +6,13 @@ import (
 	"net/url"
 	"time"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/slog"
 	"github.com/hashicorp/yamux"
 	"go.coder.com/retry"
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 const (
