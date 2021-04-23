@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -57,7 +58,7 @@ coder tunnel my-dev 3000 3000
 			}
 			baseURL := sdk.BaseURL()
 
-			envs, err := sdk.Environments(ctx)
+			envs, err := getEnvs(ctx, sdk, coder.Me)
 			if err != nil {
 				return err
 			}
@@ -79,8 +80,8 @@ coder tunnel my-dev 3000 3000
 				localPort:  uint16(localPort),
 				remotePort: uint16(remotePort),
 				ctx:        context.Background(),
-				logger:     log,
-				brokerAddr: baseURL.String(),
+				logger:     log.Leveled(slog.LevelDebug),
+				brokerAddr: baseURL,
 				token:      sdk.Token(),
 			}
 
@@ -98,7 +99,7 @@ coder tunnel my-dev 3000 3000
 
 type client struct {
 	ctx        context.Context
-	brokerAddr string
+	brokerAddr url.URL
 	token      string
 	logger     slog.Logger
 	id         string
@@ -108,9 +109,13 @@ type client struct {
 }
 
 func (c *client) start() error {
-	url := fmt.Sprintf("%s%s%s%s%s", c.brokerAddr, "/api/private/envagent/", c.id, "/connect?session_token=", c.token)
-	c.logger.Info(c.ctx, "connecting to broker", slog.F("url", url))
-
+	url := fmt.Sprintf("%s%s%s%s%s", c.brokerAddr.String(), "/api/private/envagent/", c.id, "/connect?session_token=", c.token)
+	turnScheme := "turns"
+	if c.brokerAddr.Scheme == "http" {
+		turnScheme = "turn"
+	}
+	tcpProxy := fmt.Sprintf("%s:%s:5349?transport=tcp", turnScheme, c.brokerAddr.Host)
+	c.logger.Info(c.ctx, "connecting to broker", slog.F("url", url), slog.F("tcp-proxy", tcpProxy))
 	conn, resp, err := websocket.Dial(c.ctx, url, nil)
 	if err != nil && resp == nil {
 		return fmt.Errorf("dial: %w", err)
@@ -122,7 +127,15 @@ func (c *client) start() error {
 	}
 	nconn := websocket.NetConn(context.Background(), conn, websocket.MessageBinary)
 
-	rtc, err := xwebrtc.NewPeerConnection()
+	// Only enabled under a private feature flag for now,
+	// so insecure connections are entirely fine to allow.
+	servers := []webrtc.ICEServer{{
+		URLs:           []string{tcpProxy},
+		Username:       "insecure",
+		Credential:     "pass",
+		CredentialType: webrtc.ICECredentialTypePassword,
+	}}
+	rtc, err := xwebrtc.NewPeerConnection(servers)
 	if err != nil {
 		return fmt.Errorf("create connection: %w", err)
 	}
@@ -150,16 +163,17 @@ func (c *client) start() error {
 	if err != nil {
 		return fmt.Errorf("set local desc: %w", err)
 	}
-	flushCandidates()
 
 	c.logger.Debug(context.Background(), "writing offer")
 	b, _ := json.Marshal(&proto.Message{
-		Offer: &localDesc,
+		Offer:   &localDesc,
+		Servers: servers,
 	})
 	_, err = nconn.Write(b)
 	if err != nil {
 		return fmt.Errorf("write offer: %w", err)
 	}
+	flushCandidates()
 
 	go func() {
 		err = xwebrtc.WaitForDataChannelOpen(context.Background(), channel)
