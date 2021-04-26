@@ -59,8 +59,6 @@ func (s *Server) Run(ctx context.Context) error {
 			}),
 		).Run(
 		func() error {
-			ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
-			defer cancelFunc()
 			s.log.Info(ctx, "connecting to coder", slog.F("url", s.listenURL.String()))
 			conn, resp, err := websocket.Dial(ctx, s.listenURL.String(), nil)
 			if err != nil && resp == nil {
@@ -71,7 +69,8 @@ func (s *Server) Run(ctx context.Context) error {
 					Response: resp,
 				}
 			}
-			nc := websocket.NetConn(context.Background(), conn, websocket.MessageBinary)
+
+			nc := websocket.NetConn(ctx, conn, websocket.MessageBinary)
 			session, err := yamux.Server(nc, nil)
 			if err != nil {
 				return fmt.Errorf("open: %w", err)
