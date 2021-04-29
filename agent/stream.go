@@ -7,12 +7,13 @@ import (
 	"io"
 	"net"
 
+	"cdr.dev/coder-cli/xwebrtc"
+
 	"cdr.dev/slog"
 	"github.com/hashicorp/yamux"
 	"github.com/pion/webrtc/v3"
 	"golang.org/x/xerrors"
 
-	"cdr.dev/coder-cli/internal/x/xwebrtc"
 	"cdr.dev/coder-cli/pkg/proto"
 )
 
@@ -128,6 +129,10 @@ func (s *stream) processMessage(msg proto.Message) {
 }
 
 func (s *stream) processDataChannel(channel *webrtc.DataChannel) {
+	if channel.Protocol() == "control" {
+		return
+	}
+
 	if channel.Protocol() == "ping" {
 		channel.OnOpen(func() {
 			rw, err := channel.Detach()
@@ -149,7 +154,7 @@ func (s *stream) processDataChannel(channel *webrtc.DataChannel) {
 		return
 	}
 
-	prto, port, err := xwebrtc.ParseProxyDataChannel(channel)
+	prto, addr, err := xwebrtc.ParseProxyDataChannel(channel)
 	if err != nil {
 		s.fatal(fmt.Errorf("failed to parse proxy data channel: %w", err))
 		return
@@ -159,14 +164,14 @@ func (s *stream) processDataChannel(channel *webrtc.DataChannel) {
 		return
 	}
 
-	conn, err := net.Dial(prto, fmt.Sprintf("localhost:%d", port))
+	conn, err := net.Dial(prto, addr)
 	if err != nil {
-		s.fatal(fmt.Errorf("failed to dial client port: %d", port))
+		s.fatal(fmt.Errorf("failed to dial client addr: %s", addr))
 		return
 	}
 
 	channel.OnOpen(func() {
-		s.logger.Debug(context.Background(), "proxying data channel to local port", slog.F("port", port))
+		s.logger.Debug(context.Background(), "proxying data channel", slog.F("addr", addr))
 		rw, err := channel.Detach()
 		if err != nil {
 			_ = channel.Close()

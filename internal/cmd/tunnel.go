@@ -2,26 +2,21 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"net/url"
 	"os"
 	"strconv"
-	"time"
 
 	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/sloghuman"
-	"github.com/pion/webrtc/v3"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
-	"nhooyr.io/websocket"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/x/xcobra"
-	"cdr.dev/coder-cli/internal/x/xwebrtc"
-	"cdr.dev/coder-cli/pkg/proto"
+	"cdr.dev/coder-cli/xwebrtc"
 )
 
 func tunnelCmd() *cobra.Command {
@@ -41,26 +36,26 @@ coder tunnel my-dev 3000 3000
 
 			remotePort, err := strconv.ParseUint(args[1], 10, 16)
 			if err != nil {
-				log.Fatal(ctx, "parse remote port", slog.Error(err))
+				return xerrors.Errorf("parse remote port: %w", err)
 			}
 
 			var localPort uint64
 			if args[2] != "stdio" {
 				localPort, err = strconv.ParseUint(args[2], 10, 16)
 				if err != nil {
-					log.Fatal(ctx, "parse local port", slog.Error(err))
+					return xerrors.Errorf("parse local port: %w", err)
 				}
 			}
 
 			sdk, err := newClient(ctx)
 			if err != nil {
-				return err
+				return xerrors.Errorf("getting coder client: %w", err)
 			}
 			baseURL := sdk.BaseURL()
 
 			envs, err := getEnvs(ctx, sdk, coder.Me)
 			if err != nil {
-				return err
+				return xerrors.Errorf("get workspaces: %w", err)
 			}
 
 			var envID string
@@ -74,20 +69,19 @@ coder tunnel my-dev 3000 3000
 				return xerrors.Errorf("No workspace found by name '%s'", args[0])
 			}
 
-			c := &client{
-				id:         envID,
-				stdio:      args[2] == "stdio",
-				localPort:  uint16(localPort),
-				remotePort: uint16(remotePort),
-				ctx:        context.Background(),
-				logger:     log.Leveled(slog.LevelDebug),
-				brokerAddr: baseURL,
-				token:      sdk.Token(),
+			c := &tunnneler{
+				log:         log.Leveled(slog.LevelDebug),
+				brokerAddr:  &baseURL,
+				token:       sdk.Token(),
+				workspaceID: envID,
+				stdio:       args[2] == "stdio",
+				localPort:   uint16(localPort),
+				remotePort:  uint16(remotePort),
 			}
 
-			err = c.start()
+			err = c.start(ctx)
 			if err != nil {
-				log.Fatal(ctx, err.Error())
+				return xerrors.Errorf("running tunnel: %w", err)
 			}
 
 			return nil
@@ -97,197 +91,58 @@ coder tunnel my-dev 3000 3000
 	return cmd
 }
 
-type client struct {
-	ctx        context.Context
-	brokerAddr url.URL
-	token      string
-	logger     slog.Logger
-	id         string
-	remotePort uint16
-	localPort  uint16
-	stdio      bool
+type tunnneler struct {
+	log         slog.Logger
+	brokerAddr  *url.URL
+	token       string
+	workspaceID string
+	remotePort  uint16
+	localPort   uint16
+	stdio       bool
 }
 
-func (c *client) start() error {
-	url := fmt.Sprintf("%s%s%s%s%s", c.brokerAddr.String(), "/api/private/envagent/", c.id, "/connect?session_token=", c.token)
-	turnScheme := "turns"
-	if c.brokerAddr.Scheme == "http" {
-		turnScheme = "turn"
-	}
-	tcpProxy := fmt.Sprintf("%s:%s:5349?transport=tcp", turnScheme, c.brokerAddr.Host)
-	c.logger.Info(c.ctx, "connecting to broker", slog.F("url", url), slog.F("tcp-proxy", tcpProxy))
-	conn, resp, err := websocket.Dial(c.ctx, url, nil)
-	if err != nil && resp == nil {
-		return fmt.Errorf("dial: %w", err)
-	}
-	if err != nil && resp != nil {
-		return &coder.HTTPError{
-			Response: resp,
-		}
-	}
-	nconn := websocket.NetConn(context.Background(), conn, websocket.MessageBinary)
-
-	// Only enabled under a private feature flag for now,
-	// so insecure connections are entirely fine to allow.
-	servers := []webrtc.ICEServer{{
-		URLs:           []string{tcpProxy},
-		Username:       "insecure",
-		Credential:     "pass",
-		CredentialType: webrtc.ICECredentialTypePassword,
-	}}
-	rtc, err := xwebrtc.NewPeerConnection(servers)
+func (c *tunnneler) start(ctx context.Context) error {
+	wd, err := xwebrtc.NewWorkspaceDialer(ctx, c.log, c.brokerAddr, c.token, c.workspaceID)
 	if err != nil {
-		return fmt.Errorf("create connection: %w", err)
+		return xerrors.Errorf("creating workspace dialer: %w", wd)
 	}
-
-	rtc.OnNegotiationNeeded(func() {
-		c.logger.Debug(context.Background(), "negotiation needed...")
-	})
-
-	rtc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
-		c.logger.Info(context.Background(), "connection state changed", slog.F("state", pcs))
-	})
-
-	channel, err := xwebrtc.NewProxyDataChannel(rtc, "forwarder", "tcp", c.remotePort)
+	nc, err := wd.DialContext(ctx, xwebrtc.NetworkTCP, fmt.Sprintf("localhost:%d", c.remotePort))
 	if err != nil {
-		return fmt.Errorf("create data channel: %w", err)
-	}
-	flushCandidates := proto.ProxyICECandidates(rtc, nconn)
-
-	localDesc, err := rtc.CreateOffer(&webrtc.OfferOptions{})
-	if err != nil {
-		return fmt.Errorf("create offer: %w", err)
+		return xerrors.Errorf("dial: %w", err)
 	}
 
-	err = rtc.SetLocalDescription(localDesc)
-	if err != nil {
-		return fmt.Errorf("set local desc: %w", err)
-	}
-
-	c.logger.Debug(context.Background(), "writing offer")
-	b, _ := json.Marshal(&proto.Message{
-		Offer:   &localDesc,
-		Servers: servers,
-	})
-	_, err = nconn.Write(b)
-	if err != nil {
-		return fmt.Errorf("write offer: %w", err)
-	}
-	flushCandidates()
-
-	go func() {
-		err = xwebrtc.WaitForDataChannelOpen(context.Background(), channel)
-		if err != nil {
-			c.logger.Fatal(context.Background(), "waiting for data channel open", slog.Error(err))
-		}
-		_ = conn.Close(websocket.StatusNormalClosure, "rtc connected")
-	}()
-
-	decoder := json.NewDecoder(nconn)
-	for {
-		var msg proto.Message
-		err = decoder.Decode(&msg)
-		if err == io.EOF {
-			break
-		}
-		if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("read msg: %w", err)
-		}
-		if msg.Candidate != "" {
-			c.logger.Debug(context.Background(), "accepted ice candidate", slog.F("candidate", msg.Candidate))
-			err = proto.AcceptICECandidate(rtc, &msg)
-			if err != nil {
-				return fmt.Errorf("accept ice: %w", err)
-			}
-		}
-		if msg.Answer != nil {
-			c.logger.Debug(context.Background(), "got answer", slog.F("answer", msg.Answer))
-			err = rtc.SetRemoteDescription(*msg.Answer)
-			if err != nil {
-				return fmt.Errorf("set remote: %w", err)
-			}
-		}
-	}
-
-	// Once we're open... let's test out the ping.
-	pingProto := "ping"
-	pingChannel, err := rtc.CreateDataChannel("pinger", &webrtc.DataChannelInit{
-		Protocol: &pingProto,
-	})
-	if err != nil {
-		return fmt.Errorf("create ping channel")
-	}
-	pingChannel.OnOpen(func() {
-		defer func() {
-			_ = pingChannel.Close()
-		}()
-		t1 := time.Now()
-		rw, _ := pingChannel.Detach()
-		defer func() {
-			_ = rw.Close()
-		}()
-		_, _ = rw.Write([]byte("hello"))
-		b := make([]byte, 64)
-		_, _ = rw.Read(b)
-		c.logger.Info(c.ctx, "your latency directly to the agent", slog.F("ms", time.Since(t1).Milliseconds()))
-	})
-
+	// proxy via stdio
 	if c.stdio {
-		// At this point the RTC is connected and data channel is opened...
-		rw, err := channel.Detach()
-		if err != nil {
-			return fmt.Errorf("detach channel: %w", err)
-		}
 		go func() {
-			_, _ = io.Copy(rw, os.Stdin)
+			_, _ = io.Copy(nc, os.Stdin)
 		}()
-		_, err = io.Copy(os.Stdout, rw)
+		_, err = io.Copy(os.Stdout, nc)
 		if err != nil {
-			return fmt.Errorf("copy: %w", err)
+			return xerrors.Errorf("copy: %w", err)
 		}
 		return nil
 	}
 
+	// proxy via tcp listener
 	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", c.localPort))
 	if err != nil {
-		return fmt.Errorf("listen: %w", err)
+		return xerrors.Errorf("listen: %w", err)
 	}
 
 	for {
-		conn, err := listener.Accept()
+		lc, err := listener.Accept()
 		if err != nil {
-			return fmt.Errorf("accept: %w", err)
+			return xerrors.Errorf("accept: %w", err)
 		}
 		go func() {
 			defer func() {
-				_ = conn.Close()
+				_ = lc.Close()
 			}()
-			channel, err := xwebrtc.NewProxyDataChannel(rtc, "forwarder", "tcp", c.remotePort)
-			if err != nil {
-				c.logger.Warn(context.Background(), "create data channel for proxying", slog.Error(err))
-				return
-			}
-			defer func() {
-				_ = channel.Close()
-			}()
-			err = xwebrtc.WaitForDataChannelOpen(context.Background(), channel)
-			if err != nil {
-				c.logger.Warn(context.Background(), "wait for data channel open", slog.Error(err))
-				return
-			}
-			rw, err := channel.Detach()
-			if err != nil {
-				c.logger.Warn(context.Background(), "detach channel", slog.Error(err))
-				return
-			}
 
 			go func() {
-				_, _ = io.Copy(conn, rw)
+				_, _ = io.Copy(lc, nc)
 			}()
-			_, _ = io.Copy(rw, conn)
+			_, _ = io.Copy(nc, lc)
 		}()
 	}
 }
