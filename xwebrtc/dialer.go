@@ -116,10 +116,12 @@ func (wc *WorkspaceDialer) peerConnection(ctx context.Context, workspaceID strin
 	}
 	go func() {
 		err = waitForDataChannelOpen(ctx, control)
-		if err != nil {
-			wc.log.Fatal(ctx, "waiting for data channel open", slog.Error(err))
-		}
 		_ = control.Close()
+		if err != nil {
+
+			_ = conn.Close(websocket.StatusAbnormalClosure, "data channel timed out")
+			return
+		}
 		_ = conn.Close(websocket.StatusNormalClosure, "rtc connected")
 	}()
 
