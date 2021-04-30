@@ -459,7 +459,7 @@ coder envs edit back-end-env --disk 20`,
 				if latest.Template.Type != coder.TemplateTypeLegacy {
 					var tip string
 					if latest.Template.Type == coder.TemplateTypeRemote {
-						tip = fmt.Sprintf("Update the template at %s://%s/%s/%s", latest.Repo.Scheme, latest.Repo.Host, latest.Repo.Owner, latest.Repo.Repo)
+						tip = fmt.Sprintf("Update the template at %s://%s/%s", latest.Repo.Scheme, latest.Repo.Host, latest.Repo.Path)
 					} else if latest.Template.Type == coder.TemplateTypeLocal {
 						tip = "Upload a new local template"
 					}
