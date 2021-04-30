@@ -118,7 +118,6 @@ func (wc *WorkspaceDialer) peerConnection(ctx context.Context, workspaceID strin
 		err = waitForDataChannelOpen(ctx, control)
 		_ = control.Close()
 		if err != nil {
-
 			_ = conn.Close(websocket.StatusAbnormalClosure, "data channel timed out")
 			return
 		}
