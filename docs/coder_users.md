@@ -16,6 +16,6 @@ Interact with Coder user accounts
 
 ### SEE ALSO
 
-* [coder](coder.md)	 - coder provides a CLI for working with an existing Coder Enterprise installation
+* [coder](coder.md)	 - coder provides a CLI for working with an existing Coder installation
 * [coder users ls](coder_users_ls.md)	 - list all user accounts
 

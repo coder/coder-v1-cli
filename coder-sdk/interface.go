@@ -53,7 +53,7 @@ type Client interface {
 	// PutSiteConfigOAuth sets the sitewide git provider OAuth configuration.
 	PutSiteConfigOAuth(ctx context.Context, req ConfigOAuth) error
 
-	// SiteSetupModeEnabled fetches the current setup_mode state of a Coder Enterprise deployment.
+	// SiteSetupModeEnabled fetches the current setup_mode state of a Coder deployment.
 	SiteSetupModeEnabled(ctx context.Context) (bool, error)
 
 	// SiteConfigExtensionMarketplace fetches the extension marketplace configuration.
@@ -163,7 +163,7 @@ type Client interface {
 	// UpdateOrganization applys a partial update of an Organization resource.
 	UpdateOrganization(ctx context.Context, orgID string, req UpdateOrganizationReq) error
 
-	// CreateOrganization creates a new Organization in Coder Enterprise.
+	// CreateOrganization creates a new Organization in Coder.
 	CreateOrganization(ctx context.Context, req CreateOrganizationReq) error
 
 	// DeleteOrganization deletes an organization.
@@ -193,7 +193,7 @@ type Client interface {
 	// ImageTagByID fetch an image tag by ID.
 	ImageTagByID(ctx context.Context, imageID, tagID string) (*ImageTag, error)
 
-	// CreateAPIToken creates a new APIToken for making authenticated requests to Coder Enterprise.
+	// CreateAPIToken creates a new APIToken for making authenticated requests to Coder.
 	CreateAPIToken(ctx context.Context, userID string, req CreateAPITokenReq) (string, error)
 
 	// APITokens fetches all APITokens owned by the given user.
@@ -235,4 +235,7 @@ type Client interface {
 	// UnCordonWorkspaceProvider changes an existing cordoned providers status to 'Ready';
 	// allowing it to continue creating new workspaces and provisioning resources for them.
 	UnCordonWorkspaceProvider(ctx context.Context, id string) error
+
+	// RenameWorkspaceProvider changes an existing providers name field.
+	RenameWorkspaceProvider(ctx context.Context, id string, name string) error
 }

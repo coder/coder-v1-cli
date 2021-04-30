@@ -1,4 +1,4 @@
-// Package sync contains logic for establishing a file sync between a local machine and a Coder Enterprise environment.
+// Package sync contains logic for establishing a file sync between a local machine and a Coder environment.
 package sync
 
 import (

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"net/url"
 	"strings"
 
@@ -21,7 +20,7 @@ import (
 
 func loginCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "login [Coder Enterprise URL eg. https://my.coder.domain/]",
+		Use:   "login [Coder URL eg. https://my.coder.domain/]",
 		Short: "Authenticate this client for future operations",
 		Args:  xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -73,7 +72,15 @@ func login(cmd *cobra.Command, envURL *url.URL) error {
 		fmt.Printf("Your browser has been opened to visit:\n\n\t%s\n\n", authURL.String())
 	}
 
-	token := readLine("Paste token here: ", cmd.InOrStdin())
+	fmt.Print("Paste token here: ")
+	var token string
+	scanner := bufio.NewScanner(cmd.InOrStdin())
+	_ = scanner.Scan()
+	token = scanner.Text()
+	if err := scanner.Err(); err != nil {
+		return xerrors.Errorf("reading standard input: %w", err)
+	}
+
 	if err := pingAPI(cmd.Context(), envURL, token); err != nil {
 		return xerrors.Errorf("ping API with credentials: %w", err)
 	}
@@ -82,13 +89,6 @@ func login(cmd *cobra.Command, envURL *url.URL) error {
 	}
 	clog.LogSuccess("logged in")
 	return nil
-}
-
-func readLine(prompt string, r io.Reader) string {
-	reader := bufio.NewReader(r)
-	fmt.Print(prompt)
-	text, _ := reader.ReadString('\n')
-	return strings.TrimSuffix(text, "\n")
 }
 
 // pingAPI creates a client from the given url/token and try to exec an api call.

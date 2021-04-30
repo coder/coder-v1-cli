@@ -15,7 +15,7 @@ var verbose bool = false
 func Make() *cobra.Command {
 	app := &cobra.Command{
 		Use:               "coder",
-		Short:             "coder provides a CLI for working with an existing Coder Enterprise installation",
+		Short:             "coder provides a CLI for working with an existing Coder installation",
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		DisableAutoGenTag: true,
@@ -37,6 +37,8 @@ func Make() *cobra.Command {
 		imgsCmd(),
 		providersCmd(),
 		genDocsCmd(app),
+		agentCmd(),
+		tunnelCmd(),
 	)
 	app.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "show verbose output")
 	return app

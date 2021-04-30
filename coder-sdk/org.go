@@ -90,7 +90,7 @@ type CreateOrganizationReq struct {
 	MemoryProvisioningRate float32  `json:"memory_provisioning_rate"`
 }
 
-// CreateOrganization creates a new Organization in Coder Enterprise.
+// CreateOrganization creates a new Organization in Coder.
 func (c *DefaultClient) CreateOrganization(ctx context.Context, req CreateOrganizationReq) error {
 	return c.requestBody(ctx, http.MethodPost, "/api/v0/orgs", req, nil)
 }

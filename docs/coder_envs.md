@@ -20,7 +20,7 @@ Perform operations on the Coder environments owned by the active user.
 
 ### SEE ALSO
 
-* [coder](coder.md)	 - coder provides a CLI for working with an existing Coder Enterprise installation
+* [coder](coder.md)	 - coder provides a CLI for working with an existing Coder installation
 * [coder envs create](coder_envs_create.md)	 - create a new environment.
 * [coder envs create-from-config](coder_envs_create-from-config.md)	 - create a new environment from a template
 * [coder envs edit](coder_envs_edit.md)	 - edit an existing environment and initiate a rebuild.

@@ -3,12 +3,12 @@
 package xterminal
 
 import (
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 // State differs per-platform.
 type State struct {
-	s *terminal.State
+	s *term.State
 }
 
 // MakeOutputRaw does nothing on non-Windows platforms.
@@ -20,5 +20,5 @@ func Restore(fd uintptr, state *State) error {
 		return nil
 	}
 
-	return terminal.Restore(int(fd), state.s)
+	return term.Restore(int(fd), state.s)
 }

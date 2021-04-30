@@ -123,3 +123,18 @@ func (c *DefaultClient) UnCordonWorkspaceProvider(ctx context.Context, id string
 	}
 	return nil
 }
+
+// RenameWorkspaceProviderReq defines the request parameters for changing a workspace provider name.
+type RenameWorkspaceProviderReq struct {
+	Name string `json:"name"`
+}
+
+// RenameWorkspaceProvider changes an existing cordoned providers name field.
+func (c *DefaultClient) RenameWorkspaceProvider(ctx context.Context, id string, name string) error {
+	req := RenameWorkspaceProviderReq{Name: name}
+	err := c.requestBody(ctx, http.MethodPatch, "/api/private/resource-pools/"+id, req, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}

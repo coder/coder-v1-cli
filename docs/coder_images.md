@@ -21,6 +21,6 @@ Manage existing images and/or import new ones.
 
 ### SEE ALSO
 
-* [coder](coder.md)	 - coder provides a CLI for working with an existing Coder Enterprise installation
+* [coder](coder.md)	 - coder provides a CLI for working with an existing Coder installation
 * [coder images ls](coder_images_ls.md)	 - list all images available to the active user
 

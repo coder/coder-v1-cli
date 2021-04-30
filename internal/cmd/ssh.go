@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	showInteractiveOutput = terminal.IsTerminal(int(os.Stdout.Fd()))
+	showInteractiveOutput = term.IsTerminal(int(os.Stdout.Fd()))
 )
 
 func sshCmd() *cobra.Command {

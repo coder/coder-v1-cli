@@ -13,9 +13,10 @@ coder config-ssh [flags]
 ### Options
 
 ```
-      --filepath string   overide the default path of your ssh config file (default "~/.ssh/config")
+      --filepath string   override the default path of your ssh config file (default "~/.ssh/config")
   -h, --help              help for config-ssh
-      --remove            remove the auto-generated Coder Enterprise ssh config
+      --p2p               (experimental) uses coder tunnel to proxy ssh connection
+      --remove            remove the auto-generated Coder ssh config
 ```
 
 ### Options inherited from parent commands
@@ -26,5 +27,5 @@ coder config-ssh [flags]
 
 ### SEE ALSO
 
-* [coder](coder.md)	 - coder provides a CLI for working with an existing Coder Enterprise installation
+* [coder](coder.md)	 - coder provides a CLI for working with an existing Coder installation
 
