@@ -123,8 +123,7 @@ type GitRepo struct {
 	ID        string    `json:"id"`
 	Scheme    string    `json:"scheme"`
 	Host      string    `json:"host"`
-	Owner     string    `json:"owner"`
-	Repo      string    `json:"repo"`
+	Path      string    `json:"path"`
 	Type      string    `json:"type"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
