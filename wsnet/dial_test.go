@@ -2,35 +2,40 @@ package wsnet
 
 import (
 	"context"
-	"fmt"
-	"testing"
+	"errors"
 
-	"github.com/pion/ice/v2"
-	"github.com/pion/turn/v2"
 	"github.com/pion/webrtc/v3"
 )
 
-func TestDial(t *testing.T) {
-	t.Run("Example", func(t *testing.T) {
-		connectAddr, _ := listenBroker(t)
-		turnAddr := listenTURN(t, ice.ProtoTypeTCP, "wowie", true)
+func ExampleDial_basic() {
+	servers := []webrtc.ICEServer{{
+		URLs:           []string{"turns:master.cdr.dev"},
+		Username:       "kyle",
+		Credential:     "pass",
+		CredentialType: webrtc.ICECredentialTypePassword,
+	}}
 
-		dialer, err := Dial(context.Background(), connectAddr, &DialConfig{
-			[]ICEServer{{
-				URLs:           []string{turnAddr},
-				Username:       "insecure",
-				Credential:     "pass",
-				CredentialType: webrtc.ICECredentialTypePassword,
-			}},
-		})
-		if err != nil {
-			t.Error(err)
+	for _, server := range servers {
+		err := DialICE(server, DefaultICETimeout)
+		if errors.Is(err, ErrInvalidCredentials) {
+			// You could do something...
 		}
-		fmt.Printf("Dialer: %+v\n", dialer)
+		if errors.Is(err, ErrMismatchedProtocol) {
+			// Likely they used TURN when they should have used TURN.
+			// Or they could have used TURN instead of TURNS.
+		}
+	}
+
+	dialer, err := Dial(context.Background(), "wss://master.cdr.dev/agent/workspace/connect", &DialConfig{
+		ICEServers: servers,
 	})
-}
-
-func testTURN() {
-
-	turn.NewServer(turn.ServerConfig{})
+	if err != nil {
+		// Do something...
+	}
+	conn, err := dialer.DialContext(context.Background(), "tcp", "localhost:13337")
+	if err != nil {
+		// Something...
+	}
+	defer conn.Close()
+	// You now have access to the proxied remote port in `conn`.
 }

@@ -13,11 +13,13 @@ import (
 	"nhooyr.io/websocket"
 )
 
+// DialConfig provides options to configure the Dial for a connection.
 type DialConfig struct {
-	ICEServers []ICEServer
+	ICEServers []webrtc.ICEServer
 }
 
 // Dial connects to the broker and negotiates a connection to a listener.
+//
 func Dial(ctx context.Context, broker string, config *DialConfig) (*Dialer, error) {
 	if config == nil {
 		config = &DialConfig{}
@@ -46,17 +48,11 @@ func Dial(ctx context.Context, broker string, config *DialConfig) (*Dialer, erro
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w", err)
 	}
-	rtc.OnICEConnectionStateChange(func(is webrtc.ICEConnectionState) {
-		fmt.Printf("WE CONNECTED!: %s\n", is)
-	})
-	rtc.OnICECandidate(func(i *webrtc.ICECandidate) {
-		fmt.Printf("WE GOT ICE: %+v\n", i)
-	})
 
 	flushCandidates := proxyICECandidates(rtc, nconn)
 
-	ctrl, err := rtc.CreateDataChannel("control", &webrtc.DataChannelInit{
-		Protocol: stringPtr("control"),
+	ctrl, err := rtc.CreateDataChannel(controlChannel, &webrtc.DataChannelInit{
+		Protocol: stringPtr(controlChannel),
 		Ordered:  boolPtr(true),
 	})
 	if err != nil {

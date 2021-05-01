@@ -9,7 +9,6 @@ import (
 	"io"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/pion/dtls/v2"
@@ -18,77 +17,24 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
-// ICEServer describes a single STUN and TURN server.
-type ICEServer = webrtc.ICEServer
+var (
+	ErrMismatchedProtocol = errors.New("mismatched protocols")
+	ErrInvalidCredentials = errors.New("invalid credentials")
+)
 
-// Generalizes creating a new peer connection with consistent options.
-func newPeerConnection(servers []webrtc.ICEServer) (*webrtc.PeerConnection, error) {
-	se := webrtc.SettingEngine{}
-	se.DetachDataChannels()
-	se.SetICETimeouts(time.Second*5, time.Second*5, time.Second*2)
-	api := webrtc.NewAPI(webrtc.WithSettingEngine(se))
+const (
+	DefaultICETimeout = time.Millisecond * 200
 
-	var (
-		wg   sync.WaitGroup
-		errs = make(chan error)
-	)
-	for _, server := range servers {
-		wg.Add(1)
-		server := server
-		go func() {
-			defer wg.Done()
-			err := connectToServer(server)
-			if err != nil {
-				errs <- err
-			}
-		}()
-	}
-	go func() {
-		wg.Wait()
-		close(errs)
-	}()
+	controlChannel = "control"
+)
 
-	err := <-errs
-	if err != nil {
-		return nil, err
+// DialICE confirms ICE servers are dialable.
+// Timeout defaults to `DefaultICETimeout`.
+func DialICE(server webrtc.ICEServer, timeout time.Duration) error {
+	if timeout == 0 {
+		timeout = DefaultICETimeout
 	}
 
-	return api.NewPeerConnection(webrtc.Configuration{
-		ICEServers: servers,
-	})
-}
-
-// Proxies ICE candidates using the protocol to a writer.
-func proxyICECandidates(conn *webrtc.PeerConnection, w io.Writer) func() {
-	queue := make([]*webrtc.ICECandidate, 0)
-	flushed := false
-	write := func(i *webrtc.ICECandidate) {
-		b, _ := json.Marshal(&protoMessage{
-			Candidate: i.ToJSON().Candidate,
-		})
-		_, _ = w.Write(b)
-	}
-
-	conn.OnICECandidate(func(i *webrtc.ICECandidate) {
-		if i == nil {
-			return
-		}
-		if !flushed {
-			queue = append(queue, i)
-			return
-		}
-
-		write(i)
-	})
-	return func() {
-		for _, i := range queue {
-			write(i)
-		}
-		flushed = true
-	}
-}
-
-func connectToServer(server webrtc.ICEServer) error {
 	for _, rawURL := range server.URLs {
 		url, err := ice.ParseURL(rawURL)
 		if err != nil {
@@ -126,15 +72,16 @@ func connectToServer(server webrtc.ICEServer) error {
 			}
 		}
 
-		if tcpConn != nil {
-			udpConn = turn.NewSTUNConn(tcpConn)
-		}
 		if err != nil {
 			return err
 		}
+		if tcpConn != nil {
+			udpConn = turn.NewSTUNConn(tcpConn)
+		}
+		defer udpConn.Close()
 
 		var pass string
-		if server.CredentialType == webrtc.ICECredentialTypePassword {
+		if server.Credential != nil && server.CredentialType == webrtc.ICECredentialTypePassword {
 			pass = server.Credential.(string)
 		}
 
@@ -143,35 +90,90 @@ func connectToServer(server webrtc.ICEServer) error {
 			TURNServerAddr: turnServerAddr,
 			Username:       server.Username,
 			Password:       pass,
-			Realm:          "coder",
+			Realm:          "",
 			Conn:           udpConn,
+			RTO:            timeout,
 		})
 		if err != nil {
 			return err
 		}
+		defer client.Close()
 		err = client.Listen()
 		if err != nil {
 			return err
 		}
-		addr, err := client.SendBindingRequest()
+		// STUN servers are not authenticated with credentials.
+		// As long as the transport is valid, this should always work.
+		_, err = client.SendBindingRequest()
 		if err != nil {
+			// Transport failed to connect.
+			// https://github.com/pion/turn/blob/8231b69046f562420299916e9fb69cbff4754231/errors.go#L20
 			if strings.Contains(err.Error(), "retransmissions failed") {
-				return errors.New("Invalid protocol")
+				return ErrMismatchedProtocol
 			}
 			return fmt.Errorf("binding: %w", err)
 		}
 		if url.Scheme == ice.SchemeTypeTURN || url.Scheme == ice.SchemeTypeTURNS {
+			// We TURN to validate server credentials are correct.
 			pc, err := client.Allocate()
 			if err != nil {
-				fmt.Printf("ERR %T\n", err)
+				if strings.Contains(err.Error(), "error 400") {
+					return ErrInvalidCredentials
+				}
+				// Since TURN and STUN follow the same protocol, they can
+				// both handshake, but once a tunnel is allocated it will
+				// fail to transmit.
+				if strings.Contains(err.Error(), "retransmissions failed") {
+					return ErrMismatchedProtocol
+				}
 				return err
 			}
-			pc.Close()
+			defer pc.Close()
 		}
-		fmt.Printf("Got: %+v\n", addr)
-		udpConn.Close()
 	}
 	return nil
+}
+
+// Generalizes creating a new peer connection with consistent options.
+func newPeerConnection(servers []webrtc.ICEServer) (*webrtc.PeerConnection, error) {
+	se := webrtc.SettingEngine{}
+	se.DetachDataChannels()
+	se.SetICETimeouts(time.Second*5, time.Second*5, time.Second*2)
+	api := webrtc.NewAPI(webrtc.WithSettingEngine(se))
+
+	return api.NewPeerConnection(webrtc.Configuration{
+		ICEServers: servers,
+	})
+}
+
+// Proxies ICE candidates using the protocol to a writer.
+func proxyICECandidates(conn *webrtc.PeerConnection, w io.Writer) func() {
+	queue := make([]*webrtc.ICECandidate, 0)
+	flushed := false
+	write := func(i *webrtc.ICECandidate) {
+		b, _ := json.Marshal(&protoMessage{
+			Candidate: i.ToJSON().Candidate,
+		})
+		_, _ = w.Write(b)
+	}
+
+	conn.OnICECandidate(func(i *webrtc.ICECandidate) {
+		if i == nil {
+			return
+		}
+		if !flushed {
+			queue = append(queue, i)
+			return
+		}
+
+		write(i)
+	})
+	return func() {
+		for _, i := range queue {
+			write(i)
+		}
+		flushed = true
+	}
 }
 
 // Waits for a DataChannel to hit the open state.

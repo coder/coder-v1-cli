@@ -1,6 +1,7 @@
 package wsnet
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -8,89 +9,107 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"math/big"
 	"net"
+	"net/http"
 	"testing"
 	"time"
 
 	"cdr.dev/slog/sloggers/slogtest/assert"
-	"github.com/pion/dtls/v2"
+	"github.com/hashicorp/yamux"
 	"github.com/pion/ice/v2"
 	"github.com/pion/turn/v2"
+	"nhooyr.io/websocket"
 )
 
-func listenTURN(t *testing.T, protocol ice.ProtoType, pass string, useTLS bool) string {
+// createDumbBroker proxies sockets between /listen and /connect
+// to emulate an authenticated WebSocket pair.
+func createDumbBroker(t *testing.T) (connectAddr string, listenAddr string) {
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Error(err)
+	}
+	t.Cleanup(func() {
+		listener.Close()
+	})
+	mux := http.NewServeMux()
+	var sess *yamux.Session
+	mux.HandleFunc("/listen", func(w http.ResponseWriter, r *http.Request) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		nc := websocket.NetConn(context.Background(), c, websocket.MessageBinary)
+		sess, err = yamux.Client(nc, nil)
+		if err != nil {
+			t.Error(err)
+		}
+	})
+	mux.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		nc := websocket.NetConn(context.Background(), c, websocket.MessageBinary)
+		oc, err := sess.Open()
+		if err != nil {
+			t.Error(err)
+		}
+		go io.Copy(nc, oc)
+		io.Copy(oc, nc)
+	})
+
+	s := http.Server{
+		Handler: mux,
+	}
+	go s.Serve(listener)
+	return fmt.Sprintf("ws://%s/connect", listener.Addr()), fmt.Sprintf("ws://%s/listen", listener.Addr())
+}
+
+// createTURNServer allocates a TURN server and returns the address.
+func createTURNServer(t *testing.T, server ice.SchemeType, pass string) string {
 	var (
-		listeners   = []turn.ListenerConfig{}
-		pcListeners = []turn.PacketConnConfig{}
-		tlsConfig   *tls.Config
+		listeners   []turn.ListenerConfig
+		pcListeners []turn.PacketConnConfig
 		relay       = &turn.RelayAddressGeneratorStatic{
 			RelayAddress: net.ParseIP("127.0.0.1"),
 			Address:      "127.0.0.1",
 		}
 		listenAddr net.Addr
 	)
-	if useTLS {
-		tlsConfig = generateTLSConfig(t)
-	}
+	url, _ := ice.ParseURL(fmt.Sprintf("%s:localhost", server))
 
-	switch protocol {
+	switch url.Proto {
 	case ice.ProtoTypeTCP:
 		var (
 			tcpListener net.Listener
 			err         error
 		)
-		if useTLS {
-			tcpListener, err = tls.Listen("tcp4", "0.0.0.0:0", tlsConfig)
+		if url.IsSecure() {
+			tcpListener, err = tls.Listen("tcp4", "127.0.0.1:0", generateTLSConfig(t))
 		} else {
-			tcpListener, err = net.Listen("tcp4", "0.0.0.0:0")
+			tcpListener, err = net.Listen("tcp4", "127.0.0.1:0")
 		}
 		if err != nil {
 			t.Error(err)
 		}
 		listenAddr = tcpListener.Addr()
-		listeners = append(listeners, turn.ListenerConfig{
+		listeners = []turn.ListenerConfig{{
 			Listener:              tcpListener,
 			RelayAddressGenerator: relay,
-		})
+		}}
 	case ice.ProtoTypeUDP:
-		if useTLS {
-			addr, err := net.ResolveUDPAddr("udp4", "0.0.0.0:0")
-			if err != nil {
-				t.Error(err)
-			}
-			udpListener, err := dtls.Listen("udp4", addr, &dtls.Config{
-				Certificates: tlsConfig.Certificates,
-			})
-			if err != nil {
-				t.Error(err)
-			}
-			listenAddr = udpListener.Addr()
-			listeners = append(listeners, turn.ListenerConfig{
-				Listener:              udpListener,
-				RelayAddressGenerator: relay,
-			})
-		} else {
-			udpListener, err := net.ListenPacket("udp4", "0.0.0.0:0")
-			if err != nil {
-				t.Error(err)
-			}
-			listenAddr = udpListener.LocalAddr()
-			pcListeners = append(pcListeners, turn.PacketConnConfig{
-				PacketConn:            udpListener,
-				RelayAddressGenerator: relay,
-			})
+		udpListener, err := net.ListenPacket("udp4", "127.0.0.1:0")
+		if err != nil {
+			t.Error(err)
 		}
+		listenAddr = udpListener.LocalAddr()
+		pcListeners = []turn.PacketConnConfig{{
+			PacketConn:            udpListener,
+			RelayAddressGenerator: relay,
+		}}
 	}
-
-	t.Cleanup(func() {
-		for _, l := range listeners {
-			l.Listener.Close()
-		}
-		for _, l := range pcListeners {
-			l.PacketConn.Close()
-		}
-	})
 
 	srv, err := turn.NewServer(turn.ServerConfig{
 		PacketConnConfigs: pcListeners,
@@ -104,14 +123,16 @@ func listenTURN(t *testing.T, protocol ice.ProtoType, pass string, useTLS bool) 
 		t.Error(err)
 	}
 	t.Cleanup(func() {
+		for _, l := range listeners {
+			l.Listener.Close()
+		}
+		for _, l := range pcListeners {
+			l.PacketConn.Close()
+		}
 		srv.Close()
 	})
 
-	scheme := "turn"
-	if useTLS {
-		scheme = "turns"
-	}
-	return fmt.Sprintf("%s:%s", scheme, listenAddr.String())
+	return listenAddr.String()
 }
 
 func generateTLSConfig(t testing.TB) *tls.Config {
