@@ -85,24 +85,16 @@ func Dial(ctx context.Context, broker string, config *DialConfig) (*Dialer, erro
 	flushCandidates()
 
 	dialer := &Dialer{
+		ws:   conn,
 		ctrl: ctrl,
 		rtc:  rtc,
 	}
-
-	go func() {
-		err = waitForDataChannelOpen(ctx, ctrl)
-		if err != nil {
-			_ = conn.Close(websocket.StatusAbnormalClosure, "timeout")
-			return
-		}
-		dialer.ctrlrw, _ = ctrl.Detach()
-		_ = conn.Close(websocket.StatusNormalClosure, "connected")
-	}()
 
 	return dialer, dialer.negotiate(nconn)
 }
 
 type Dialer struct {
+	ws     *websocket.Conn
 	ctrl   *webrtc.DataChannel
 	ctrlrw datachannel.ReadWriteCloser
 	rtc    *webrtc.PeerConnection
@@ -110,6 +102,22 @@ type Dialer struct {
 
 func (d *Dialer) negotiate(nconn net.Conn) (err error) {
 	decoder := json.NewDecoder(nconn)
+	errCh := make(chan error)
+	go func() {
+		defer close(errCh)
+		err := waitForDataChannelOpen(context.Background(), d.ctrl)
+		if err != nil {
+			_ = d.ws.Close(websocket.StatusAbnormalClosure, "timeout")
+			errCh <- err
+			return
+		}
+		d.ctrlrw, err = d.ctrl.Detach()
+		if err != nil {
+			errCh <- err
+		}
+		_ = d.ws.Close(websocket.StatusNormalClosure, "connected")
+	}()
+
 	for {
 		var msg protoMessage
 		err = decoder.Decode(&msg)
@@ -144,7 +152,7 @@ func (d *Dialer) negotiate(nconn net.Conn) (err error) {
 		}
 		return fmt.Errorf("unhandled message: %+v", msg)
 	}
-	return nil
+	return <-errCh
 }
 
 // Close closes the RTC connection.
@@ -173,6 +181,9 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 	if err != nil {
 		return nil, fmt.Errorf("create data channel: %w", err)
 	}
+	dc.OnError(func(err error) {
+		fmt.Printf("We got err %+v\n", err)
+	})
 	err = waitForDataChannelOpen(ctx, dc)
 	if err != nil {
 		return nil, fmt.Errorf("wait for open: %w", err)
