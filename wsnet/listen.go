@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strings"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"github.com/hashicorp/yamux"
-	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
 	"nhooyr.io/websocket"
 )
@@ -149,15 +149,43 @@ func (l *listener) negotiate(conn net.Conn) {
 }
 
 func (l *listener) handle(dc *webrtc.DataChannel) {
-	// if dc.Protocol() == controlChannel {
-	// 	return
-	// }
+	if dc.Protocol() == controlChannel {
+		// The control channel handles pings.
+		dc.OnOpen(func() {
+			rw, err := dc.Detach()
+			if err != nil {
+				return
+			}
+			// We'll read and write back a single byte for ping/pongin'.
+			d := make([]byte, 1)
+			for {
+				_, err = rw.Read(d)
+				if err != nil {
+					continue
+				}
+				_, _ = rw.Write(d)
+			}
+		})
+		return
+	}
 
-	fmt.Printf("GOT CHANNEL %s\n", dc.Protocol())
+	dc.OnOpen(func() {
+		rw, err := dc.Detach()
+		if err != nil {
+			return
+		}
+		parts := strings.SplitN(dc.Protocol(), ":", 2)
+		network := parts[0]
+		addr := parts[1]
 
-	// dc.OnOpen(func() {
-	// 	rw, err := dc.Detach()
-	// })
+		l.conns <- &conn{
+			addr: &net.UnixAddr{
+				Name: addr,
+				Net:  network,
+			},
+			rw: rw,
+		}
+	})
 }
 
 // Accept accepts a new connection.
@@ -174,30 +202,5 @@ func (l *listener) Close() error {
 // Since this listener is bound to the WebSocket, we could
 // return that resolved Addr, but until we need it we won't.
 func (l *listener) Addr() net.Addr {
-	return nil
-}
-
-type dataChannelConn struct {
-	rw        datachannel.ReadWriteCloser
-	localAddr net.Addr
-}
-
-func (d *dataChannelConn) Read(b []byte) (n int, err error) {
-	return d.rw.Read(b)
-}
-
-func (d *dataChannelConn) Write(b []byte) (n int, err error) {
-	return d.rw.Write(b)
-}
-
-func (d *dataChannelConn) Close() error {
-	return d.Close()
-}
-
-func (d *dataChannelConn) LocalAddr() net.Addr {
-	return d.localAddr
-}
-
-func (d *dataChannelConn) RemoteAddr() net.Addr {
 	return nil
 }

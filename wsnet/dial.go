@@ -9,6 +9,7 @@ import (
 	"net"
 
 	"cdr.dev/coder-cli/coder-sdk"
+	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
 	"nhooyr.io/websocket"
 )
@@ -22,7 +23,9 @@ type DialConfig struct {
 //
 func Dial(ctx context.Context, broker string, config *DialConfig) (*Dialer, error) {
 	if config == nil {
-		config = &DialConfig{}
+		config = &DialConfig{
+			ICEServers: []webrtc.ICEServer{},
+		}
 	}
 
 	conn, resp, err := websocket.Dial(ctx, broker, nil)
@@ -92,6 +95,7 @@ func Dial(ctx context.Context, broker string, config *DialConfig) (*Dialer, erro
 			_ = conn.Close(websocket.StatusAbnormalClosure, "timeout")
 			return
 		}
+		dialer.ctrlrw, _ = ctrl.Detach()
 		_ = conn.Close(websocket.StatusNormalClosure, "connected")
 	}()
 
@@ -99,8 +103,9 @@ func Dial(ctx context.Context, broker string, config *DialConfig) (*Dialer, erro
 }
 
 type Dialer struct {
-	ctrl *webrtc.DataChannel
-	rtc  *webrtc.PeerConnection
+	ctrl   *webrtc.DataChannel
+	ctrlrw datachannel.ReadWriteCloser
+	rtc    *webrtc.PeerConnection
 }
 
 func (d *Dialer) negotiate(nconn net.Conn) (err error) {
@@ -142,14 +147,45 @@ func (d *Dialer) negotiate(nconn net.Conn) (err error) {
 	return nil
 }
 
+// Close closes the RTC connection.
+// All data channels dialed will be closed.
 func (d *Dialer) Close() error {
-	return nil
+	return d.rtc.Close()
 }
 
+// Ping sends a ping through the control channel.
 func (d *Dialer) Ping(ctx context.Context) error {
-	return nil
+	_, err := d.ctrlrw.Write([]byte{'a'})
+	if err != nil {
+		return fmt.Errorf("write: %w", err)
+	}
+	b := make([]byte, 4)
+	_, err = d.ctrlrw.Read(b)
+	return err
 }
 
+// DialContext dials the network and address on the remote listener.
 func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
-	return nil, nil
+	dc, err := d.rtc.CreateDataChannel("proxy", &webrtc.DataChannelInit{
+		Ordered:  boolPtr(network != "udp"),
+		Protocol: stringPtr(fmt.Sprintf("%s:%s", network, address)),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create data channel: %w", err)
+	}
+	err = waitForDataChannelOpen(ctx, dc)
+	if err != nil {
+		return nil, fmt.Errorf("wait for open: %w", err)
+	}
+	rw, err := dc.Detach()
+	if err != nil {
+		return nil, fmt.Errorf("detach: %w", err)
+	}
+	return &conn{
+		addr: &net.UnixAddr{
+			Name: address,
+			Net:  network,
+		},
+		rw: rw,
+	}, nil
 }

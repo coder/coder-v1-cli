@@ -20,6 +20,10 @@ import (
 var (
 	ErrMismatchedProtocol = errors.New("mismatched protocols")
 	ErrInvalidCredentials = errors.New("invalid credentials")
+
+	DefaultPublicSTUN = webrtc.ICEServer{
+		URLs: []string{"stun:stun.l.google.com:19302"},
+	}
 )
 
 const (
