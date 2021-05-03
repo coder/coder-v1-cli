@@ -8,10 +8,11 @@ import (
 	"io"
 	"net"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
 	"nhooyr.io/websocket"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 // DialConfig provides options to configure the Dial for a connection.

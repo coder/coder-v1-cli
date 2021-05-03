@@ -7,10 +7,11 @@ import (
 	"net"
 	"strings"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"github.com/hashicorp/yamux"
 	"github.com/pion/webrtc/v3"
 	"nhooyr.io/websocket"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 // Listen connects to the broker and returns a Listener that's triggered
