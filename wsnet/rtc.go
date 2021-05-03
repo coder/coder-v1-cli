@@ -171,9 +171,9 @@ func proxyICECandidates(conn *webrtc.PeerConnection, w io.Writer) func() {
 		if i == nil {
 			return
 		}
+		mut.Lock()
+		defer mut.Unlock()
 		if !flushed {
-			mut.Lock()
-			defer mut.Unlock()
 			queue = append(queue, i)
 			return
 		}
