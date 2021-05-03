@@ -2,15 +2,16 @@ package cmd
 
 import (
 	"context"
+	"log"
 	"net/url"
 	"os"
+	"os/signal"
+	"syscall"
 
-	"cdr.dev/slog"
-	"cdr.dev/slog/sloggers/sloghuman"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
-	"cdr.dev/coder-cli/agent"
+	"cdr.dev/coder-cli/wsnet"
 )
 
 func agentCmd() *cobra.Command {
@@ -46,8 +47,6 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			log := slog.Make(sloghuman.Sink(cmd.OutOrStdout()))
-
 			if coderURL == "" {
 				var ok bool
 				coderURL, ok = os.LookupEnv("CODER_URL")
@@ -74,18 +73,18 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 				}
 			}
 
-			server, err := agent.NewServer(agent.ServerArgs{
-				Log:      log,
-				CoderURL: u,
-				Token:    token,
-			})
+			listener, err := wsnet.Listen(context.Background(), wsnet.ListenEndpoint(u, token))
 			if err != nil {
-				return xerrors.Errorf("creating agent server: %w", err)
+				return xerrors.Errorf("listen: %w", err)
 			}
 
-			err = server.Run(ctx)
-			if err != nil && !xerrors.Is(err, context.Canceled) && !xerrors.Is(err, context.DeadlineExceeded) {
-				return xerrors.Errorf("running agent server: %w", err)
+			// Block until user sends SIGINT or SIGTERM
+			sigs := make(chan os.Signal, 1)
+			signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+			<-sigs
+
+			if err = listener.Close(); err != nil {
+				log.Panic(err)
 			}
 
 			return nil

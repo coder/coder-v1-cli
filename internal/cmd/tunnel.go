@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -11,12 +12,13 @@ import (
 
 	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/sloghuman"
+	"github.com/pion/webrtc/v3"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/x/xcobra"
-	"cdr.dev/coder-cli/xwebrtc"
+	"cdr.dev/coder-cli/wsnet"
 )
 
 func tunnelCmd() *cobra.Command {
@@ -102,14 +104,34 @@ type tunnneler struct {
 }
 
 func (c *tunnneler) start(ctx context.Context) error {
-	wd, err := xwebrtc.NewWorkspaceDialer(ctx, c.log, c.brokerAddr, c.token, c.workspaceID)
-	if err != nil {
-		return xerrors.Errorf("creating workspace dialer: %w", wd)
+	server := webrtc.ICEServer{
+		URLs:           []string{wsnet.TURNEndpoint(c.brokerAddr)},
+		Username:       "insecure",
+		Credential:     "pass",
+		CredentialType: webrtc.ICECredentialTypePassword,
 	}
-	nc, err := wd.DialContext(ctx, xwebrtc.NetworkTCP, fmt.Sprintf("localhost:%d", c.remotePort))
-	if err != nil {
-		return xerrors.Errorf("dial: %w", err)
+
+	err := wsnet.DialICE(server, 0)
+	if errors.Is(err, wsnet.ErrInvalidCredentials) {
+		return xerrors.Errorf("failed to authenticate your user for this workspace")
 	}
+	if errors.Is(err, wsnet.ErrMismatchedProtocol) {
+		return xerrors.Errorf("your TURN server is configured incorrectly. check TLS settings")
+	}
+	if err != nil {
+		return xerrors.Errorf("dial ice: %w", err)
+	}
+
+	c.log.Info(ctx, "Connecting to workspace...")
+	wd, err := wsnet.Dial(ctx, wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token), []webrtc.ICEServer{server})
+	if err != nil {
+		return xerrors.Errorf("creating workspace dialer: %w", err)
+	}
+	nc, err := wd.DialContext(ctx, "tcp", fmt.Sprintf("localhost:%d", c.remotePort))
+	if err != nil {
+		return err
+	}
+	c.log.Info(ctx, "Connected to workspace!")
 
 	// proxy via stdio
 	if c.stdio {
@@ -122,6 +144,9 @@ func (c *tunnneler) start(ctx context.Context) error {
 		}
 		return nil
 	}
+	// This was used to test if the port was open, and proxy over stdio
+	// if the user specified that.
+	_ = nc.Close()
 
 	// proxy via tcp listener
 	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", c.localPort))
@@ -133,6 +158,10 @@ func (c *tunnneler) start(ctx context.Context) error {
 		lc, err := listener.Accept()
 		if err != nil {
 			return xerrors.Errorf("accept: %w", err)
+		}
+		nc, err := wd.DialContext(ctx, "tcp", fmt.Sprintf("localhost:%d", c.remotePort))
+		if err != nil {
+			return err
 		}
 		go func() {
 			defer func() {
