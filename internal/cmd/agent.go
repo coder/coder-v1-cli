@@ -129,5 +129,4 @@ func runAgentRetry(ctx context.Context, logger slog.Logger, u *url.URL, token st
 				}()
 			}
 		})
-
 }
