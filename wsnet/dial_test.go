@@ -23,7 +23,7 @@ func ExampleDial_basic() {
 			// You could do something...
 		}
 		if errors.Is(err, ErrMismatchedProtocol) {
-			// Likely they used TURN when they should have used TURN.
+			// Likely they used TURNS when they should have used TURN.
 			// Or they could have used TURN instead of TURNS.
 		}
 	}
