@@ -20,7 +20,6 @@ type DialConfig struct {
 }
 
 // Dial connects to the broker and negotiates a connection to a listener.
-//
 func Dial(ctx context.Context, broker string, config *DialConfig) (*Dialer, error) {
 	if config == nil {
 		config = &DialConfig{
@@ -93,6 +92,9 @@ func Dial(ctx context.Context, broker string, config *DialConfig) (*Dialer, erro
 	return dialer, dialer.negotiate(nconn)
 }
 
+// Dialer enables arbitrary dialing to any network and address
+// inside a workspace. The opposing end of the WebSocket messages
+// should be proxied with a Listener.
 type Dialer struct {
 	ws     *websocket.Conn
 	ctrl   *webrtc.DataChannel

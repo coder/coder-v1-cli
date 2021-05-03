@@ -56,8 +56,10 @@ func createDumbBroker(t *testing.T) (connectAddr string, listenAddr string) {
 		if err != nil {
 			t.Error(err)
 		}
-		go io.Copy(nc, oc)
-		io.Copy(oc, nc)
+		go func() {
+			_, _ = io.Copy(nc, oc)
+		}()
+		_, _ = io.Copy(oc, nc)
 	})
 
 	s := http.Server{

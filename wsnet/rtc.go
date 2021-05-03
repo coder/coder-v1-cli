@@ -18,17 +18,25 @@ import (
 )
 
 var (
+	// ErrMismatchedProtocol occurs when a TURN is requested to a STUN server,
+	// or a TURN server is requested instead of TURNS.
 	ErrMismatchedProtocol = errors.New("mismatched protocols")
+	// ErrInvalidCredentials occurs when invalid credentials are passed to a
+	// TURN server. This error cannot occur for STUN servers, as they don't accept
+	// credentials.
 	ErrInvalidCredentials = errors.New("invalid credentials")
 
+	// DefaultPublicSTUN references a default STUN server we use for
+	// users happy with external dependencies.
 	DefaultPublicSTUN = webrtc.ICEServer{
 		URLs: []string{"stun:stun.l.google.com:19302"},
 	}
-)
 
-const (
+	// DefaultICETimeout refers to the default retry for dialing an
+	// ICE server.
 	DefaultICETimeout = time.Millisecond * 200
 
+	// Constant for the control channel protocol.
 	controlChannel = "control"
 )
 
