@@ -48,100 +48,108 @@ func DialICE(server webrtc.ICEServer, timeout time.Duration) error {
 	}
 
 	for _, rawURL := range server.URLs {
-		url, err := ice.ParseURL(rawURL)
+		err := dialICEURL(server, rawURL, timeout)
 		if err != nil {
 			return err
 		}
-		var (
-			tcpConn        net.Conn
-			udpConn        net.PacketConn
-			turnServerAddr = fmt.Sprintf("%s:%d", url.Host, url.Port)
-		)
-		switch {
-		case url.Scheme == ice.SchemeTypeTURN || url.Scheme == ice.SchemeTypeSTUN:
-			switch url.Proto {
-			case ice.ProtoTypeUDP:
-				udpConn, err = net.ListenPacket("udp4", "0.0.0.0:0")
-			case ice.ProtoTypeTCP:
-				tcpConn, err = net.Dial("tcp4", turnServerAddr)
+	}
+	return nil
+}
+
+func dialICEURL(server webrtc.ICEServer, rawURL string, timeout time.Duration) error {
+	url, err := ice.ParseURL(rawURL)
+	if err != nil {
+		return err
+	}
+	var (
+		tcpConn        net.Conn
+		udpConn        net.PacketConn
+		turnServerAddr = fmt.Sprintf("%s:%d", url.Host, url.Port)
+	)
+	switch {
+	case url.Scheme == ice.SchemeTypeTURN || url.Scheme == ice.SchemeTypeSTUN:
+		switch url.Proto {
+		case ice.ProtoTypeUDP:
+			udpConn, err = net.ListenPacket("udp4", "0.0.0.0:0")
+		case ice.ProtoTypeTCP:
+			tcpConn, err = net.Dial("tcp4", turnServerAddr)
+		}
+	case url.Scheme == ice.SchemeTypeTURNS || url.Scheme == ice.SchemeTypeSTUNS:
+		switch url.Proto {
+		case ice.ProtoTypeUDP:
+			udpAddr, resErr := net.ResolveUDPAddr("udp4", turnServerAddr)
+			if resErr != nil {
+				return resErr
 			}
-		case url.Scheme == ice.SchemeTypeTURNS || url.Scheme == ice.SchemeTypeSTUNS:
-			switch url.Proto {
-			case ice.ProtoTypeUDP:
-				udpAddr, resErr := net.ResolveUDPAddr("udp4", turnServerAddr)
-				if resErr != nil {
-					return resErr
-				}
-				dconn, dialErr := dtls.Dial("udp4", udpAddr, &dtls.Config{
-					InsecureSkipVerify: true,
-				})
-				err = dialErr
-				udpConn = turn.NewSTUNConn(dconn)
-			case ice.ProtoTypeTCP:
-				tcpConn, err = tls.Dial("tcp4", turnServerAddr, &tls.Config{
-					InsecureSkipVerify: true,
-				})
+			dconn, dialErr := dtls.Dial("udp4", udpAddr, &dtls.Config{
+				InsecureSkipVerify: true,
+			})
+			err = dialErr
+			udpConn = turn.NewSTUNConn(dconn)
+		case ice.ProtoTypeTCP:
+			tcpConn, err = tls.Dial("tcp4", turnServerAddr, &tls.Config{
+				InsecureSkipVerify: true,
+			})
+		}
+	}
+
+	if err != nil {
+		return err
+	}
+	if tcpConn != nil {
+		udpConn = turn.NewSTUNConn(tcpConn)
+	}
+	defer udpConn.Close()
+
+	var pass string
+	if server.Credential != nil && server.CredentialType == webrtc.ICECredentialTypePassword {
+		pass = server.Credential.(string)
+	}
+
+	client, err := turn.NewClient(&turn.ClientConfig{
+		STUNServerAddr: turnServerAddr,
+		TURNServerAddr: turnServerAddr,
+		Username:       server.Username,
+		Password:       pass,
+		Realm:          "",
+		Conn:           udpConn,
+		RTO:            timeout,
+	})
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	err = client.Listen()
+	if err != nil {
+		return err
+	}
+	// STUN servers are not authenticated with credentials.
+	// As long as the transport is valid, this should always work.
+	_, err = client.SendBindingRequest()
+	if err != nil {
+		// Transport failed to connect.
+		// https://github.com/pion/turn/blob/8231b69046f562420299916e9fb69cbff4754231/errors.go#L20
+		if strings.Contains(err.Error(), "retransmissions failed") {
+			return ErrMismatchedProtocol
+		}
+		return fmt.Errorf("binding: %w", err)
+	}
+	if url.Scheme == ice.SchemeTypeTURN || url.Scheme == ice.SchemeTypeTURNS {
+		// We TURN to validate server credentials are correct.
+		pc, err := client.Allocate()
+		if err != nil {
+			if strings.Contains(err.Error(), "error 400") {
+				return ErrInvalidCredentials
 			}
-		}
-
-		if err != nil {
-			return err
-		}
-		if tcpConn != nil {
-			udpConn = turn.NewSTUNConn(tcpConn)
-		}
-		defer udpConn.Close()
-
-		var pass string
-		if server.Credential != nil && server.CredentialType == webrtc.ICECredentialTypePassword {
-			pass = server.Credential.(string)
-		}
-
-		client, err := turn.NewClient(&turn.ClientConfig{
-			STUNServerAddr: turnServerAddr,
-			TURNServerAddr: turnServerAddr,
-			Username:       server.Username,
-			Password:       pass,
-			Realm:          "",
-			Conn:           udpConn,
-			RTO:            timeout,
-		})
-		if err != nil {
-			return err
-		}
-		defer client.Close()
-		err = client.Listen()
-		if err != nil {
-			return err
-		}
-		// STUN servers are not authenticated with credentials.
-		// As long as the transport is valid, this should always work.
-		_, err = client.SendBindingRequest()
-		if err != nil {
-			// Transport failed to connect.
-			// https://github.com/pion/turn/blob/8231b69046f562420299916e9fb69cbff4754231/errors.go#L20
+			// Since TURN and STUN follow the same protocol, they can
+			// both handshake, but once a tunnel is allocated it will
+			// fail to transmit.
 			if strings.Contains(err.Error(), "retransmissions failed") {
 				return ErrMismatchedProtocol
 			}
-			return fmt.Errorf("binding: %w", err)
+			return err
 		}
-		if url.Scheme == ice.SchemeTypeTURN || url.Scheme == ice.SchemeTypeTURNS {
-			// We TURN to validate server credentials are correct.
-			pc, err := client.Allocate()
-			if err != nil {
-				if strings.Contains(err.Error(), "error 400") {
-					return ErrInvalidCredentials
-				}
-				// Since TURN and STUN follow the same protocol, they can
-				// both handshake, but once a tunnel is allocated it will
-				// fail to transmit.
-				if strings.Contains(err.Error(), "retransmissions failed") {
-					return ErrMismatchedProtocol
-				}
-				return err
-			}
-			defer pc.Close()
-		}
+		defer pc.Close()
 	}
 	return nil
 }

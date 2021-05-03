@@ -9,10 +9,14 @@ import (
 	"github.com/pion/datachannel"
 )
 
+const (
+	httpScheme = "http"
+)
+
 // TURNEndpoint returns the TURN address for a Coder baseURL.
 func TURNEndpoint(baseURL *url.URL) string {
 	turnScheme := "turns"
-	if baseURL.Scheme == "http" {
+	if baseURL.Scheme == httpScheme {
 		turnScheme = "turn"
 	}
 	return fmt.Sprintf("%s:%s:5349?transport=tcp", turnScheme, baseURL.Host)
@@ -21,7 +25,7 @@ func TURNEndpoint(baseURL *url.URL) string {
 // ListenEndpoint returns the Coder endpoint to listen for workspace connections.
 func ListenEndpoint(baseURL *url.URL, token string) string {
 	wsScheme := "wss"
-	if baseURL.Scheme == "http" {
+	if baseURL.Scheme == httpScheme {
 		wsScheme = "ws"
 	}
 	return fmt.Sprintf("%s:%s%s?service_token=%s", wsScheme, baseURL.Host, "/api/private/envagent/listen", token)
@@ -30,7 +34,7 @@ func ListenEndpoint(baseURL *url.URL, token string) string {
 // ConnectEndpoint returns the Coder endpoint to dial a connection for a workspace.
 func ConnectEndpoint(baseURL *url.URL, workspace, token string) string {
 	wsScheme := "wss"
-	if baseURL.Scheme == "http" {
+	if baseURL.Scheme == httpScheme {
 		wsScheme = "ws"
 	}
 	return fmt.Sprintf("%s:%s%s%s%s%s", wsScheme, baseURL.Host, "/api/private/envagent/", workspace, "/connect?session_token=", token)

@@ -65,7 +65,9 @@ func createDumbBroker(t *testing.T) (connectAddr string, listenAddr string) {
 	s := http.Server{
 		Handler: mux,
 	}
-	go s.Serve(listener)
+	go func() {
+		_ = s.Serve(listener)
+	}()
 	return fmt.Sprintf("ws://%s/connect", listener.Addr()), fmt.Sprintf("ws://%s/listen", listener.Addr())
 }
 
