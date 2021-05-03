@@ -22,7 +22,6 @@ require (
 	github.com/rjeczalik/notify v0.9.2
 	github.com/spf13/cobra v1.1.3
 	go.coder.com/retry v1.2.0
-	golang.org/x/net v0.0.0-20210420210106-798c2154c571 // indirect
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/sys v0.0.0-20210420072515-93ed5bcd2bfe
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
