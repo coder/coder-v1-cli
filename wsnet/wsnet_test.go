@@ -1,5 +1,3 @@
-// +build !race
-
 package wsnet
 
 import (
@@ -15,6 +13,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -35,14 +34,19 @@ func createDumbBroker(t *testing.T) (connectAddr string, listenAddr string) {
 	t.Cleanup(func() {
 		listener.Close()
 	})
-	mux := http.NewServeMux()
-	var sess *yamux.Session
+	var (
+		mux  = http.NewServeMux()
+		sess *yamux.Session
+		mut  sync.Mutex
+	)
 	mux.HandleFunc("/listen", func(w http.ResponseWriter, r *http.Request) {
 		c, err := websocket.Accept(w, r, nil)
 		if err != nil {
 			t.Error(err)
 		}
 		nc := websocket.NetConn(context.Background(), c, websocket.MessageBinary)
+		mut.Lock()
+		defer mut.Unlock()
 		sess, err = yamux.Client(nc, nil)
 		if err != nil {
 			t.Error(err)
@@ -54,6 +58,8 @@ func createDumbBroker(t *testing.T) (connectAddr string, listenAddr string) {
 			t.Error(err)
 		}
 		nc := websocket.NetConn(context.Background(), c, websocket.MessageBinary)
+		mut.Lock()
+		defer mut.Unlock()
 		oc, err := sess.Open()
 		if err != nil {
 			t.Error(err)

@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pion/dtls/v2"
@@ -168,20 +169,25 @@ func newPeerConnection(servers []webrtc.ICEServer) (*webrtc.PeerConnection, erro
 
 // Proxies ICE candidates using the protocol to a writer.
 func proxyICECandidates(conn *webrtc.PeerConnection, w io.Writer) func() {
-	queue := make([]*webrtc.ICECandidate, 0)
-	flushed := false
-	write := func(i *webrtc.ICECandidate) {
-		b, _ := json.Marshal(&protoMessage{
-			Candidate: i.ToJSON().Candidate,
-		})
-		_, _ = w.Write(b)
-	}
+	var (
+		mut     sync.Mutex
+		queue   = []*webrtc.ICECandidate{}
+		flushed = false
+		write   = func(i *webrtc.ICECandidate) {
+			b, _ := json.Marshal(&protoMessage{
+				Candidate: i.ToJSON().Candidate,
+			})
+			_, _ = w.Write(b)
+		}
+	)
 
 	conn.OnICECandidate(func(i *webrtc.ICECandidate) {
 		if i == nil {
 			return
 		}
 		if !flushed {
+			mut.Lock()
+			defer mut.Unlock()
 			queue = append(queue, i)
 			return
 		}
@@ -189,6 +195,8 @@ func proxyICECandidates(conn *webrtc.PeerConnection, w io.Writer) func() {
 		write(i)
 	})
 	return func() {
+		mut.Lock()
+		defer mut.Unlock()
 		for _, i := range queue {
 			write(i)
 		}
