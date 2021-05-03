@@ -3,6 +3,7 @@ package wsnet
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -41,11 +42,14 @@ func Listen(ctx context.Context, broker string) (io.Closer, error) {
 		for {
 			conn, err := session.Accept()
 			if err != nil {
+				if errors.Is(err, io.EOF) {
+					continue
+				}
 				l.acceptError = err
 				l.Close()
 				return
 			}
-			l.negotiate(conn)
+			go l.negotiate(conn)
 		}
 	}()
 	return l, nil
@@ -64,6 +68,10 @@ func (l *listener) negotiate(conn net.Conn) {
 		err     error
 		decoder = json.NewDecoder(conn)
 		rtc     *webrtc.PeerConnection
+		// If candidates are sent before an offer, we place them here.
+		// We currently have no assurances to ensure this can't happen,
+		// so it's better to buffer and process than fail.
+		pendingCandidates = []webrtc.ICECandidateInit{}
 		// Sends the error provided then closes the connection.
 		// If RTC isn't connected, we'll close it.
 		closeError = func(err error) {
@@ -90,14 +98,16 @@ func (l *listener) negotiate(conn net.Conn) {
 		}
 
 		if msg.Candidate != "" {
-			if rtc == nil {
-				closeError(fmt.Errorf("offer must be sent before candidates"))
-				return
+			c := webrtc.ICECandidateInit{
+				Candidate: msg.Candidate,
 			}
 
-			err = rtc.AddICECandidate(webrtc.ICECandidateInit{
-				Candidate: msg.Candidate,
-			})
+			if rtc == nil {
+				pendingCandidates = append(pendingCandidates, c)
+				continue
+			}
+
+			err = rtc.AddICECandidate(c)
 			if err != nil {
 				closeError(fmt.Errorf("accept ice candidate: %w", err))
 				return
@@ -148,6 +158,15 @@ func (l *listener) negotiate(conn net.Conn) {
 				closeError(fmt.Errorf("write: %w", err))
 				return
 			}
+
+			for _, candidate := range pendingCandidates {
+				err = rtc.AddICECandidate(candidate)
+				if err != nil {
+					closeError(fmt.Errorf("add pending candidate: %w", err))
+					return
+				}
+			}
+			pendingCandidates = nil
 		}
 	}
 }
@@ -209,9 +228,9 @@ func (l *listener) handle(dc *webrtc.DataChannel) {
 		defer dc.Close()
 
 		go func() {
-			_, _ = io.Copy(conn, rw)
+			_, _ = io.Copy(rw, conn)
 		}()
-		_, _ = io.Copy(rw, conn)
+		_, _ = io.Copy(conn, rw)
 	})
 }
 

@@ -105,8 +105,15 @@ type Dialer struct {
 }
 
 func (d *Dialer) negotiate(nconn net.Conn) (err error) {
-	decoder := json.NewDecoder(nconn)
-	errCh := make(chan error)
+	var (
+		decoder = json.NewDecoder(nconn)
+		errCh   = make(chan error)
+		// If candidates are sent before an offer, we place them here.
+		// We currently have no assurances to ensure this can't happen,
+		// so it's better to buffer and process than fail.
+		pendingCandidates = []webrtc.ICECandidateInit{}
+	)
+
 	go func() {
 		defer close(errCh)
 		err := waitForDataChannelOpen(context.Background(), d.ctrl)
@@ -136,9 +143,14 @@ func (d *Dialer) negotiate(nconn net.Conn) (err error) {
 			return fmt.Errorf("read: %w", err)
 		}
 		if msg.Candidate != "" {
-			err = d.rtc.AddICECandidate(webrtc.ICECandidateInit{
+			c := webrtc.ICECandidateInit{
 				Candidate: msg.Candidate,
-			})
+			}
+			if d.rtc.RemoteDescription() == nil {
+				pendingCandidates = append(pendingCandidates, c)
+				continue
+			}
+			err = d.rtc.AddICECandidate(c)
 			if err != nil {
 				return fmt.Errorf("accept ice candidate: %s: %w", msg.Candidate, err)
 			}
@@ -149,6 +161,13 @@ func (d *Dialer) negotiate(nconn net.Conn) (err error) {
 			if err != nil {
 				return fmt.Errorf("set answer: %w", err)
 			}
+			for _, candidate := range pendingCandidates {
+				err = d.rtc.AddICECandidate(candidate)
+				if err != nil {
+					return fmt.Errorf("accept pending ice candidate: %s: %w", candidate.Candidate, err)
+				}
+			}
+			pendingCandidates = nil
 			continue
 		}
 		if msg.Error != "" {
@@ -185,9 +204,6 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 	if err != nil {
 		return nil, fmt.Errorf("create data channel: %w", err)
 	}
-	dc.OnError(func(err error) {
-		fmt.Printf("We got err %+v\n", err)
-	})
 	err = waitForDataChannelOpen(ctx, dc)
 	if err != nil {
 		return nil, fmt.Errorf("wait for open: %w", err)

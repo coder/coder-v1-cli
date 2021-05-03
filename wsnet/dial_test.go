@@ -95,7 +95,7 @@ func TestDial(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			conn.Write(msg)
+			_, _ = conn.Write(msg)
 		}()
 
 		connectAddr, listenAddr := createDumbBroker(t)

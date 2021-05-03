@@ -122,14 +122,18 @@ func (c *tunnneler) start(ctx context.Context) error {
 		return xerrors.Errorf("dial ice: %w", err)
 	}
 
-	wd, err := wsnet.Dial(ctx, wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token), &wsnet.DialConfig{})
+	c.log.Info(ctx, "Connecting to workspace...")
+	wd, err := wsnet.Dial(ctx, wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token), &wsnet.DialConfig{
+		ICEServers: []webrtc.ICEServer{server},
+	})
 	if err != nil {
-		return xerrors.Errorf("creating workspace dialer: %w", wd)
+		return xerrors.Errorf("creating workspace dialer: %w", err)
 	}
 	nc, err := wd.DialContext(ctx, "tcp", fmt.Sprintf("localhost:%d", c.remotePort))
 	if err != nil {
-		return xerrors.Errorf("dial: %w", err)
+		return err
 	}
+	c.log.Info(ctx, "Connected to workspace!")
 
 	// proxy via stdio
 	if c.stdio {
@@ -142,6 +146,9 @@ func (c *tunnneler) start(ctx context.Context) error {
 		}
 		return nil
 	}
+	// This was used to test if the port was open, and proxy over stdio
+	// if the user specified that.
+	_ = nc.Close()
 
 	// proxy via tcp listener
 	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", c.localPort))
@@ -153,6 +160,10 @@ func (c *tunnneler) start(ctx context.Context) error {
 		lc, err := listener.Accept()
 		if err != nil {
 			return xerrors.Errorf("accept: %w", err)
+		}
+		nc, err := wd.DialContext(ctx, "tcp", fmt.Sprintf("localhost:%d", c.remotePort))
+		if err != nil {
+			return err
 		}
 		go func() {
 			defer func() {

@@ -28,7 +28,7 @@ func ListenEndpoint(baseURL *url.URL, token string) string {
 	if baseURL.Scheme == httpScheme {
 		wsScheme = "ws"
 	}
-	return fmt.Sprintf("%s:%s%s?service_token=%s", wsScheme, baseURL.Host, "/api/private/envagent/listen", token)
+	return fmt.Sprintf("%s://%s%s?service_token=%s", wsScheme, baseURL.Host, "/api/private/envagent/listen", token)
 }
 
 // ConnectEndpoint returns the Coder endpoint to dial a connection for a workspace.
@@ -37,7 +37,7 @@ func ConnectEndpoint(baseURL *url.URL, workspace, token string) string {
 	if baseURL.Scheme == httpScheme {
 		wsScheme = "ws"
 	}
-	return fmt.Sprintf("%s:%s%s%s%s%s", wsScheme, baseURL.Host, "/api/private/envagent/", workspace, "/connect?session_token=", token)
+	return fmt.Sprintf("%s://%s%s%s%s%s", wsScheme, baseURL.Host, "/api/private/envagent/", workspace, "/connect?session_token=", token)
 }
 
 type conn struct {
