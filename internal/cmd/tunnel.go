@@ -111,7 +111,7 @@ func (c *tunnneler) start(ctx context.Context) error {
 		CredentialType: webrtc.ICECredentialTypePassword,
 	}
 
-	err := wsnet.DialICE(server, wsnet.DefaultICETimeout)
+	err := wsnet.DialICE(server, 0)
 	if errors.Is(err, wsnet.ErrInvalidCredentials) {
 		return xerrors.Errorf("failed to authenticate your user for this workspace")
 	}
@@ -123,9 +123,7 @@ func (c *tunnneler) start(ctx context.Context) error {
 	}
 
 	c.log.Info(ctx, "Connecting to workspace...")
-	wd, err := wsnet.Dial(ctx, wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token), &wsnet.DialConfig{
-		ICEServers: []webrtc.ICEServer{server},
-	})
+	wd, err := wsnet.Dial(ctx, wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token), []webrtc.ICEServer{server})
 	if err != nil {
 		return xerrors.Errorf("creating workspace dialer: %w", err)
 	}

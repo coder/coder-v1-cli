@@ -20,7 +20,7 @@ func ExampleDial_basic() {
 	}}
 
 	for _, server := range servers {
-		err := DialICE(server, DefaultICETimeout)
+		err := DialICE(server, 0)
 		if errors.Is(err, ErrInvalidCredentials) {
 			// You could do something...
 		}
@@ -30,9 +30,7 @@ func ExampleDial_basic() {
 		}
 	}
 
-	dialer, err := Dial(context.Background(), "wss://master.cdr.dev/agent/workspace/connect", &DialConfig{
-		ICEServers: servers,
-	})
+	dialer, err := Dial(context.Background(), "wss://master.cdr.dev/agent/workspace/connect", servers)
 	if err != nil {
 		// Do something...
 	}

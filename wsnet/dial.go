@@ -16,17 +16,10 @@ import (
 	"cdr.dev/coder-cli/coder-sdk"
 )
 
-// DialConfig provides options to configure the Dial for a connection.
-type DialConfig struct {
-	ICEServers []webrtc.ICEServer
-}
-
 // Dial connects to the broker and negotiates a connection to a listener.
-func Dial(ctx context.Context, broker string, config *DialConfig) (*Dialer, error) {
-	if config == nil {
-		config = &DialConfig{
-			ICEServers: []webrtc.ICEServer{},
-		}
+func Dial(ctx context.Context, broker string, iceServers []webrtc.ICEServer) (*Dialer, error) {
+	if iceServers == nil {
+		iceServers = []webrtc.ICEServer{}
 	}
 
 	conn, resp, err := websocket.Dial(ctx, broker, nil)
@@ -48,7 +41,7 @@ func Dial(ctx context.Context, broker string, config *DialConfig) (*Dialer, erro
 		_ = conn.Close(websocket.StatusInternalError, "an error occurred")
 	}()
 
-	rtc, err := newPeerConnection(config.ICEServers)
+	rtc, err := newPeerConnection(iceServers)
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w", err)
 	}
@@ -74,7 +67,7 @@ func Dial(ctx context.Context, broker string, config *DialConfig) (*Dialer, erro
 
 	offerMessage, err := json.Marshal(&protoMessage{
 		Offer:   &offer,
-		Servers: config.ICEServers,
+		Servers: iceServers,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("marshal offer message: %w", err)

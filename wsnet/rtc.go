@@ -27,27 +27,13 @@ var (
 	// credentials.
 	ErrInvalidCredentials = errors.New("invalid credentials")
 
-	// DefaultPublicSTUN references a default STUN server we use for
-	// users happy with external dependencies.
-	DefaultPublicSTUN = webrtc.ICEServer{
-		URLs: []string{"stun:stun.l.google.com:19302"},
-	}
-
-	// DefaultICETimeout refers to the default retry for dialing an
-	// ICE server.
-	DefaultICETimeout = time.Millisecond * 200
-
 	// Constant for the control channel protocol.
 	controlChannel = "control"
 )
 
 // DialICE confirms ICE servers are dialable.
-// Timeout defaults to `DefaultICETimeout`.
+// Timeout defaults to 200ms.
 func DialICE(server webrtc.ICEServer, timeout time.Duration) error {
-	if timeout == 0 {
-		timeout = DefaultICETimeout
-	}
-
 	for _, rawURL := range server.URLs {
 		err := dialICEURL(server, rawURL, timeout)
 		if err != nil {
