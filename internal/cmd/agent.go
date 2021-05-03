@@ -4,12 +4,10 @@ import (
 	"context"
 	"net/url"
 	"os"
-	"time"
 
 	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/sloghuman"
 	"github.com/spf13/cobra"
-	"go.coder.com/retry"
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/wsnet"
@@ -76,7 +74,11 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 				}
 			}
 
-			return runAgentRetry(ctx, log, u, token)
+			listener, err := wsnet.Listen(context.Background(), wsnet.ListenEndpoint(u, token))
+			if err != nil {
+				return xerrors.Errorf("listen: %w", err)
+			}
+			return nil
 		},
 	}
 
@@ -84,24 +86,4 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 	cmd.Flags().StringVar(&coderURL, "coder-url", "", "coder access url")
 
 	return cmd
-}
-
-func runAgentRetry(ctx context.Context, logger slog.Logger, u *url.URL, token string) error {
-	return retry.New(time.Second).
-		Context(ctx).
-		Backoff(15 * time.Second).
-		Conditions(
-			retry.Condition(func(err error) bool {
-				if err != nil {
-					logger.Error(ctx, "failed to connect", slog.Error(err))
-				}
-				return true
-			}),
-		).Run(
-		func() error {
-			listener, err := wsnet.Listen(context.Background(), wsnet.ListenEndpoint(u, token))
-			if err != nil {
-				return xerrors.Errorf("listen: %w", err)
-			}
-		})
 }
