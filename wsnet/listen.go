@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/yamux"
 	"github.com/pion/webrtc/v3"
@@ -14,11 +16,9 @@ import (
 	"cdr.dev/coder-cli/coder-sdk"
 )
 
-// Listen connects to the broker and returns a Listener that's triggered
-// when a new connection is requested from a Dialer.
-//
-// LocalAddr on connections indicates the target specified by the dialer.
-func Listen(ctx context.Context, broker string) (net.Listener, error) {
+// Listen connects to the broker proxies connections to the local net.
+// Close will end all RTC connections.
+func Listen(ctx context.Context, broker string) (io.Closer, error) {
 	conn, resp, err := websocket.Dial(ctx, broker, nil)
 	if err != nil {
 		if resp != nil {
@@ -34,8 +34,8 @@ func Listen(ctx context.Context, broker string) (net.Listener, error) {
 		return nil, fmt.Errorf("create multiplex: %w", err)
 	}
 	l := &listener{
-		ws:    conn,
-		conns: make(chan net.Conn),
+		ws:          conn,
+		connClosers: make([]io.Closer, 0),
 	}
 	go func() {
 		for {
@@ -52,10 +52,10 @@ func Listen(ctx context.Context, broker string) (net.Listener, error) {
 }
 
 type listener struct {
-	acceptError error
-	ws          *websocket.Conn
-
-	conns chan net.Conn
+	acceptError    error
+	ws             *websocket.Conn
+	connClosers    []io.Closer
+	connClosersMut sync.Mutex
 }
 
 // Negotiates the handshake protocol over the connection provided.
@@ -114,6 +114,9 @@ func (l *listener) negotiate(conn net.Conn) {
 				closeError(err)
 				return
 			}
+			l.connClosersMut.Lock()
+			l.connClosers = append(l.connClosers, rtc)
+			l.connClosersMut.Unlock()
 			rtc.OnDataChannel(l.handle)
 			flushCandidates := proxyICECandidates(rtc, conn)
 			err = rtc.SetRemoteDescription(*msg.Offer)
@@ -179,24 +182,48 @@ func (l *listener) handle(dc *webrtc.DataChannel) {
 		network := parts[0]
 		addr := parts[1]
 
-		l.conns <- &conn{
-			addr: &net.UnixAddr{
-				Name: addr,
-				Net:  network,
-			},
-			rw: rw,
+		var init dialChannelMessage
+		conn, err := net.Dial(network, addr)
+		if err != nil {
+			init.Err = err.Error()
+			if op, ok := err.(*net.OpError); ok {
+				init.Net = op.Net
+				init.Op = op.Op
+			}
 		}
+		initData, err := json.Marshal(&init)
+		if err != nil {
+			rw.Close()
+			return
+		}
+		_, err = rw.Write(initData)
+		if err != nil {
+			return
+		}
+		if init.Err != "" {
+			// If an error occurred, we're safe to close the connection.
+			dc.Close()
+			return
+		}
+		defer conn.Close()
+		defer dc.Close()
+
+		go func() {
+			_, _ = io.Copy(conn, rw)
+		}()
+		_, _ = io.Copy(rw, conn)
 	})
 }
 
-// Accept accepts a new connection.
-func (l *listener) Accept() (net.Conn, error) {
-	return <-l.conns, l.acceptError
-}
-
-// Close closes the broker socket.
+// Close closes the broker socket and all created RTC connections.
 func (l *listener) Close() error {
-	close(l.conns)
+	l.connClosersMut.Lock()
+	for _, connCloser := range l.connClosers {
+		// We can ignore the error here... it doesn't
+		// really matter if these fail to close.
+		_ = connCloser.Close()
+	}
+	l.connClosersMut.Unlock()
 	return l.ws.Close(websocket.StatusNormalClosure, "")
 }
 

@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"context"
-	"io"
-	"net"
 	"net/url"
 	"os"
 	"time"
@@ -104,29 +102,6 @@ func runAgentRetry(ctx context.Context, logger slog.Logger, u *url.URL, token st
 			listener, err := wsnet.Listen(context.Background(), wsnet.ListenEndpoint(u, token))
 			if err != nil {
 				return xerrors.Errorf("listen: %w", err)
-			}
-			for {
-				conn, err := listener.Accept()
-				if err != nil {
-					return xerrors.Errorf("accept: %w", err)
-				}
-				if conn.LocalAddr().Network() != "tcp" {
-					logger.Warn(ctx, "client requested unsupported protocol", slog.F("protocol", conn.LocalAddr().Network()))
-					conn.Close()
-					continue
-				}
-				nconn, err := net.Dial(conn.LocalAddr().Network(), conn.LocalAddr().String())
-				if err != nil {
-					logger.Warn(ctx, "client dial error", slog.Error(err))
-					conn.Close()
-					continue
-				}
-				go func() {
-					_, _ = io.Copy(nconn, conn)
-				}()
-				go func() {
-					_, _ = io.Copy(conn, nconn)
-				}()
 			}
 		})
 }

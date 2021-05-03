@@ -1,9 +1,11 @@
 package wsnet
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
+	"net"
 	"testing"
 
 	"github.com/pion/webrtc/v3"
@@ -59,28 +61,95 @@ func TestDial(t *testing.T) {
 		}
 	})
 
-	t.Run("Disconnect", func(t *testing.T) {
+	t.Run("OPError", func(t *testing.T) {
 		connectAddr, listenAddr := createDumbBroker(t)
-		listener, err := Listen(context.Background(), listenAddr)
+		_, err := Listen(context.Background(), listenAddr)
 		if err != nil {
 			t.Error(err)
 		}
-		go func() {
-			c, _ := listener.Accept()
-			c.Close()
-		}()
 		dialer, err := Dial(context.Background(), connectAddr, nil)
 		if err != nil {
 			t.Error(err)
 		}
-		conn, err := dialer.DialContext(context.Background(), "tcp", "example")
+		_, err = dialer.DialContext(context.Background(), "tcp", "localhost:100")
+		if err == nil {
+			t.Error("should have gotten err")
+			return
+		}
+		_, ok := err.(*net.OpError)
+		if !ok {
+			t.Error("invalid error type returned")
+			return
+		}
+	})
+
+	t.Run("Proxy", func(t *testing.T) {
+		listener, err := net.Listen("tcp", "0.0.0.0:0")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		msg := []byte("Hello!")
+		go func() {
+			conn, err := listener.Accept()
+			if err != nil {
+				t.Error(err)
+			}
+			conn.Write(msg)
+		}()
+
+		connectAddr, listenAddr := createDumbBroker(t)
+		_, err = Listen(context.Background(), listenAddr)
 		if err != nil {
 			t.Error(err)
 		}
-		b := make([]byte, 16)
-		_, err = conn.Read(b)
-		if err != io.EOF {
+		dialer, err := Dial(context.Background(), connectAddr, nil)
+		if err != nil {
 			t.Error(err)
+		}
+		conn, err := dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		rec := make([]byte, len(msg))
+		_, err = conn.Read(rec)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if !bytes.Equal(msg, rec) {
+			t.Error("bytes were different", string(msg), string(rec))
+		}
+	})
+
+	// Expect that we'd get an EOF on the server closing.
+	t.Run("EOF on Close", func(t *testing.T) {
+		listener, err := net.Listen("tcp", "0.0.0.0:0")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		connectAddr, listenAddr := createDumbBroker(t)
+		srv, err := Listen(context.Background(), listenAddr)
+		if err != nil {
+			t.Error(err)
+		}
+		dialer, err := Dial(context.Background(), connectAddr, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		conn, err := dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		go srv.Close()
+		rec := make([]byte, 16)
+		_, err = conn.Read(rec)
+		if !errors.Is(err, io.EOF) {
+			t.Error(err)
+			return
 		}
 	})
 }

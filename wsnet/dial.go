@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"time"
 
 	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
@@ -195,6 +196,41 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 	if err != nil {
 		return nil, fmt.Errorf("detach: %w", err)
 	}
+
+	errCh := make(chan error)
+	go func() {
+		var init dialChannelMessage
+		err = json.NewDecoder(rw).Decode(&init)
+		if err != nil {
+			errCh <- fmt.Errorf("read init: %w", err)
+			return
+		}
+		if init.Err == "" {
+			close(errCh)
+			return
+		}
+		err := errors.New(init.Err)
+		if init.Net != "" {
+			errCh <- &net.OpError{
+				Op:  init.Op,
+				Net: init.Net,
+				Err: err,
+			}
+			return
+		}
+		errCh <- err
+	}()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+	select {
+	case err := <-errCh:
+		if err != nil {
+			return nil, err
+		}
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+
 	return &conn{
 		addr: &net.UnixAddr{
 			Name: address,
