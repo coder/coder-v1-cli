@@ -126,7 +126,7 @@ func (c *tunnneler) start(ctx context.Context) error {
 	if err != nil {
 		return xerrors.Errorf("creating workspace dialer: %w", wd)
 	}
-	nc, err := wd.DialContext(ctx, xwebrtc.NetworkTCP, fmt.Sprintf("localhost:%d", c.remotePort))
+	nc, err := wd.DialContext(ctx, "tcp", fmt.Sprintf("localhost:%d", c.remotePort))
 	if err != nil {
 		return xerrors.Errorf("dial: %w", err)
 	}
