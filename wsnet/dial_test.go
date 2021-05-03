@@ -3,7 +3,7 @@ package wsnet
 import (
 	"context"
 	"errors"
-	"fmt"
+	"io"
 	"testing"
 
 	"github.com/pion/webrtc/v3"
@@ -57,32 +57,30 @@ func TestDial(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-
 	})
 
-	t.Run("Pipe", func(t *testing.T) {
+	t.Run("Disconnect", func(t *testing.T) {
 		connectAddr, listenAddr := createDumbBroker(t)
 		listener, err := Listen(context.Background(), listenAddr)
 		if err != nil {
 			t.Error(err)
 		}
+		go func() {
+			c, _ := listener.Accept()
+			c.Close()
+		}()
 		dialer, err := Dial(context.Background(), connectAddr, nil)
 		if err != nil {
 			t.Error(err)
 		}
-		go func() {
-			conn, err := dialer.DialContext(context.Background(), "tcp", "localhost:40000")
-			if err != nil {
-				t.Error(err)
-			}
-			conn.Write([]byte("hello"))
-		}()
-		conn, err := listener.Accept()
+		conn, err := dialer.DialContext(context.Background(), "tcp", "example")
 		if err != nil {
 			t.Error(err)
 		}
-		b := make([]byte, 5)
-		_, _ = conn.Read(b)
-		fmt.Printf("WE LEGIT GOT IT! %s\n", b)
+		b := make([]byte, 16)
+		_, err = conn.Read(b)
+		if err != io.EOF {
+			t.Error(err)
+		}
 	})
 }
