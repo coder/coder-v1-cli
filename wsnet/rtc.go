@@ -31,11 +31,22 @@ var (
 	controlChannel = "control"
 )
 
+// DialICEOptions provides options for dialing an ICE server.
+type DialICEOptions struct {
+	Timeout time.Duration
+	// Whether to ignore TLS errors.
+	InsecureSkipVerify bool
+}
+
 // DialICE confirms ICE servers are dialable.
 // Timeout defaults to 200ms.
-func DialICE(server webrtc.ICEServer, timeout time.Duration) error {
+func DialICE(server webrtc.ICEServer, options *DialICEOptions) error {
+	if options == nil {
+		options = &DialICEOptions{}
+	}
+
 	for _, rawURL := range server.URLs {
-		err := dialICEURL(server, rawURL, timeout)
+		err := dialICEURL(server, rawURL, options)
 		if err != nil {
 			return err
 		}
@@ -43,7 +54,7 @@ func DialICE(server webrtc.ICEServer, timeout time.Duration) error {
 	return nil
 }
 
-func dialICEURL(server webrtc.ICEServer, rawURL string, timeout time.Duration) error {
+func dialICEURL(server webrtc.ICEServer, rawURL string, options *DialICEOptions) error {
 	url, err := ice.ParseURL(rawURL)
 	if err != nil {
 		return err
@@ -69,13 +80,13 @@ func dialICEURL(server webrtc.ICEServer, rawURL string, timeout time.Duration) e
 				return resErr
 			}
 			dconn, dialErr := dtls.Dial("udp4", udpAddr, &dtls.Config{
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: options.InsecureSkipVerify,
 			})
 			err = dialErr
 			udpConn = turn.NewSTUNConn(dconn)
 		case ice.ProtoTypeTCP:
 			tcpConn, err = tls.Dial("tcp4", turnServerAddr, &tls.Config{
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: options.InsecureSkipVerify,
 			})
 		}
 	}
@@ -100,7 +111,7 @@ func dialICEURL(server webrtc.ICEServer, rawURL string, timeout time.Duration) e
 		Password:       pass,
 		Realm:          "",
 		Conn:           udpConn,
-		RTO:            timeout,
+		RTO:            options.Timeout,
 	})
 	if err != nil {
 		return err

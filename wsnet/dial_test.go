@@ -20,7 +20,7 @@ func ExampleDial_basic() {
 	}}
 
 	for _, server := range servers {
-		err := DialICE(server, 0)
+		err := DialICE(server, nil)
 		if errors.Is(err, ErrInvalidCredentials) {
 			// You could do something...
 		}
