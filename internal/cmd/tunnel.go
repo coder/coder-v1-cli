@@ -111,7 +111,7 @@ func (c *tunnneler) start(ctx context.Context) error {
 		CredentialType: webrtc.ICECredentialTypePassword,
 	}
 
-	err := wsnet.DialICE(server, 0)
+	err := wsnet.DialICE(server, nil)
 	if errors.Is(err, wsnet.ErrInvalidCredentials) {
 		return xerrors.Errorf("failed to authenticate your user for this workspace")
 	}

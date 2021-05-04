@@ -22,7 +22,10 @@ func TestDialICE(t *testing.T) {
 			Username:       "example",
 			Credential:     "test",
 			CredentialType: webrtc.ICECredentialTypePassword,
-		}, time.Millisecond)
+		}, &DialICEOptions{
+			Timeout:            time.Millisecond,
+			InsecureSkipVerify: true,
+		})
 		if err != nil {
 			t.Error(err)
 		}
@@ -37,7 +40,10 @@ func TestDialICE(t *testing.T) {
 			Username:       "example",
 			Credential:     "test",
 			CredentialType: webrtc.ICECredentialTypePassword,
-		}, time.Millisecond)
+		}, &DialICEOptions{
+			Timeout:            time.Millisecond,
+			InsecureSkipVerify: true,
+		})
 		if !errors.Is(err, ErrMismatchedProtocol) {
 			t.Error(err)
 		}
@@ -52,7 +58,10 @@ func TestDialICE(t *testing.T) {
 			Username:       "example",
 			Credential:     "invalid",
 			CredentialType: webrtc.ICECredentialTypePassword,
-		}, time.Millisecond)
+		}, &DialICEOptions{
+			Timeout:            time.Millisecond,
+			InsecureSkipVerify: true,
+		})
 		if !errors.Is(err, ErrInvalidCredentials) {
 			t.Error(err)
 		}
@@ -63,7 +72,10 @@ func TestDialICE(t *testing.T) {
 
 		err := DialICE(webrtc.ICEServer{
 			URLs: []string{"turn:stun.l.google.com:19302"},
-		}, time.Millisecond)
+		}, &DialICEOptions{
+			Timeout:            time.Millisecond,
+			InsecureSkipVerify: true,
+		})
 		if !errors.Is(err, ErrMismatchedProtocol) {
 			t.Error(err)
 		}
