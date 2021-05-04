@@ -24,6 +24,7 @@ Perform operations on the Coder environments owned by the active user.
 * [coder envs create](coder_envs_create.md)	 - create a new environment.
 * [coder envs create-from-config](coder_envs_create-from-config.md)	 - create a new environment from a template
 * [coder envs edit](coder_envs_edit.md)	 - edit an existing environment and initiate a rebuild.
+* [coder envs edit-from-config](coder_envs_edit-from-config.md)	 - change the template an environment is tracking
 * [coder envs ls](coder_envs_ls.md)	 - list all environments owned by the active user
 * [coder envs rebuild](coder_envs_rebuild.md)	 - rebuild a Coder environment
 * [coder envs rm](coder_envs_rm.md)	 - remove Coder environments by name
