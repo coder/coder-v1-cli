@@ -104,14 +104,18 @@ type tunnneler struct {
 }
 
 func (c *tunnneler) start(ctx context.Context) error {
+	username, password, err := wsnet.TURNCredentials(c.token)
+	if err != nil {
+		return xerrors.Errorf("failed to parse credentials from token")
+	}
 	server := webrtc.ICEServer{
 		URLs:           []string{wsnet.TURNEndpoint(c.brokerAddr)},
-		Username:       "insecure",
-		Credential:     "pass",
+		Username:       username,
+		Credential:     password,
 		CredentialType: webrtc.ICECredentialTypePassword,
 	}
 
-	err := wsnet.DialICE(server, nil)
+	err = wsnet.DialICE(server, nil)
 	if errors.Is(err, wsnet.ErrInvalidCredentials) {
 		return xerrors.Errorf("failed to authenticate your user for this workspace")
 	}
