@@ -288,6 +288,32 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 	return cmd
 }
 
+// selectOrg finds the organization in the list or returns the default organization
+// if the needle isn't found.
+func selectOrg(needle string, haystack []coder.Organization) (*coder.Organization, error) {
+	var userOrg *coder.Organization
+	for i := range haystack {
+		// Look for org by name
+		if haystack[i].Name == needle {
+			userOrg = &haystack[i]
+			break
+		}
+		// Or use default if the provided is blank
+		if needle == "" && haystack[i].Default {
+			userOrg = &haystack[i]
+			break
+		}
+	}
+
+	if userOrg == nil {
+		if needle != "" {
+			return nil, xerrors.Errorf("Unable to locate org '%s'", needle)
+		}
+		return nil, xerrors.Errorf("Unable to locate a default organization for the user")
+	}
+	return userOrg, nil
+}
+
 // environmentFromConfigCmd will return a create or an update workspace for a template'd workspace.
 // The code for create/update is nearly identical.
 // If `update` is true, the update command is returned. If false, the create command.
@@ -308,14 +334,12 @@ func environmentFromConfigCmd(update bool) *cobra.Command {
 		// Update requires the env name, and the name should be the first argument.
 		if update {
 			envName = args[0]
-		} else { // Create takes the name as a flag
-			// TODO: @emyrk Should we take the name as the first argument always?
-			if envName == "" {
-				return clog.Error("Must provide a environment name.",
-					clog.BlankLine,
-					clog.Tipf("Use --name=<env-name> to name your environment"),
-				)
-			}
+		} else if envName == "" {
+			// Create takes the name as a flag, and it must be set
+			return clog.Error("Must provide a environment name.",
+				clog.BlankLine,
+				clog.Tipf("Use --name=<env-name> to name your environment"),
+			)
 		}
 
 		client, err := newClient(ctx)
@@ -347,24 +371,10 @@ func environmentFromConfigCmd(update bool) *cobra.Command {
 			orgID = env.OrganizationID
 		} else {
 			var userOrg *coder.Organization
-			for i := range orgs {
-				// Look for org by name
-				if orgs[i].Name == org {
-					userOrg = &orgs[i]
-					break
-				}
-				// Or use default if the provided is blank
-				if org == "" && orgs[i].Default {
-					userOrg = &orgs[i]
-					break
-				}
-			}
-
-			if userOrg == nil {
-				if org != "" {
-					return xerrors.Errorf("Unable to locate org '%s'", org)
-				}
-				return xerrors.Errorf("Unable to locate a default organization for the user")
+			// Select org in list or use default
+			userOrg, err := selectOrg(org, orgs)
+			if err != nil {
+				return err
 			}
 
 			orgID = userOrg.ID
@@ -401,9 +411,6 @@ func environmentFromConfigCmd(update bool) *cobra.Command {
 			err = client.EditEnvironment(ctx, env.ID, coder.UpdateEnvironmentReq{
 				TemplateID: &version.TemplateID,
 			})
-			if err != nil {
-				return handleAPIError(err)
-			}
 		} else {
 			env, err = client.CreateEnvironment(ctx, coder.CreateEnvironmentRequest{
 				OrgID:          orgID,
@@ -412,9 +419,9 @@ func environmentFromConfigCmd(update bool) *cobra.Command {
 				Namespace:      provider.DefaultNamespace,
 				Name:           envName,
 			})
-			if err != nil {
-				return handleAPIError(err)
-			}
+		}
+		if err != nil {
+			return handleAPIError(err)
 		}
 
 		if follow {
