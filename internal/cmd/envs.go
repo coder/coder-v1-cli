@@ -35,7 +35,8 @@ func envsCmd() *cobra.Command {
 		watchBuildLogCommand(),
 		rebuildEnvCommand(),
 		createEnvCmd(),
-		createEnvFromConfigCmd(),
+		environmentFromConfigCmd(true),
+		environmentFromConfigCmd(false),
 		editEnvCmd(),
 	)
 	return cmd
@@ -287,7 +288,10 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 	return cmd
 }
 
-func createEnvFromConfigCmd() *cobra.Command {
+// environmentFromConfigCmd will return a create or an update workspace for a template'd workspace.
+// The code for create/update is nearly identical.
+// If `update` is true, the update command is returned. If false, the create command.
+func environmentFromConfigCmd(update bool) *cobra.Command {
 	var (
 		ref          string
 		repo         string
@@ -298,38 +302,50 @@ func createEnvFromConfigCmd() *cobra.Command {
 		envName      string
 	)
 
-	cmd := &cobra.Command{
-		Use:   "create-from-config",
-		Short: "create a new environment from a template",
-		Long:  "Create a new Coder environment using a Workspaces As Code template.",
-		Example: `# create a new environment from git repository
-coder envs create-from-config --name="dev-env" --repo-url https://github.com/cdr/m --ref my-branch
-coder envs create-from-config --name="dev-env" -f coder.yaml`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
+	run := func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
 
+		// Update requires the env name, and the name should be the first argument.
+		if update {
+			envName = args[0]
+		} else { // Create takes the name as a flag
+			// TODO: @emyrk Should we take the name as the first argument always?
 			if envName == "" {
 				return clog.Error("Must provide a environment name.",
 					clog.BlankLine,
 					clog.Tipf("Use --name=<env-name> to name your environment"),
 				)
 			}
+		}
 
-			client, err := newClient(ctx)
+		client, err := newClient(ctx)
+		if err != nil {
+			return err
+		}
+
+		orgs, err := getUserOrgs(ctx, client, coder.Me)
+		if err != nil {
+			return err
+		}
+
+		multiOrgMember := len(orgs) > 1
+		if multiOrgMember && org == "" {
+			return xerrors.New("org is required for multi-org members")
+		}
+
+		// This is the env to be updated/created
+		var env *coder.Environment
+
+		// OrgID is the org where the template and env should be created.
+		// If we are updating an env, use the orgID from the environment.
+		var orgID string
+		if update {
+			env, err = findEnv(ctx, client, envName, coder.Me)
 			if err != nil {
-				return err
+				return handleAPIError(err)
 			}
-
-			orgs, err := getUserOrgs(ctx, client, coder.Me)
-			if err != nil {
-				return err
-			}
-
-			multiOrgMember := len(orgs) > 1
-			if multiOrgMember && org == "" {
-				return xerrors.New("org is required for multi-org members")
-			}
-
+			orgID = env.OrganizationID
+		} else {
 			var userOrg *coder.Organization
 			for i := range orgs {
 				// Look for org by name
@@ -351,35 +367,46 @@ coder envs create-from-config --name="dev-env" -f coder.yaml`,
 				return xerrors.Errorf("Unable to locate a default organization for the user")
 			}
 
-			var rd io.Reader
-			if filepath != "" {
-				b, err := ioutil.ReadFile(filepath)
-				if err != nil {
-					return xerrors.Errorf("read local file: %w", err)
-				}
-				rd = bytes.NewReader(b)
-			}
+			orgID = userOrg.ID
+		}
 
-			req := coder.ParseTemplateRequest{
-				RepoURL:  repo,
-				Ref:      ref,
-				Local:    rd,
-				OrgID:    userOrg.ID,
-				Filepath: ".coder/coder.yaml",
+		var rd io.Reader
+		if filepath != "" {
+			b, err := ioutil.ReadFile(filepath)
+			if err != nil {
+				return xerrors.Errorf("read local file: %w", err)
 			}
+			rd = bytes.NewReader(b)
+		}
 
-			version, err := client.ParseTemplate(ctx, req)
+		req := coder.ParseTemplateRequest{
+			RepoURL:  repo,
+			Ref:      ref,
+			Local:    rd,
+			OrgID:    orgID,
+			Filepath: ".coder/coder.yaml",
+		}
+
+		version, err := client.ParseTemplate(ctx, req)
+		if err != nil {
+			return handleAPIError(err)
+		}
+
+		provider, err := coderutil.DefaultWorkspaceProvider(ctx, client)
+		if err != nil {
+			return xerrors.Errorf("default workspace provider: %w", err)
+		}
+
+		if update {
+			err = client.EditEnvironment(ctx, env.ID, coder.UpdateEnvironmentReq{
+				TemplateID: &version.TemplateID,
+			})
 			if err != nil {
 				return handleAPIError(err)
 			}
-
-			provider, err := coderutil.DefaultWorkspaceProvider(ctx, client)
-			if err != nil {
-				return xerrors.Errorf("default workspace provider: %w", err)
-			}
-
-			env, err := client.CreateEnvironment(ctx, coder.CreateEnvironmentRequest{
-				OrgID:          userOrg.ID,
+		} else {
+			env, err = client.CreateEnvironment(ctx, coder.CreateEnvironmentRequest{
+				OrgID:          orgID,
 				TemplateID:     version.TemplateID,
 				ResourcePoolID: provider.ID,
 				Namespace:      provider.DefaultNamespace,
@@ -388,29 +415,54 @@ coder envs create-from-config --name="dev-env" -f coder.yaml`,
 			if err != nil {
 				return handleAPIError(err)
 			}
+		}
 
-			if follow {
-				clog.LogSuccess("creating environment...")
-				if err := trailBuildLogs(ctx, client, env.ID); err != nil {
-					return err
-				}
-				return nil
+		if follow {
+			clog.LogSuccess("creating environment...")
+			if err := trailBuildLogs(ctx, client, env.ID); err != nil {
+				return err
 			}
-
-			clog.LogSuccess("creating environment...",
-				clog.BlankLine,
-				clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, env.Name),
-			)
 			return nil
-		},
+		}
+
+		clog.LogSuccess("creating environment...",
+			clog.BlankLine,
+			clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, env.Name),
+		)
+		return nil
 	}
-	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the environment should be created under.")
+
+	var cmd *cobra.Command
+	if update {
+		cmd = &cobra.Command{
+			Use:   "edit-from-config",
+			Short: "change the template an environment is tracking",
+			Long:  "Edit an existing Coder environment using a Workspaces As Code template.",
+			Args:  cobra.ExactArgs(1),
+			Example: `# edit a new environment from git repository
+coder envs edit-from-config dev-env --repo-url https://github.com/cdr/m --ref my-branch
+coder envs edit-from-config dev-env -f coder.yaml`,
+			RunE: run,
+		}
+	} else {
+		cmd = &cobra.Command{
+			Use:   "create-from-config",
+			Short: "create a new environment from a template",
+			Long:  "Create a new Coder environment using a Workspaces As Code template.",
+			Example: `# create a new environment from git repository
+coder envs create-from-config --name="dev-env" --repo-url https://github.com/cdr/m --ref my-branch
+coder envs create-from-config --name="dev-env" -f coder.yaml`,
+			RunE: run,
+		}
+		cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the environment")
+		cmd.Flags().StringVar(&envName, "name", "", "name of the environment to be created")
+		cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the environment should be created under.")
+	}
+
 	cmd.Flags().StringVarP(&filepath, "filepath", "f", "", "path to local template file.")
 	cmd.Flags().StringVarP(&ref, "ref", "", "master", "git reference to pull template from. May be a branch, tag, or commit hash.")
 	cmd.Flags().StringVarP(&repo, "repo-url", "r", "", "URL of the git repository to pull the config from. Config file must live in '.coder/coder.yaml'.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
-	cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the environment")
-	cmd.Flags().StringVar(&envName, "name", "", "name of the environment to be created")
 	return cmd
 }
 
