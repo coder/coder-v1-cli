@@ -17,7 +17,7 @@ require (
 	github.com/pion/dtls/v2 v2.0.9
 	github.com/pion/ice/v2 v2.1.7
 	github.com/pion/turn/v2 v2.0.5
-	github.com/pion/webrtc/v3 v3.0.27
+	github.com/pion/webrtc/v3 v3.0.28
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 	github.com/rjeczalik/notify v0.9.2
 	github.com/spf13/cobra v1.1.3
