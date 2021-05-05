@@ -380,6 +380,12 @@ func environmentFromConfigCmd(update bool) *cobra.Command {
 			orgID = userOrg.ID
 		}
 
+		if filepath == "" && ref == "" && repo == "" {
+			return clog.Error("Must specify a configuration source",
+				"A template source is either sourced from a local file (-f) or from a git repository (--repo-url and --ref)",
+			)
+		}
+
 		var rd io.Reader
 		if filepath != "" {
 			b, err := ioutil.ReadFile(filepath)
@@ -464,11 +470,12 @@ coder envs create-from-config --name="dev-env" -f coder.yaml`,
 		cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the environment")
 		cmd.Flags().StringVar(&envName, "name", "", "name of the environment to be created")
 		cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the environment should be created under.")
+		// Ref and repo-url can only be used for create
+		cmd.Flags().StringVarP(&ref, "ref", "", "master", "git reference to pull template from. May be a branch, tag, or commit hash.")
+		cmd.Flags().StringVarP(&repo, "repo-url", "r", "", "URL of the git repository to pull the config from. Config file must live in '.coder/coder.yaml'.")
 	}
 
 	cmd.Flags().StringVarP(&filepath, "filepath", "f", "", "path to local template file.")
-	cmd.Flags().StringVarP(&ref, "ref", "", "master", "git reference to pull template from. May be a branch, tag, or commit hash.")
-	cmd.Flags().StringVarP(&repo, "repo-url", "r", "", "URL of the git repository to pull the config from. Config file must live in '.coder/coder.yaml'.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	return cmd
 }
