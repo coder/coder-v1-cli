@@ -24,8 +24,6 @@ coder envs edit-from-config dev-env -f coder.yaml
   -f, --filepath string   path to local template file.
       --follow            follow buildlog after initiating rebuild
   -h, --help              help for edit-from-config
-      --ref string        git reference to pull template from. May be a branch, tag, or commit hash. (default "master")
-  -r, --repo-url string   URL of the git repository to pull the config from. Config file must live in '.coder/coder.yaml'.
 ```
 
 ### Options inherited from parent commands
