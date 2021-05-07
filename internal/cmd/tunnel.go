@@ -127,7 +127,7 @@ func (c *tunnneler) start(ctx context.Context) error {
 	}
 
 	c.log.Info(ctx, "Connecting to workspace...")
-	wd, err := wsnet.Dial(ctx, wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token), []webrtc.ICEServer{server})
+	wd, err := wsnet.DialWebsocket(ctx, wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token), []webrtc.ICEServer{server})
 	if err != nil {
 		return xerrors.Errorf("creating workspace dialer: %w", err)
 	}

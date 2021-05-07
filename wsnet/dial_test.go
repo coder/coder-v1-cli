@@ -30,7 +30,7 @@ func ExampleDial_basic() {
 		}
 	}
 
-	dialer, err := Dial(context.Background(), "wss://master.cdr.dev/agent/workspace/connect", servers)
+	dialer, err := DialWebsocket(context.Background(), "wss://master.cdr.dev/agent/workspace/connect", servers)
 	if err != nil {
 		// Do something...
 	}
@@ -49,7 +49,7 @@ func TestDial(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		dialer, err := Dial(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -65,7 +65,7 @@ func TestDial(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		dialer, err := Dial(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -101,7 +101,7 @@ func TestDial(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		dialer, err := Dial(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -133,7 +133,7 @@ func TestDial(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		dialer, err := Dial(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
 		if err != nil {
 			t.Error(err)
 		}
