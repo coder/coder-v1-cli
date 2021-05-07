@@ -129,11 +129,7 @@ func (d *Dialer) negotiate() (err error) {
 	for {
 		var msg protoMessage
 		err = decoder.Decode(&msg)
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
-			// The listener closed the socket because success!
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrClosedPipe) {
 			break
 		}
 		if err != nil {
