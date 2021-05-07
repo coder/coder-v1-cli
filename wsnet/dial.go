@@ -36,11 +36,11 @@ func DialWebsocket(ctx context.Context, broker string, iceServers []webrtc.ICESe
 		// We should close the socket intentionally.
 		_ = conn.Close(websocket.StatusInternalError, "an error occurred")
 	}()
-	return Dial(ctx, nconn, iceServers)
+	return Dial(nconn, iceServers)
 }
 
 // Dial negotiates a connection to a listener.
-func Dial(ctx context.Context, conn net.Conn, iceServers []webrtc.ICEServer) (*Dialer, error) {
+func Dial(conn net.Conn, iceServers []webrtc.ICEServer) (*Dialer, error) {
 	if iceServers == nil {
 		iceServers = []webrtc.ICEServer{}
 	}
