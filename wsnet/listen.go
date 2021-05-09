@@ -226,6 +226,9 @@ func (l *listener) handle(dc *webrtc.DataChannel) {
 			d := make([]byte, 1)
 			for {
 				_, err = rw.Read(d)
+				if errors.Is(err, io.EOF) {
+					return
+				}
 				if err != nil {
 					continue
 				}
