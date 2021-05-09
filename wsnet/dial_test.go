@@ -48,10 +48,12 @@ func TestDial(t *testing.T) {
 		_, err := Listen(context.Background(), listenAddr)
 		if err != nil {
 			t.Error(err)
+			return
 		}
 		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
 		if err != nil {
 			t.Error(err)
+			return
 		}
 		err = dialer.Ping(context.Background())
 		if err != nil {
@@ -64,6 +66,7 @@ func TestDial(t *testing.T) {
 		_, err := Listen(context.Background(), listenAddr)
 		if err != nil {
 			t.Error(err)
+			return
 		}
 		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
 		if err != nil {
@@ -100,10 +103,12 @@ func TestDial(t *testing.T) {
 		_, err = Listen(context.Background(), listenAddr)
 		if err != nil {
 			t.Error(err)
+			return
 		}
 		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
 		if err != nil {
 			t.Error(err)
+			return
 		}
 		conn, err := dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
 		if err != nil {
@@ -132,6 +137,7 @@ func TestDial(t *testing.T) {
 		srv, err := Listen(context.Background(), listenAddr)
 		if err != nil {
 			t.Error(err)
+			return
 		}
 		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
 		if err != nil {
