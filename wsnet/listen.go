@@ -96,6 +96,9 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 }
 
 // Negotiates the handshake protocol over the connection provided.
+// This functions control-flow is important to readability,
+// so the cognitive overload linter has been disabled.
+// nolint:gocognit
 func (l *listener) negotiate(conn net.Conn) {
 	var (
 		err     error
