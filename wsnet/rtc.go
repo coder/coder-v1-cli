@@ -157,6 +157,18 @@ func newPeerConnection(servers []webrtc.ICEServer) (*webrtc.PeerConnection, erro
 	se := webrtc.SettingEngine{}
 	se.DetachDataChannels()
 	se.SetICETimeouts(time.Second*5, time.Second*5, time.Second*2)
+
+	// If one server is provided and we know it's TURN, we can set the
+	// relay acceptable so the connection starts immediately.
+	if len(servers) == 1 {
+		server := servers[0]
+		if server.Credential != nil && len(server.URLs) == 1 {
+			url, err := ice.ParseURL(server.URLs[0])
+			if err == nil && url.Proto == ice.ProtoTypeTCP {
+				se.SetRelayAcceptanceMinWait(0)
+			}
+		}
+	}
 	api := webrtc.NewAPI(webrtc.WithSettingEngine(se))
 
 	return api.NewPeerConnection(webrtc.Configuration{
