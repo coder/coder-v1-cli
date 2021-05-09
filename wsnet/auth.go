@@ -2,6 +2,7 @@ package wsnet
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"strings"
 )
@@ -16,6 +17,6 @@ func TURNCredentials(token string) (username, password string, err error) {
 	}
 	username = str[0]
 	hash := sha256.Sum256([]byte(str[1]))
-	password = string(hash[:])
+	password = base64.StdEncoding.EncodeToString(hash[:])
 	return
 }

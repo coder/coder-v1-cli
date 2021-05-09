@@ -9,6 +9,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/yamux"
 	"github.com/pion/webrtc/v3"
@@ -20,7 +21,51 @@ import (
 // Listen connects to the broker proxies connections to the local net.
 // Close will end all RTC connections.
 func Listen(ctx context.Context, broker string) (io.Closer, error) {
-	conn, resp, err := websocket.Dial(ctx, broker, nil)
+	l := &listener{
+		broker:      broker,
+		connClosers: make([]io.Closer, 0),
+	}
+	// We do a one-off dial outside of the loop to ensure the initial
+	// connection is successful. If not, there's likely an error the
+	// user needs to act on.
+	ch, err := l.dial(ctx)
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		for {
+			err := <-ch
+			if errors.Is(err, io.EOF) {
+				// If we hit an EOF, then the connection to the broker
+				// was interrupted. We'll take a short break then dial
+				// again.
+				time.Sleep(time.Second)
+				ch, err = l.dial(ctx)
+			}
+			if err != nil {
+				l.acceptError = err
+				_ = l.Close()
+				break
+			}
+		}
+	}()
+	return l, nil
+}
+
+type listener struct {
+	broker string
+
+	acceptError    error
+	ws             *websocket.Conn
+	connClosers    []io.Closer
+	connClosersMut sync.Mutex
+}
+
+func (l *listener) dial(ctx context.Context) (<-chan error, error) {
+	if l.ws != nil {
+		_ = l.ws.Close(websocket.StatusNormalClosure, "new connection inbound")
+	}
+	conn, resp, err := websocket.Dial(ctx, l.broker, nil)
 	if err != nil {
 		if resp != nil {
 			return nil, &coder.HTTPError{
@@ -29,40 +74,31 @@ func Listen(ctx context.Context, broker string) (io.Closer, error) {
 		}
 		return nil, err
 	}
+	l.ws = conn
 	nconn := websocket.NetConn(ctx, conn, websocket.MessageBinary)
 	session, err := yamux.Server(nconn, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create multiplex: %w", err)
 	}
-	l := &listener{
-		ws:          conn,
-		connClosers: make([]io.Closer, 0),
-	}
+	errCh := make(chan error)
 	go func() {
+		defer close(errCh)
 		for {
 			conn, err := session.Accept()
 			if err != nil {
-				if errors.Is(err, io.EOF) {
-					continue
-				}
-				l.acceptError = err
-				l.Close()
-				return
+				errCh <- err
+				break
 			}
 			go l.negotiate(conn)
 		}
 	}()
-	return l, nil
-}
-
-type listener struct {
-	acceptError    error
-	ws             *websocket.Conn
-	connClosers    []io.Closer
-	connClosersMut sync.Mutex
+	return errCh, nil
 }
 
 // Negotiates the handshake protocol over the connection provided.
+// This functions control-flow is important to readability,
+// so the cognitive overload linter has been disabled.
+// nolint:gocognit
 func (l *listener) negotiate(conn net.Conn) {
 	var (
 		err     error
@@ -118,6 +154,13 @@ func (l *listener) negotiate(conn net.Conn) {
 			if msg.Servers == nil {
 				closeError(fmt.Errorf("ICEServers must be provided"))
 				return
+			}
+			for _, server := range msg.Servers {
+				err = DialICE(server, nil)
+				if err != nil {
+					closeError(fmt.Errorf("dial server %+v: %w", server.URLs, err))
+					return
+				}
 			}
 			rtc, err = newPeerConnection(msg.Servers)
 			if err != nil {
