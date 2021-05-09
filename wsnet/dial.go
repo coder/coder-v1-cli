@@ -36,11 +36,11 @@ func DialWebsocket(ctx context.Context, broker string, iceServers []webrtc.ICESe
 		// We should close the socket intentionally.
 		_ = conn.Close(websocket.StatusInternalError, "an error occurred")
 	}()
-	return Dial(ctx, nconn, iceServers)
+	return Dial(nconn, iceServers)
 }
 
 // Dial negotiates a connection to a listener.
-func Dial(ctx context.Context, conn net.Conn, iceServers []webrtc.ICEServer) (*Dialer, error) {
+func Dial(conn net.Conn, iceServers []webrtc.ICEServer) (*Dialer, error) {
 	if iceServers == nil {
 		iceServers = []webrtc.ICEServer{}
 	}
@@ -129,11 +129,7 @@ func (d *Dialer) negotiate() (err error) {
 	for {
 		var msg protoMessage
 		err = decoder.Decode(&msg)
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
-			// The listener closed the socket because success!
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrClosedPipe) {
 			break
 		}
 		if err != nil {
