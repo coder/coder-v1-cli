@@ -48,12 +48,6 @@ func Listen(ctx context.Context, broker string) (io.Closer, error) {
 				break
 			}
 		}
-
-		err := <-ch
-
-		if err != nil {
-			l.acceptError = err
-		}
 	}()
 	return l, nil
 }
@@ -157,6 +151,16 @@ func (l *listener) negotiate(conn net.Conn) {
 			if msg.Servers == nil {
 				closeError(fmt.Errorf("ICEServers must be provided"))
 				return
+			}
+			// srvs := make([]webrtc.ICEServer, 0, len(msg.Servers))
+			for _, server := range msg.Servers {
+				// rtcServer := server.toRTC()
+				err = DialICE(server, nil)
+				if err != nil {
+					closeError(fmt.Errorf("dial server %+v: %w", server.URLs, err))
+					return
+				}
+				// srvs = append(srvs, rtcServer)
 			}
 			rtc, err = newPeerConnection(msg.Servers)
 			if err != nil {
