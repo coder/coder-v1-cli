@@ -1,9 +1,15 @@
 ## coder urls create
 
-Create a new devurl for an environment
+Create a new dev URL for a workspace
 
 ```
-coder urls create [env_name] [port] [flags]
+coder urls create [workspace_name] [port] [flags]
+```
+
+### Examples
+
+```
+coder urls create my-workspace 8080 --name my-dev-url
 ```
 
 ### Options
