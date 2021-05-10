@@ -205,10 +205,11 @@ func makeSSHConfig(host, userName, envName, privateKeyFilepath string, p2p bool)
 	if p2p {
 		return fmt.Sprintf(
 			`Host coder.%s
-   HostName localhost
-   ProxyCommand coder tunnel %s 22 stdio
+   HostName %s
+   ProxyCommand coder tunnel %s 12213 stdio
    StrictHostKeyChecking no
    ConnectTimeout=0
+   IdentitiesOnly yes
    IdentityFile="%s"
    ServerAliveInterval 60
    ServerAliveCountMax 3
