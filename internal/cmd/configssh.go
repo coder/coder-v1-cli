@@ -213,7 +213,7 @@ func makeSSHConfig(host, userName, envName, privateKeyFilepath string, p2p bool)
    IdentityFile="%s"
    ServerAliveInterval 60
    ServerAliveCountMax 3
-`, envName, envName, privateKeyFilepath)
+`, envName, envName, envName, privateKeyFilepath)
 	}
 
 	return fmt.Sprintf(
