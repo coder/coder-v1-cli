@@ -126,7 +126,7 @@ func (c *tunnneler) start(ctx context.Context) error {
 		return xerrors.Errorf("dial ice: %w", err)
 	}
 
-	c.log.Info(ctx, "Connecting to workspace...")
+	c.log.Debug(ctx, "Connecting to workspace...")
 	wd, err := wsnet.DialWebsocket(ctx, wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token), []webrtc.ICEServer{server})
 	if err != nil {
 		return xerrors.Errorf("creating workspace dialer: %w", err)
@@ -135,7 +135,7 @@ func (c *tunnneler) start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	c.log.Info(ctx, "Connected to workspace!")
+	c.log.Debug(ctx, "Connected to workspace!")
 
 	// proxy via stdio
 	if c.stdio {
