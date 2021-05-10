@@ -81,7 +81,7 @@ func accessLevelIsValid(level string) bool {
 func listDevURLsCmd(outputFmt *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
-		client, err := newClient(ctx)
+		client, err := newClient(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -147,7 +147,7 @@ func createDevURLCmd() *cobra.Command {
 			if urlname != "" && !devURLNameValidRx.MatchString(urlname) {
 				return xerrors.New("update devurl: name must be < 64 chars in length, begin with a letter and only contain letters or digits.")
 			}
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -230,7 +230,7 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 		return xerrors.Errorf("validate port: %w", err)
 	}
 
-	client, err := newClient(ctx)
+	client, err := newClient(ctx, true)
 	if err != nil {
 		return err
 	}

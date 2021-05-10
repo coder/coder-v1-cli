@@ -88,7 +88,7 @@ func configSSH(configpath *string, remove *bool, p2p *bool) func(cmd *cobra.Comm
 			return nil
 		}
 
-		client, err := newClient(ctx)
+		client, err := newClient(ctx, true)
 		if err != nil {
 			return err
 		}

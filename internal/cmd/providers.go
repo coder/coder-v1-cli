@@ -50,7 +50,7 @@ coder providers create my-provider --hostname=https://provider.example.com --clu
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -143,7 +143,7 @@ coder providers ls`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -174,7 +174,7 @@ func deleteProviderCmd() *cobra.Command {
 coder providers rm my-workspace-provider`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -232,7 +232,7 @@ func cordonProviderCmd() *cobra.Command {
 coder providers cordon my-workspace-provider --reason "limit cloud clost"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -265,7 +265,7 @@ func unCordonProviderCmd() *cobra.Command {
 coder providers uncordon my-workspace-provider`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -296,7 +296,7 @@ func renameProviderCmd() *cobra.Command {
 coder providers rename build-in us-east-1`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}

@@ -23,7 +23,7 @@ var errNeedLogin = clog.Fatal(
 const tokenEnv = "CODER_TOKEN"
 const urlEnv = "CODER_URL"
 
-func newClient(ctx context.Context) (coder.Client, error) {
+func newClient(ctx context.Context, checkVersion bool) (coder.Client, error) {
 	var (
 		err          error
 		sessionToken = os.Getenv(tokenEnv)
@@ -55,10 +55,14 @@ func newClient(ctx context.Context) (coder.Client, error) {
 		return nil, xerrors.Errorf("failed to create new coder.Client: %w", err)
 	}
 
-	apiVersion, err := c.APIVersion(ctx)
-	if apiVersion != "" && !version.VersionsMatch(apiVersion) {
-		logVersionMismatchError(apiVersion)
+	if checkVersion {
+		var apiVersion string
+		apiVersion, err = c.APIVersion(ctx)
+		if apiVersion != "" && !version.VersionsMatch(apiVersion) {
+			logVersionMismatchError(apiVersion)
+		}
 	}
+
 	if err != nil {
 		var he *coder.HTTPError
 		if xerrors.As(err, &he) {

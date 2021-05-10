@@ -37,7 +37,7 @@ coder ssh my-dev pwd`,
 
 func shell(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	client, err := newClient(ctx)
+	client, err := newClient(ctx, true)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func shValidArgs(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	err := cobra.MinimumNArgs(1)(cmd, args)
 	if err != nil {
-		client, err := newClient(ctx)
+		client, err := newClient(ctx, true)
 		if err != nil {
 			return clog.Error("missing [environment_name] argument")
 		}
