@@ -155,6 +155,8 @@ func dialICEURL(server webrtc.ICEServer, rawURL string, options *DialICEOptions)
 // Generalizes creating a new peer connection with consistent options.
 func newPeerConnection(servers []webrtc.ICEServer) (*webrtc.PeerConnection, error) {
 	se := webrtc.SettingEngine{}
+	se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
+	se.SetSrflxAcceptanceMinWait(0)
 	se.DetachDataChannels()
 	se.SetICETimeouts(time.Second*5, time.Second*5, time.Second*2)
 
@@ -165,6 +167,7 @@ func newPeerConnection(servers []webrtc.ICEServer) (*webrtc.PeerConnection, erro
 		if server.Credential != nil && len(server.URLs) == 1 {
 			url, err := ice.ParseURL(server.URLs[0])
 			if err == nil && url.Proto == ice.ProtoTypeTCP {
+				se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeTCP4, webrtc.NetworkTypeTCP6})
 				se.SetRelayAcceptanceMinWait(0)
 			}
 		}
@@ -211,6 +214,25 @@ func proxyICECandidates(conn *webrtc.PeerConnection, w io.Writer) func() {
 		}
 		flushed = true
 	}
+}
+
+// Waits for a PeerConnection to hit the open state.
+func waitForConnectionOpen(ctx context.Context, conn *webrtc.PeerConnection) error {
+	if conn.ConnectionState() == webrtc.PeerConnectionStateConnected {
+		return nil
+	}
+	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
+	defer cancelFunc()
+	conn.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
+		if pcs == webrtc.PeerConnectionStateConnected {
+			cancelFunc()
+		}
+	})
+	<-ctx.Done()
+	if ctx.Err() == context.DeadlineExceeded {
+		return ctx.Err()
+	}
+	return nil
 }
 
 // Waits for a DataChannel to hit the open state.

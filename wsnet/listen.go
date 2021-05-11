@@ -103,7 +103,7 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 // Negotiates the handshake protocol over the connection provided.
 // This functions control-flow is important to readability,
 // so the cognitive overload linter has been disabled.
-// nolint:gocognit
+// nolint:gocognit,nestif
 func (l *listener) negotiate(conn net.Conn) {
 	var (
 		err     error
@@ -172,11 +172,17 @@ func (l *listener) negotiate(conn net.Conn) {
 				closeError(err)
 				return
 			}
+			rtc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
+				if pcs == webrtc.PeerConnectionStateConnecting {
+					return
+				}
+				_ = conn.Close()
+			})
+			flushCandidates := proxyICECandidates(rtc, conn)
 			l.connClosersMut.Lock()
 			l.connClosers = append(l.connClosers, rtc)
 			l.connClosersMut.Unlock()
 			rtc.OnDataChannel(l.handle)
-			flushCandidates := proxyICECandidates(rtc, conn)
 			err = rtc.SetRemoteDescription(*msg.Offer)
 			if err != nil {
 				closeError(fmt.Errorf("apply offer: %w", err))
