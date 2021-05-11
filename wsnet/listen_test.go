@@ -36,8 +36,9 @@ func TestListen(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		go srv.Serve(listener)
-
+		go func() {
+			_ = srv.Serve(listener)
+		}()
 		addr := listener.Addr()
 		broker := fmt.Sprintf("http://%s/", addr.String())
 
@@ -53,7 +54,9 @@ func TestListen(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		go srv.Serve(listener)
+		go func() {
+			_ = srv.Serve(listener)
+		}()
 		<-connCh
 	})
 }
