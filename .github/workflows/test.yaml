@@ -6,36 +6,44 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+
       - uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+
       - name: fmt
         uses: ./ci/image
         with:
           args: make -j fmt 
+
       - run: ./ci/scripts/files_changed.sh
+
   lint:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2.5.2
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.36
+          version: v1.39
+
   test:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+
       - uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+
       - name: test
         uses: ./ci/image
         env:
@@ -45,18 +53,22 @@ jobs:
           CODER_PASSWORD: ${{ secrets.CODER_PASSWORD }}
         with:
           args: make -j test/coverage
+
   gendocs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+
       - uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+
       - name: generate-docs
         uses: ./ci/image
         with:
           args: make -j gendocs
+
       - run: ./ci/scripts/files_changed.sh
