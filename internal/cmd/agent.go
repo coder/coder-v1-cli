@@ -51,7 +51,7 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 				var ok bool
 				coderURL, ok = os.LookupEnv("CODER_URL")
 				if !ok {
-					client, err := newClient(ctx)
+					client, err := newClient(ctx, true)
 					if err != nil {
 						return xerrors.New("must login, pass --coder-url flag, or set the CODER_URL env variable")
 					}

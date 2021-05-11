@@ -49,7 +49,7 @@ coder tunnel my-dev 3000 3000
 				}
 			}
 
-			sdk, err := newClient(ctx)
+			sdk, err := newClient(ctx, false)
 			if err != nil {
 				return xerrors.Errorf("getting coder client: %w", err)
 			}
@@ -72,7 +72,7 @@ coder tunnel my-dev 3000 3000
 			}
 
 			c := &tunnneler{
-				log:         log.Leveled(slog.LevelDebug),
+				log:         log,
 				brokerAddr:  &baseURL,
 				token:       sdk.Token(),
 				workspaceID: envID,

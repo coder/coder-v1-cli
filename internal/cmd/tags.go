@@ -41,7 +41,7 @@ func tagsCreateCmd() *cobra.Command {
 		Args:    xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -86,7 +86,7 @@ func tagsLsCmd() *cobra.Command {
 		Example: `coder tags ls --image ubuntu --org default --output json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -143,7 +143,7 @@ func tagsRmCmd() *cobra.Command {
 		Args:    xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
