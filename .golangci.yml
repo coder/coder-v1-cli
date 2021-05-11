@@ -1,64 +1,81 @@
 # See https://golangci-lint.run/usage/configuration/
 linters-settings:
-  goconst:
-    min-len: 4 
-    min-occurrences: 3
   gocognit:
     # tunnel.go has a 150 line function. Someone should fix it and
     # decrement this back down to a rational number.
     min-complexity: 52
+  goconst:
+    min-len: 4
+    min-occurrences: 3
   nestif:
     min-complexity: 10
-  govet:
-    settings:
-      printf:
-        funcs: # Run `go tool vet help printf` to see available settings for `printf` analyzer.
-          - (cdr.dev/coder-cli/pkg/clog).Tipf
-          - (cdr.dev/coder-cli/pkg/clog).Hintf
-          - (cdr.dev/coder-cli/pkg/clog).Causef
-linters:
-  disable-all: true
-  exclude-use-default: false
-  enable:
-    - megacheck
-    - govet
-    - golint
-    - goconst
-    - gocognit
-    - nestif
-    - misspell
-    - unparam
-    - unused
-    - bodyclose
-    - deadcode
-    - depguard
-    - dogsled
-    - errcheck
-    - unconvert
-    - unparam
-    - varcheck
-    - whitespace    
-    - structcheck
-    - stylecheck
-    - typecheck
-    - nolintlint
-    - rowserrcheck
-    - scopelint
-    - goprintffuncname
-    - gofmt
-    - godot
-    - ineffassign
-    - gocritic
+  revive:
+    # see https://github.com/mgechev/revive#available-rules for details.
+    ignore-generated-header: true
+    severity: warning
+    rules:
+      - name: atomic
+      # - name: bare-return
+      - name: blank-imports
+      - name: bool-literal-in-expr
+      - name: call-to-gc
+      - name: confusing-naming
+      - name: confusing-results
+      - name: constant-logical-expr
+      - name: context-as-argument
+      - name: context-keys-type
+      # - name: deep-exit
+      - name: defer
+      - name: dot-imports
+      - name: duplicated-imports
+      # - name: early-return
+      # - name: empty-block
+      - name: empty-lines
+      - name: error-naming
+      - name: error-return
+      - name: error-strings
+      - name: errorf
+      - name: exported
+      # - name: flag-parameter
+      - name: get-return
+      - name: identical-branches
+      # - name: if-return
+      # - name: import-shadowing
+      - name: increment-decrement
+      - name: indent-error-flow
+      - name: modifies-parameter
+      - name: modifies-value-receiver
+      - name: package-comments
+      - name: range
+      - name: range-val-address
+      - name: range-val-in-closure
+      - name: receiver-naming
+      - name: redefines-builtin-id
+      - name: string-of-int
+      - name: struct-tag
+      - name: superfluous-else
+      - name: time-naming
+      - name: unconditional-recursion
+      - name: unexported-naming
+      - name: unexported-return
+      # - name: unhandled-error
+      - name: unnecessary-stmt
+      - name: unreachable-code
+      # - name: unused-parameter
+      # - name: unused-receiver
+      # - name: var-declaration
+      - name: var-naming
+      - name: waitgroup-by-value
 
 issues:
-  exclude-use-default: false
   exclude:
     # errcheck: Almost all programs ignore errors on these functions and in most cases it's ok
     - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*printf?|os\.(Un)?Setenv). is not checked
     # golint: False positive when tests are defined in package 'test'
     - func name will be used as test\.Test.* by other packages, and that stutters; consider calling this
     # govet: Common false positives
-    - (possible misuse of unsafe.Pointer|should have signature)
+    - possible misuse of unsafe.Pointer|should have signature
+    - should have signature
     # staticcheck: Developers tend to write in C-style with an explicit 'break' in a 'switch', so it's ok to ignore
     - ineffective break statement. Did you mean to break out of the outer loop
     # gosec: Too many false-positives on 'unsafe' usage
@@ -67,7 +84,56 @@ issues:
     - Subprocess launch(ed with variable|ing should be audited)
     # gosec: Duplicated errcheck checks
     - G104
-    # gosec: Too many issues in popular repos
-    - (Expect directory permissions to be 0750 or less|Expect file permissions to be 0600 or less)
     # gosec: False positive is triggered by 'src, err := ioutil.ReadFile(filename)'
     - Potential file inclusion via variable
+
+  fix: true
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - deadcode
+    - dogsled
+    - errcheck
+    # - errorlint
+    - exportloopref
+    # - forcetypeassert
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - gofmt
+    - goimports
+    - golint
+    - gomodguard
+    - goprintffuncname
+    # - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - makezero
+    - megacheck
+    - misspell
+    - nestif
+    - noctx
+    - nolintlint
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+    - wastedassign
+    - whitespace
