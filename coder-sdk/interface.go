@@ -62,6 +62,9 @@ type Client interface {
 	// PutSiteConfigExtensionMarketplace sets the extension marketplace configuration.
 	PutSiteConfigExtensionMarketplace(ctx context.Context, req ConfigExtensionMarketplace) error
 
+	// SiteConfigWorkspaces fetches the workspace configuration.
+	SiteConfigWorkspaces(ctx context.Context) (*ConfigWorkspaces, error)
+
 	// DeleteDevURL deletes the specified devurl.
 	DeleteDevURL(ctx context.Context, envID, urlID string) error
 
