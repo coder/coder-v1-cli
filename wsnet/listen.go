@@ -18,6 +18,8 @@ import (
 	"cdr.dev/coder-cli/coder-sdk"
 )
 
+var keepAliveInterval = 5 * time.Second
+
 // Listen connects to the broker proxies connections to the local net.
 // Close will end all RTC connections.
 func Listen(ctx context.Context, broker string) (io.Closer, error) {
@@ -35,7 +37,7 @@ func Listen(ctx context.Context, broker string) (io.Closer, error) {
 	go func() {
 		for {
 			err := <-ch
-			if errors.Is(err, io.EOF) {
+			if errors.Is(err, io.EOF) || errors.Is(err, yamux.ErrKeepAliveTimeout) {
 				// If we hit an EOF, then the connection to the broker
 				// was interrupted. We'll take a short break then dial
 				// again.
@@ -76,7 +78,10 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 	}
 	l.ws = conn
 	nconn := websocket.NetConn(ctx, conn, websocket.MessageBinary)
-	session, err := yamux.Server(nconn, nil)
+	config := yamux.DefaultConfig()
+	config.KeepAliveInterval = keepAliveInterval
+	config.LogOutput = io.Discard
+	session, err := yamux.Server(nconn, config)
 	if err != nil {
 		return nil, fmt.Errorf("create multiplex: %w", err)
 	}

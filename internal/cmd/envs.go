@@ -59,7 +59,7 @@ func lsEnvsCommand() *cobra.Command {
 		Long:  "List all Coder environments owned by the active user.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -128,7 +128,7 @@ coder envs --user charlie@coder.com ls -o json \
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return xerrors.Errorf("new client: %w", err)
 			}
@@ -189,7 +189,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 				return xerrors.New("image unset")
 			}
 
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -315,7 +315,7 @@ coder envs create-from-config --name="dev-env" -f coder.yaml`,
 				)
 			}
 
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -438,7 +438,7 @@ func editEnvCmd() *cobra.Command {
 coder envs edit back-end-env --disk 20`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -532,7 +532,7 @@ func rmEnvsCmd() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
