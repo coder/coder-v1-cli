@@ -49,7 +49,7 @@ coder tunnel my-dev 3000 3000
 				}
 			}
 
-			sdk, err := newClient(ctx)
+			sdk, err := newClient(ctx, false)
 			if err != nil {
 				return xerrors.Errorf("getting coder client: %w", err)
 			}
@@ -72,7 +72,7 @@ coder tunnel my-dev 3000 3000
 			}
 
 			c := &tunnneler{
-				log:         log.Leveled(slog.LevelDebug),
+				log:         log,
 				brokerAddr:  &baseURL,
 				token:       sdk.Token(),
 				workspaceID: envID,
@@ -104,14 +104,18 @@ type tunnneler struct {
 }
 
 func (c *tunnneler) start(ctx context.Context) error {
+	username, password, err := wsnet.TURNCredentials(c.token)
+	if err != nil {
+		return xerrors.Errorf("failed to parse credentials from token")
+	}
 	server := webrtc.ICEServer{
 		URLs:           []string{wsnet.TURNEndpoint(c.brokerAddr)},
-		Username:       "insecure",
-		Credential:     "pass",
+		Username:       username,
+		Credential:     password,
 		CredentialType: webrtc.ICECredentialTypePassword,
 	}
 
-	err := wsnet.DialICE(server, 0)
+	err = wsnet.DialICE(server, nil)
 	if errors.Is(err, wsnet.ErrInvalidCredentials) {
 		return xerrors.Errorf("failed to authenticate your user for this workspace")
 	}
@@ -122,8 +126,8 @@ func (c *tunnneler) start(ctx context.Context) error {
 		return xerrors.Errorf("dial ice: %w", err)
 	}
 
-	c.log.Info(ctx, "Connecting to workspace...")
-	wd, err := wsnet.Dial(ctx, wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token), []webrtc.ICEServer{server})
+	c.log.Debug(ctx, "Connecting to workspace...")
+	wd, err := wsnet.DialWebsocket(ctx, wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token), []webrtc.ICEServer{server})
 	if err != nil {
 		return xerrors.Errorf("creating workspace dialer: %w", err)
 	}
@@ -131,7 +135,7 @@ func (c *tunnneler) start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	c.log.Info(ctx, "Connected to workspace!")
+	c.log.Debug(ctx, "Connected to workspace!")
 
 	// proxy via stdio
 	if c.stdio {

@@ -40,7 +40,7 @@ type CreateDevURLReq struct {
 	Scheme string `json:"scheme"`
 }
 
-// CreateDevURL inserts a new devurl for the authenticated user.
+// CreateDevURL inserts a new dev URL for the authenticated user.
 func (c *DefaultClient) CreateDevURL(ctx context.Context, envID string, req CreateDevURLReq) error {
 	return c.requestBody(ctx, http.MethodPost, "/api/v0/environments/"+envID+"/devurls", req, nil)
 }

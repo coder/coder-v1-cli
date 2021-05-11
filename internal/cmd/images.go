@@ -38,7 +38,7 @@ func lsImgsCommand(user *string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}

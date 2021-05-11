@@ -36,7 +36,7 @@ func lsTokensCmd() *cobra.Command {
 		Short: "show the user's active API tokens",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -79,7 +79,7 @@ func createTokensCmd() *cobra.Command {
 		Args:  xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -102,7 +102,7 @@ func rmTokenCmd() *cobra.Command {
 		Args:  xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -121,7 +121,7 @@ func regenTokenCmd() *cobra.Command {
 		Args:  xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}

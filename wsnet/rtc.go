@@ -31,11 +31,22 @@ var (
 	controlChannel = "control"
 )
 
+// DialICEOptions provides options for dialing an ICE server.
+type DialICEOptions struct {
+	Timeout time.Duration
+	// Whether to ignore TLS errors.
+	InsecureSkipVerify bool
+}
+
 // DialICE confirms ICE servers are dialable.
 // Timeout defaults to 200ms.
-func DialICE(server webrtc.ICEServer, timeout time.Duration) error {
+func DialICE(server webrtc.ICEServer, options *DialICEOptions) error {
+	if options == nil {
+		options = &DialICEOptions{}
+	}
+
 	for _, rawURL := range server.URLs {
-		err := dialICEURL(server, rawURL, timeout)
+		err := dialICEURL(server, rawURL, options)
 		if err != nil {
 			return err
 		}
@@ -43,7 +54,7 @@ func DialICE(server webrtc.ICEServer, timeout time.Duration) error {
 	return nil
 }
 
-func dialICEURL(server webrtc.ICEServer, rawURL string, timeout time.Duration) error {
+func dialICEURL(server webrtc.ICEServer, rawURL string, options *DialICEOptions) error {
 	url, err := ice.ParseURL(rawURL)
 	if err != nil {
 		return err
@@ -69,13 +80,13 @@ func dialICEURL(server webrtc.ICEServer, rawURL string, timeout time.Duration) e
 				return resErr
 			}
 			dconn, dialErr := dtls.Dial("udp4", udpAddr, &dtls.Config{
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: options.InsecureSkipVerify,
 			})
 			err = dialErr
 			udpConn = turn.NewSTUNConn(dconn)
 		case ice.ProtoTypeTCP:
 			tcpConn, err = tls.Dial("tcp4", turnServerAddr, &tls.Config{
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: options.InsecureSkipVerify,
 			})
 		}
 	}
@@ -100,7 +111,7 @@ func dialICEURL(server webrtc.ICEServer, rawURL string, timeout time.Duration) e
 		Password:       pass,
 		Realm:          "",
 		Conn:           udpConn,
-		RTO:            timeout,
+		RTO:            options.Timeout,
 	})
 	if err != nil {
 		return err
@@ -144,8 +155,23 @@ func dialICEURL(server webrtc.ICEServer, rawURL string, timeout time.Duration) e
 // Generalizes creating a new peer connection with consistent options.
 func newPeerConnection(servers []webrtc.ICEServer) (*webrtc.PeerConnection, error) {
 	se := webrtc.SettingEngine{}
+	se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
+	se.SetSrflxAcceptanceMinWait(0)
 	se.DetachDataChannels()
 	se.SetICETimeouts(time.Second*5, time.Second*5, time.Second*2)
+
+	// If one server is provided and we know it's TURN, we can set the
+	// relay acceptable so the connection starts immediately.
+	if len(servers) == 1 {
+		server := servers[0]
+		if server.Credential != nil && len(server.URLs) == 1 {
+			url, err := ice.ParseURL(server.URLs[0])
+			if err == nil && url.Proto == ice.ProtoTypeTCP {
+				se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeTCP4, webrtc.NetworkTypeTCP6})
+				se.SetRelayAcceptanceMinWait(0)
+			}
+		}
+	}
 	api := webrtc.NewAPI(webrtc.WithSettingEngine(se))
 
 	return api.NewPeerConnection(webrtc.Configuration{
@@ -188,6 +214,25 @@ func proxyICECandidates(conn *webrtc.PeerConnection, w io.Writer) func() {
 		}
 		flushed = true
 	}
+}
+
+// Waits for a PeerConnection to hit the open state.
+func waitForConnectionOpen(ctx context.Context, conn *webrtc.PeerConnection) error {
+	if conn.ConnectionState() == webrtc.PeerConnectionStateConnected {
+		return nil
+	}
+	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
+	defer cancelFunc()
+	conn.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
+		if pcs == webrtc.PeerConnectionStateConnected {
+			cancelFunc()
+		}
+	})
+	<-ctx.Done()
+	if ctx.Err() == context.DeadlineExceeded {
+		return ctx.Err()
+	}
+	return nil
 }
 
 // Waits for a DataChannel to hit the open state.

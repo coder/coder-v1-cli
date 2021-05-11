@@ -81,7 +81,7 @@ func accessLevelIsValid(level string) bool {
 func listDevURLsCmd(outputFmt *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
-		client, err := newClient(ctx)
+		client, err := newClient(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -122,11 +122,11 @@ func createDevURLCmd() *cobra.Command {
 		scheme  string
 	)
 	cmd := &cobra.Command{
-		Use:     "create [env_name] [port]",
-		Short:   "Create a new devurl for an environment",
+		Use:     "create [workspace_name] [port]",
+		Short:   "Create a new dev URL for a workspace",
 		Aliases: []string{"edit"},
 		Args:    xcobra.ExactArgs(2),
-		// Run creates or updates a devURL
+		Example: `coder urls create my-workspace 8080 --name my-dev-url`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var (
 				envName = args[0]
@@ -147,7 +147,7 @@ func createDevURLCmd() *cobra.Command {
 			if urlname != "" && !devURLNameValidRx.MatchString(urlname) {
 				return xerrors.New("update devurl: name must be < 64 chars in length, begin with a letter and only contain letters or digits.")
 			}
-			client, err := newClient(ctx)
+			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
@@ -195,8 +195,6 @@ func createDevURLCmd() *cobra.Command {
 	cmd.Flags().StringVar(&access, "access", "private", "Set DevURL access to [private | org | authed | public]")
 	cmd.Flags().StringVar(&urlname, "name", "", "DevURL name")
 	cmd.Flags().StringVar(&scheme, "scheme", "http", "Server scheme (http|https)")
-	_ = cmd.MarkFlagRequired("name")
-
 	return cmd
 }
 
@@ -230,7 +228,7 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 		return xerrors.Errorf("validate port: %w", err)
 	}
 
-	client, err := newClient(ctx)
+	client, err := newClient(ctx, true)
 	if err != nil {
 		return err
 	}

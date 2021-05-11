@@ -20,7 +20,7 @@ func ExampleDial_basic() {
 	}}
 
 	for _, server := range servers {
-		err := DialICE(server, 0)
+		err := DialICE(server, nil)
 		if errors.Is(err, ErrInvalidCredentials) {
 			// You could do something...
 		}
@@ -30,7 +30,7 @@ func ExampleDial_basic() {
 		}
 	}
 
-	dialer, err := Dial(context.Background(), "wss://master.cdr.dev/agent/workspace/connect", servers)
+	dialer, err := DialWebsocket(context.Background(), "wss://master.cdr.dev/agent/workspace/connect", servers)
 	if err != nil {
 		// Do something...
 	}
@@ -48,10 +48,12 @@ func TestDial(t *testing.T) {
 		_, err := Listen(context.Background(), listenAddr)
 		if err != nil {
 			t.Error(err)
+			return
 		}
-		dialer, err := Dial(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
 		if err != nil {
 			t.Error(err)
+			return
 		}
 		err = dialer.Ping(context.Background())
 		if err != nil {
@@ -64,8 +66,9 @@ func TestDial(t *testing.T) {
 		_, err := Listen(context.Background(), listenAddr)
 		if err != nil {
 			t.Error(err)
+			return
 		}
-		dialer, err := Dial(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -100,10 +103,12 @@ func TestDial(t *testing.T) {
 		_, err = Listen(context.Background(), listenAddr)
 		if err != nil {
 			t.Error(err)
+			return
 		}
-		dialer, err := Dial(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
 		if err != nil {
 			t.Error(err)
+			return
 		}
 		conn, err := dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
 		if err != nil {
@@ -132,8 +137,9 @@ func TestDial(t *testing.T) {
 		srv, err := Listen(context.Background(), listenAddr)
 		if err != nil {
 			t.Error(err)
+			return
 		}
-		dialer, err := Dial(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
 		if err != nil {
 			t.Error(err)
 		}

@@ -35,23 +35,21 @@ func configSSHCmd() *cobra.Command {
 	var (
 		configpath string
 		remove     = false
-		p2p        = false
 	)
 
 	cmd := &cobra.Command{
 		Use:   "config-ssh",
 		Short: "Configure SSH to access Coder environments",
 		Long:  "Inject the proper OpenSSH configuration into your local SSH config file.",
-		RunE:  configSSH(&configpath, &remove, &p2p),
+		RunE:  configSSH(&configpath, &remove),
 	}
 	cmd.Flags().StringVar(&configpath, "filepath", filepath.Join("~", ".ssh", "config"), "override the default path of your ssh config file")
 	cmd.Flags().BoolVar(&remove, "remove", false, "remove the auto-generated Coder ssh config")
-	cmd.Flags().BoolVar(&p2p, "p2p", false, "(experimental) uses coder tunnel to proxy ssh connection")
 
 	return cmd
 }
 
-func configSSH(configpath *string, remove *bool, p2p *bool) func(cmd *cobra.Command, _ []string) error {
+func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
 		usr, err := user.Current()
@@ -88,7 +86,7 @@ func configSSH(configpath *string, remove *bool, p2p *bool) func(cmd *cobra.Comm
 			return nil
 		}
 
-		client, err := newClient(ctx)
+		client, err := newClient(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -115,7 +113,12 @@ func configSSH(configpath *string, remove *bool, p2p *bool) func(cmd *cobra.Comm
 			return xerrors.New("SSH is disabled or not available for any environments in your Coder deployment.")
 		}
 
-		newConfig := makeNewConfigs(user.Username, envsWithProviders, privateKeyFilepath, *p2p)
+		wconf, err := client.SiteConfigWorkspaces(ctx)
+		if err != nil {
+			return xerrors.Errorf("getting site workspace config: %w", err)
+		}
+
+		newConfig := makeNewConfigs(user.Username, envsWithProviders, privateKeyFilepath, wconf.EnableP2P)
 
 		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
 		if err != nil {
@@ -194,25 +197,28 @@ func makeNewConfigs(userName string, envs []coderutil.EnvWithWorkspaceProvider, 
 			clog.LogWarn("invalid access url", clog.Causef("malformed url: %q", env.WorkspaceProvider.EnvproxyAccessURL))
 			continue
 		}
-		newConfig += makeSSHConfig(u.Host, userName, env.Env.Name, privateKeyFilepath, p2p)
+
+		useTunnel := env.WorkspaceProvider.BuiltIn && p2p
+		newConfig += makeSSHConfig(u.Host, userName, env.Env.Name, privateKeyFilepath, useTunnel)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", sshEndToken)
 
 	return newConfig
 }
 
-func makeSSHConfig(host, userName, envName, privateKeyFilepath string, p2p bool) string {
-	if p2p {
+func makeSSHConfig(host, userName, envName, privateKeyFilepath string, tunnel bool) string {
+	if tunnel {
 		return fmt.Sprintf(
 			`Host coder.%s
-   HostName localhost
-   ProxyCommand coder tunnel %s 22 stdio
+   HostName coder.%s
+   ProxyCommand coder tunnel %s 12213 stdio
    StrictHostKeyChecking no
    ConnectTimeout=0
+   IdentitiesOnly yes
    IdentityFile="%s"
    ServerAliveInterval 60
    ServerAliveCountMax 3
-`, envName, envName, privateKeyFilepath)
+`, envName, envName, envName, privateKeyFilepath)
 	}
 
 	return fmt.Sprintf(

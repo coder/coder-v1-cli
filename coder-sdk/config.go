@@ -137,3 +137,21 @@ func (c *DefaultClient) SiteConfigExtensionMarketplace(ctx context.Context) (*Co
 func (c *DefaultClient) PutSiteConfigExtensionMarketplace(ctx context.Context, req ConfigExtensionMarketplace) error {
 	return c.requestBody(ctx, http.MethodPut, "/api/private/extensions/config", req, nil)
 }
+
+// ConfigWorkspaces is the site configuration for workspace attributes.
+type ConfigWorkspaces struct {
+	GPUVendor              string `json:"gpu_vendor,omitempty" valid:"in(nvidia|amd)"`
+	EnableContainerVMs     bool   `json:"enable_container_vms,omitempty"`
+	EnableWorkspacesAsCode bool   `json:"enable_workspaces_as_code,omitempty"`
+	EnableP2P              bool   `json:"enable_p2p,omitempty"`
+}
+
+// SiteConfigWorkspaces fetches the workspace configuration.
+func (c *DefaultClient) SiteConfigWorkspaces(ctx context.Context) (*ConfigWorkspaces, error) {
+	var conf ConfigWorkspaces
+	// TODO: use the `/api/v0/workspaces/config route once we migrate from using general config
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/config", nil, &conf); err != nil {
+		return nil, err
+	}
+	return &conf, nil
+}
