@@ -113,17 +113,16 @@ func (d *Dialer) negotiate() (err error) {
 
 	go func() {
 		defer close(errCh)
-		err := waitForDataChannelOpen(context.Background(), d.ctrl)
+		err := waitForConnectionOpen(context.Background(), d.rtc)
 		if err != nil {
 			_ = d.conn.Close()
 			errCh <- err
 			return
 		}
-		d.ctrlrw, err = d.ctrl.Detach()
-		if err != nil {
-			errCh <- err
-		}
-		_ = d.conn.Close()
+		go func() {
+			// Closing this connection took 30ms+.
+			_ = d.conn.Close()
+		}()
 	}()
 
 	for {
@@ -179,7 +178,20 @@ func (d *Dialer) Close() error {
 
 // Ping sends a ping through the control channel.
 func (d *Dialer) Ping(ctx context.Context) error {
-	_, err := d.ctrlrw.Write([]byte{'a'})
+	// Since we control the client and server we could open this
+	// data channel with `Negotiated` true to reduce traffic being
+	// sent when the RTC connection is opened.
+	err := waitForDataChannelOpen(context.Background(), d.ctrl)
+	if err != nil {
+		return err
+	}
+	if d.ctrlrw == nil {
+		d.ctrlrw, err = d.ctrl.Detach()
+		if err != nil {
+			return err
+		}
+	}
+	_, err = d.ctrlrw.Write([]byte{'a'})
 	if err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
