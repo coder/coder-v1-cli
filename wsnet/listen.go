@@ -18,7 +18,7 @@ import (
 	"cdr.dev/coder-cli/coder-sdk"
 )
 
-var keepAliveInterval = 5 * time.Second
+var connectionRetryInterval = time.Second
 
 // Listen connects to the broker proxies connections to the local net.
 // Close will end all RTC connections.
@@ -41,8 +41,19 @@ func Listen(ctx context.Context, broker string) (io.Closer, error) {
 				// If we hit an EOF, then the connection to the broker
 				// was interrupted. We'll take a short break then dial
 				// again.
-				time.Sleep(time.Second)
-				ch, err = l.dial(ctx)
+				ticker := time.NewTicker(connectionRetryInterval)
+				for {
+					select {
+					case <-ticker.C:
+						ch, err = l.dial(ctx)
+					case <-ctx.Done():
+						err = ctx.Err()
+					}
+					if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+						break
+					}
+				}
+				ticker.Stop()
 			}
 			if err != nil {
 				l.acceptError = err
@@ -79,7 +90,6 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 	l.ws = conn
 	nconn := websocket.NetConn(ctx, conn, websocket.MessageBinary)
 	config := yamux.DefaultConfig()
-	config.KeepAliveInterval = keepAliveInterval
 	config.LogOutput = io.Discard
 	session, err := yamux.Server(nconn, config)
 	if err != nil {

@@ -13,22 +13,22 @@ import (
 
 func TestListen(t *testing.T) {
 	t.Run("Reconnect", func(t *testing.T) {
-		keepAliveInterval = 50 * time.Millisecond
+		connectionRetryInterval = 10 * time.Millisecond
 
 		var (
-			connCh = make(chan interface{})
+			connCh = make(chan *websocket.Conn)
 			mux    = http.NewServeMux()
 			srv    = http.Server{
 				Handler: mux,
 			}
 		)
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			_, err := websocket.Accept(w, r, nil)
+			ws, err := websocket.Accept(w, r, nil)
 			if err != nil {
 				t.Error(err)
 				return
 			}
-			connCh <- struct{}{}
+			connCh <- ws
 		})
 
 		listener, err := net.Listen("tcp4", "127.0.0.1:0")
@@ -47,8 +47,15 @@ func TestListen(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		<-connCh
+		conn := <-connCh
 		_ = listener.Close()
+		// We need to close the connection too... closing a TCP
+		// listener does not close active local connections.
+		_ = conn.Close(websocket.StatusGoingAway, "")
+
+		// At least a few retry attempts should be had...
+		time.Sleep(connectionRetryInterval * 5)
+
 		listener, err = net.Listen("tcp4", addr.String())
 		if err != nil {
 			t.Error(err)
