@@ -35,21 +35,23 @@ func configSSHCmd() *cobra.Command {
 	var (
 		configpath string
 		remove     = false
+		next       = false
 	)
 
 	cmd := &cobra.Command{
 		Use:   "config-ssh",
 		Short: "Configure SSH to access Coder environments",
 		Long:  "Inject the proper OpenSSH configuration into your local SSH config file.",
-		RunE:  configSSH(&configpath, &remove),
+		RunE:  configSSH(&configpath, &remove, &next),
 	}
 	cmd.Flags().StringVar(&configpath, "filepath", filepath.Join("~", ".ssh", "config"), "override the default path of your ssh config file")
 	cmd.Flags().BoolVar(&remove, "remove", false, "remove the auto-generated Coder ssh config")
+	cmd.Flags().BoolVar(&next, "next", false, "(alpha) uses coder tunnel to proxy ssh connection")
 
 	return cmd
 }
 
-func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []string) error {
+func configSSH(configpath *string, remove *bool, next *bool) func(cmd *cobra.Command, _ []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
 		usr, err := user.Current()
@@ -117,8 +119,20 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 		if err != nil {
 			return xerrors.Errorf("getting site workspace config: %w", err)
 		}
+		p2p := false
+		if wconf.EnableP2P {
+			if *next {
+				p2p = true
+			} else {
+				fmt.Println("Note: NetworkingV2 is enabled on the coder deployment, use --next to enable it for ssh")
+			}
+		} else {
+			if *next {
+				return xerrors.New("NetworkingV2 feature is not enabled, cannot use --next flag")
+			}
+		}
 
-		newConfig := makeNewConfigs(user.Username, envsWithProviders, privateKeyFilepath, wconf.EnableP2P)
+		newConfig := makeNewConfigs(user.Username, envsWithProviders, privateKeyFilepath, p2p)
 
 		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
 		if err != nil {
