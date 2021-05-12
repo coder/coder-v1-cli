@@ -11,10 +11,13 @@ import (
 	"nhooyr.io/websocket"
 )
 
+func init() {
+	// We override this value to make tests faster.
+	connectionRetryInterval = 10 * time.Millisecond
+}
+
 func TestListen(t *testing.T) {
 	t.Run("Reconnect", func(t *testing.T) {
-		connectionRetryInterval = 10 * time.Millisecond
-
 		var (
 			connCh = make(chan *websocket.Conn)
 			mux    = http.NewServeMux()
