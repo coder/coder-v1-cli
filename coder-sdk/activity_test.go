@@ -17,14 +17,14 @@ func TestPushActivity(t *testing.T) {
 	t.Parallel()
 
 	const source = "test"
-	const envID = "602d377a-e6b8d763cae7561885c5f1b2"
+	const workspaceID = "602d377a-e6b8d763cae7561885c5f1b2"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "PushActivity is a POST", http.MethodPost, r.Method)
 		assert.Equal(t, "URL matches", "/api/private/metrics/usage/push", r.URL.Path)
 
 		expected := map[string]interface{}{
-			"source":         source,
-			"environment_id": envID,
+			"source":       source,
+			"workspace_id": workspaceID,
 		}
 		var request map[string]interface{}
 		err := json.NewDecoder(r.Body).Decode(&request)
@@ -46,6 +46,6 @@ func TestPushActivity(t *testing.T) {
 	})
 	assert.Success(t, "failed to create coder.Client", err)
 
-	err = client.PushActivity(context.Background(), source, envID)
+	err = client.PushActivity(context.Background(), source, workspaceID)
 	assert.Success(t, "expected successful response from PushActivity", err)
 }

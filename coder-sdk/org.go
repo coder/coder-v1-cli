@@ -13,7 +13,7 @@ type Organization struct {
 	Description            string             `json:"description"`
 	Default                bool               `json:"default"`
 	Members                []OrganizationUser `json:"members"`
-	EnvironmentCount       int                `json:"environment_count"`
+	WorkspaceCount         int                `json:"workspace_count"`
 	ResourceNamespace      string             `json:"resource_namespace"`
 	CreatedAt              time.Time          `json:"created_at"`
 	UpdatedAt              time.Time          `json:"updated_at"`

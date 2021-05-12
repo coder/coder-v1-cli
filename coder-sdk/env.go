@@ -13,8 +13,8 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
-// Environment describes a Coder environment.
-type Environment struct {
+// Workspace describes a Coder workspace.
+type Workspace struct {
 	ID               string           `json:"id"                 table:"-"`
 	Name             string           `json:"name"               table:"Name"`
 	ImageID          string           `json:"image_id"           table:"-"`
@@ -27,7 +27,7 @@ type Environment struct {
 	DiskGB           int              `json:"disk_gb"            table:"DiskGB"`
 	GPUs             int              `json:"gpus"               table:"-"`
 	Updating         bool             `json:"updating"           table:"-"`
-	LatestStat       EnvironmentStat  `json:"latest_stat"        table:"Status"`
+	LatestStat       WorkspaceStat    `json:"latest_stat"        table:"Status"`
 	RebuildMessages  []RebuildMessage `json:"rebuild_messages"   table:"-"`
 	CreatedAt        time.Time        `json:"created_at"         table:"-"`
 	UpdatedAt        time.Time        `json:"updated_at"         table:"-"`
@@ -38,42 +38,42 @@ type Environment struct {
 	ResourcePoolID   string           `json:"resource_pool_id"   table:"-"`
 }
 
-// RebuildMessage defines the message shown when an Environment requires a rebuild for it can be accessed.
+// RebuildMessage defines the message shown when a Workspace requires a rebuild for it can be accessed.
 type RebuildMessage struct {
 	Text             string   `json:"text"`
 	Required         bool     `json:"required"`
 	AutoOffThreshold Duration `json:"auto_off_threshold"`
 }
 
-// EnvironmentStat represents the state of an environment.
-type EnvironmentStat struct {
-	Time            time.Time         `json:"time"`
-	LastOnline      time.Time         `json:"last_online"`
-	ContainerStatus EnvironmentStatus `json:"container_status"`
-	StatError       string            `json:"stat_error"`
-	CPUUsage        float32           `json:"cpu_usage"`
-	MemoryTotal     int64             `json:"memory_total"`
-	MemoryUsage     float32           `json:"memory_usage"`
-	DiskTotal       int64             `json:"disk_total"`
-	DiskUsed        int64             `json:"disk_used"`
+// WorkspaceStat represents the state of a workspace.
+type WorkspaceStat struct {
+	Time            time.Time       `json:"time"`
+	LastOnline      time.Time       `json:"last_online"`
+	ContainerStatus WorkspaceStatus `json:"container_status"`
+	StatError       string          `json:"stat_error"`
+	CPUUsage        float32         `json:"cpu_usage"`
+	MemoryTotal     int64           `json:"memory_total"`
+	MemoryUsage     float32         `json:"memory_usage"`
+	DiskTotal       int64           `json:"disk_total"`
+	DiskUsed        int64           `json:"disk_used"`
 }
 
-func (e EnvironmentStat) String() string { return string(e.ContainerStatus) }
+func (e WorkspaceStat) String() string { return string(e.ContainerStatus) }
 
-// EnvironmentStatus refers to the states of an environment.
-type EnvironmentStatus string
+// WorkspaceStatus refers to the states of a workspace.
+type WorkspaceStatus string
 
-// The following represent the possible environment container states.
+// The following represent the possible workspace container states.
 const (
-	EnvironmentCreating EnvironmentStatus = "CREATING"
-	EnvironmentOff      EnvironmentStatus = "OFF"
-	EnvironmentOn       EnvironmentStatus = "ON"
-	EnvironmentFailed   EnvironmentStatus = "FAILED"
-	EnvironmentUnknown  EnvironmentStatus = "UNKNOWN"
+	WorkspaceCreating WorkspaceStatus = "CREATING"
+	WorkspaceOff      WorkspaceStatus = "OFF"
+	WorkspaceOn       WorkspaceStatus = "ON"
+	WorkspaceFailed   WorkspaceStatus = "FAILED"
+	WorkspaceUnknown  WorkspaceStatus = "UNKNOWN"
 )
 
-// CreateEnvironmentRequest is used to configure a new environment.
-type CreateEnvironmentRequest struct {
+// CreateWorkspaceRequest is used to configure a new workspace.
+type CreateWorkspaceRequest struct {
 	Name            string  `json:"name"`
 	ImageID         string  `json:"image_id"`
 	OrgID           string  `json:"org_id"`
@@ -91,13 +91,13 @@ type CreateEnvironmentRequest struct {
 	TemplateID string `json:"template_id,omitempty"`
 }
 
-// CreateEnvironment sends a request to create an environment.
-func (c *DefaultClient) CreateEnvironment(ctx context.Context, req CreateEnvironmentRequest) (*Environment, error) {
-	var env Environment
-	if err := c.requestBody(ctx, http.MethodPost, "/api/v0/environments", req, &env); err != nil {
+// CreateWorkspace sends a request to create a workspace.
+func (c *DefaultClient) CreateWorkspace(ctx context.Context, req CreateWorkspaceRequest) (*Workspace, error) {
+	var workspace Workspace
+	if err := c.requestBody(ctx, http.MethodPost, "/api/v0/workspaces", req, &workspace); err != nil {
 		return nil, err
 	}
-	return &env, nil
+	return &workspace, nil
 }
 
 // ParseTemplateRequest parses a template. If Local is a non-nil reader
@@ -112,7 +112,7 @@ type ParseTemplateRequest struct {
 
 // TemplateVersion is a Workspaces As Code (WAC) template.
 // For now, let's not interpret it on the CLI level. We just need
-// to forward this as part of the create env request.
+// to forward this as part of the create workspace request.
 type TemplateVersion struct {
 	ID         string `json:"id"`
 	TemplateID string `json:"template_id"`
@@ -127,7 +127,7 @@ type TemplateVersion struct {
 // ParseTemplate parses a template config. It support both remote repositories and local files.
 // If a local file is specified then all other values in the request are ignored.
 func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequest) (*TemplateVersion, error) {
-	const path = "/api/private/environments/template/parse"
+	const path = "/api/private/workspaces/template/parse"
 	var (
 		tpl     TemplateVersion
 		opts    []requestOption
@@ -157,54 +157,54 @@ func (c *DefaultClient) ParseTemplate(ctx context.Context, req ParseTemplateRequ
 	return &tpl, nil
 }
 
-// CreateEnvironmentFromRepo sends a request to create an environment from a repository.
-func (c *DefaultClient) CreateEnvironmentFromRepo(ctx context.Context, orgID string, req TemplateVersion) (*Environment, error) {
-	var env Environment
-	if err := c.requestBody(ctx, http.MethodPost, "/api/private/orgs/"+orgID+"/environments/from-repo", req, &env); err != nil {
+// CreateWorkspaceFromRepo sends a request to create a workspace from a repository.
+func (c *DefaultClient) CreateWorkspaceFromRepo(ctx context.Context, orgID string, req TemplateVersion) (*Workspace, error) {
+	var workspace Workspace
+	if err := c.requestBody(ctx, http.MethodPost, "/api/private/orgs/"+orgID+"/workspaces/from-repo", req, &workspace); err != nil {
 		return nil, err
 	}
-	return &env, nil
+	return &workspace, nil
 }
 
-// Environments lists environments returned by the given filter.
+// Workspaces lists workspaces returned by the given filter.
 // TODO: add the filter options, explore performance issue.
-func (c *DefaultClient) Environments(ctx context.Context) ([]Environment, error) {
-	var envs []Environment
-	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/environments", nil, &envs); err != nil {
+func (c *DefaultClient) Workspaces(ctx context.Context) ([]Workspace, error) {
+	var workspaces []Workspace
+	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/workspaces", nil, &workspaces); err != nil {
 		return nil, err
 	}
-	return envs, nil
+	return workspaces, nil
 }
 
-// UserEnvironmentsByOrganization gets the list of environments owned by the given user.
-func (c *DefaultClient) UserEnvironmentsByOrganization(ctx context.Context, userID, orgID string) ([]Environment, error) {
+// UserWorkspacesByOrganization gets the list of workspaces owned by the given user.
+func (c *DefaultClient) UserWorkspacesByOrganization(ctx context.Context, userID, orgID string) ([]Workspace, error) {
 	var (
-		envs  []Environment
-		query = url.Values{}
+		workspaces []Workspace
+		query      = url.Values{}
 	)
 
 	query.Add("orgs", orgID)
 	query.Add("users", userID)
 
-	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/environments", nil, &envs, withQueryParams(query)); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/workspaces", nil, &workspaces, withQueryParams(query)); err != nil {
 		return nil, err
 	}
-	return envs, nil
+	return workspaces, nil
 }
 
-// DeleteEnvironment deletes the environment.
-func (c *DefaultClient) DeleteEnvironment(ctx context.Context, envID string) error {
-	return c.requestBody(ctx, http.MethodDelete, "/api/v0/environments/"+envID, nil, nil)
+// DeleteWorkspace deletes the workspace.
+func (c *DefaultClient) DeleteWorkspace(ctx context.Context, workspaceID string) error {
+	return c.requestBody(ctx, http.MethodDelete, "/api/v0/workspaces/"+workspaceID, nil, nil)
 }
 
-// StopEnvironment stops the environment.
-func (c *DefaultClient) StopEnvironment(ctx context.Context, envID string) error {
-	return c.requestBody(ctx, http.MethodPut, "/api/v0/environments/"+envID+"/stop", nil, nil)
+// StopWorkspace stops the workspace.
+func (c *DefaultClient) StopWorkspace(ctx context.Context, workspaceID string) error {
+	return c.requestBody(ctx, http.MethodPut, "/api/v0/workspaces/"+workspaceID+"/stop", nil, nil)
 }
 
-// UpdateEnvironmentReq defines the update operation, only setting
+// UpdateWorkspaceReq defines the update operation, only setting
 // nil-fields.
-type UpdateEnvironmentReq struct {
+type UpdateWorkspaceReq struct {
 	ImageID  *string  `json:"image_id"`
 	ImageTag *string  `json:"image_tag"`
 	CPUCores *float32 `json:"cpu_cores"`
@@ -213,45 +213,46 @@ type UpdateEnvironmentReq struct {
 	GPUs     *int     `json:"gpus"`
 }
 
-// RebuildEnvironment requests that the given envID is rebuilt with no changes to its specification.
-func (c *DefaultClient) RebuildEnvironment(ctx context.Context, envID string) error {
-	return c.requestBody(ctx, http.MethodPatch, "/api/v0/environments/"+envID, UpdateEnvironmentReq{}, nil)
+// RebuildWorkspace requests that the given workspaceID is rebuilt with no changes to its specification.
+func (c *DefaultClient) RebuildWorkspace(ctx context.Context, workspaceID string) error {
+	return c.requestBody(ctx, http.MethodPatch, "/api/v0/workspaces/"+workspaceID, UpdateWorkspaceReq{}, nil)
 }
 
-// EditEnvironment modifies the environment specification and initiates a rebuild.
-func (c *DefaultClient) EditEnvironment(ctx context.Context, envID string, req UpdateEnvironmentReq) error {
-	return c.requestBody(ctx, http.MethodPatch, "/api/v0/environments/"+envID, req, nil)
+// EditWorkspace modifies the workspace specification and initiates a rebuild.
+func (c *DefaultClient) EditWorkspace(ctx context.Context, workspaceID string, req UpdateWorkspaceReq) error {
+	return c.requestBody(ctx, http.MethodPatch, "/api/v0/workspaces/"+workspaceID, req, nil)
 }
 
-// DialWsep dials an environments command execution interface
+// DialWsep dials a workspace's command execution interface
 // See https://github.com/cdr/wsep for details.
-func (c *DefaultClient) DialWsep(ctx context.Context, baseURL *url.URL, envID string) (*websocket.Conn, error) {
-	return c.dialWebsocket(ctx, "/proxy/environments/"+envID+"/wsep", withBaseURL(baseURL))
+func (c *DefaultClient) DialWsep(ctx context.Context, baseURL *url.URL, workspaceID string) (*websocket.Conn, error) {
+	return c.dialWebsocket(ctx, "/proxy/workspaces/"+workspaceID+"/wsep", withBaseURL(baseURL))
 }
 
-// DialExecutor gives a remote execution interface for performing commands inside an environment.
-func (c *DefaultClient) DialExecutor(ctx context.Context, baseURL *url.URL, envID string) (wsep.Execer, error) {
-	ws, err := c.DialWsep(ctx, baseURL, envID)
+// DialExecutor gives a remote execution interface for performing commands
+// inside a workspace.
+func (c *DefaultClient) DialExecutor(ctx context.Context, baseURL *url.URL, workspaceID string) (wsep.Execer, error) {
+	ws, err := c.DialWsep(ctx, baseURL, workspaceID)
 	if err != nil {
 		return nil, err
 	}
 	return wsep.RemoteExecer(ws), nil
 }
 
-// DialIDEStatus opens a websocket connection for cpu load metrics on the environment.
-func (c *DefaultClient) DialIDEStatus(ctx context.Context, baseURL *url.URL, envID string) (*websocket.Conn, error) {
-	return c.dialWebsocket(ctx, "/proxy/environments/"+envID+"/ide/api/status", withBaseURL(baseURL))
+// DialIDEStatus opens a websocket connection for cpu load metrics on the workspace.
+func (c *DefaultClient) DialIDEStatus(ctx context.Context, baseURL *url.URL, workspaceID string) (*websocket.Conn, error) {
+	return c.dialWebsocket(ctx, "/proxy/workspaces/"+workspaceID+"/ide/api/status", withBaseURL(baseURL))
 }
 
-// DialEnvironmentBuildLog opens a websocket connection for the environment build log messages.
-func (c *DefaultClient) DialEnvironmentBuildLog(ctx context.Context, envID string) (*websocket.Conn, error) {
-	return c.dialWebsocket(ctx, "/api/private/environments/"+envID+"/watch-update")
+// DialWorkspaceBuildLog opens a websocket connection for the workspace build log messages.
+func (c *DefaultClient) DialWorkspaceBuildLog(ctx context.Context, workspaceID string) (*websocket.Conn, error) {
+	return c.dialWebsocket(ctx, "/api/private/workspaces/"+workspaceID+"/watch-update")
 }
 
-// BuildLog defines a build log record for a Coder environment.
+// BuildLog defines a build log record for a Coder workspace.
 type BuildLog struct {
-	ID            string `db:"id" json:"id"`
-	EnvironmentID string `db:"environment_id" json:"environment_id"`
+	ID          string `db:"id" json:"id"`
+	WorkspaceID string `db:"workspace_id" json:"workspace_id"`
 	// BuildID allows the frontend to separate the logs from the old build with the logs from the new.
 	BuildID string       `db:"build_id" json:"build_id"`
 	Time    time.Time    `db:"time" json:"time"`
@@ -266,10 +267,10 @@ type BuildLogFollowMsg struct {
 	Err error
 }
 
-// FollowEnvironmentBuildLog trails the build log of a Coder environment.
-func (c *DefaultClient) FollowEnvironmentBuildLog(ctx context.Context, envID string) (<-chan BuildLogFollowMsg, error) {
+// FollowWorkspaceBuildLog trails the build log of a Coder workspace.
+func (c *DefaultClient) FollowWorkspaceBuildLog(ctx context.Context, workspaceID string) (<-chan BuildLogFollowMsg, error) {
 	ch := make(chan BuildLogFollowMsg)
-	ws, err := c.DialEnvironmentBuildLog(ctx, envID)
+	ws, err := c.DialWorkspaceBuildLog(ctx, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -291,14 +292,14 @@ func (c *DefaultClient) FollowEnvironmentBuildLog(ctx context.Context, envID str
 	return ch, nil
 }
 
-// DialEnvironmentStats opens a websocket connection for environment stats.
-func (c *DefaultClient) DialEnvironmentStats(ctx context.Context, envID string) (*websocket.Conn, error) {
-	return c.dialWebsocket(ctx, "/api/private/environments/"+envID+"/watch-stats")
+// DialWorkspaceStats opens a websocket connection for workspace stats.
+func (c *DefaultClient) DialWorkspaceStats(ctx context.Context, workspaceID string) (*websocket.Conn, error) {
+	return c.dialWebsocket(ctx, "/api/private/workspaces/"+workspaceID+"/watch-stats")
 }
 
-// DialResourceLoad opens a websocket connection for cpu load metrics on the environment.
-func (c *DefaultClient) DialResourceLoad(ctx context.Context, envID string) (*websocket.Conn, error) {
-	return c.dialWebsocket(ctx, "/api/private/environments/"+envID+"/watch-resource-load")
+// DialResourceLoad opens a websocket connection for cpu load metrics on the workspace.
+func (c *DefaultClient) DialResourceLoad(ctx context.Context, workspaceID string) (*websocket.Conn, error) {
+	return c.dialWebsocket(ctx, "/api/private/workspaces/"+workspaceID+"/watch-resource-load")
 }
 
 // BuildLogType describes the type of an event.
@@ -307,8 +308,8 @@ type BuildLogType string
 const (
 	// BuildLogTypeStart signals that a new build log has begun.
 	BuildLogTypeStart BuildLogType = "start"
-	// BuildLogTypeStage is a stage-level event for an environment.
-	// It can be thought of as a major step in the environment's
+	// BuildLogTypeStage is a stage-level event for a workspace.
+	// It can be thought of as a major step in the workspace's
 	// lifecycle.
 	BuildLogTypeStage BuildLogType = "stage"
 	// BuildLogTypeError describes an error that has occurred.
@@ -325,18 +326,18 @@ type buildLogMsg struct {
 	Type BuildLogType `json:"type"`
 }
 
-// WaitForEnvironmentReady will watch the build log and return when done.
-func (c *DefaultClient) WaitForEnvironmentReady(ctx context.Context, envID string) error {
-	conn, err := c.DialEnvironmentBuildLog(ctx, envID)
+// WaitForWorkspaceReady will watch the build log and return when done.
+func (c *DefaultClient) WaitForWorkspaceReady(ctx context.Context, workspaceID string) error {
+	conn, err := c.DialWorkspaceBuildLog(ctx, workspaceID)
 	if err != nil {
-		return xerrors.Errorf("%s: dial build log: %w", envID, err)
+		return xerrors.Errorf("%s: dial build log: %w", workspaceID, err)
 	}
 
 	for {
 		msg := buildLogMsg{}
 		err := wsjson.Read(ctx, conn, &msg)
 		if err != nil {
-			return xerrors.Errorf("%s: reading build log msg: %w", envID, err)
+			return xerrors.Errorf("%s: reading build log msg: %w", workspaceID, err)
 		}
 
 		if msg.Type == BuildLogTypeDone {
@@ -345,20 +346,20 @@ func (c *DefaultClient) WaitForEnvironmentReady(ctx context.Context, envID strin
 	}
 }
 
-// EnvironmentByID get the details of an environment by its id.
-func (c *DefaultClient) EnvironmentByID(ctx context.Context, id string) (*Environment, error) {
-	var env Environment
-	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/environments/"+id, nil, &env); err != nil {
+// WorkspaceByID get the details of a workspace by its id.
+func (c *DefaultClient) WorkspaceByID(ctx context.Context, id string) (*Workspace, error) {
+	var workspace Workspace
+	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/workspaces/"+id, nil, &workspace); err != nil {
 		return nil, err
 	}
-	return &env, nil
+	return &workspace, nil
 }
 
-// EnvironmentsByWorkspaceProvider returns all environments that belong to a particular workspace provider.
-func (c *DefaultClient) EnvironmentsByWorkspaceProvider(ctx context.Context, wpID string) ([]Environment, error) {
-	var envs []Environment
-	if err := c.requestBody(ctx, http.MethodGet, "/api/private/resource-pools/"+wpID+"/environments", nil, &envs); err != nil {
+// WorkspacesByWorkspaceProvider returns all workspaces that belong to a particular workspace provider.
+func (c *DefaultClient) WorkspacesByWorkspaceProvider(ctx context.Context, wpID string) ([]Workspace, error) {
+	var workspaces []Workspace
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/resource-pools/"+wpID+"/workspaces", nil, &workspaces); err != nil {
 		return nil, err
 	}
-	return envs, nil
+	return workspaces, nil
 }

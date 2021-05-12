@@ -17,7 +17,7 @@ import (
 	"cdr.dev/coder-cli/coder-sdk"
 )
 
-func Test_envs_ls(t *testing.T) {
+func Test_workspaces_ls(t *testing.T) {
 	skipIfNoAuth(t)
 	res := execute(t, nil, "envs", "ls")
 	res.success(t)
@@ -25,11 +25,11 @@ func Test_envs_ls(t *testing.T) {
 	res = execute(t, nil, "envs", "ls", "--output=json")
 	res.success(t)
 
-	var envs []coder.Environment
-	res.stdoutUnmarshals(t, &envs)
+	var workspaces []coder.Workspace
+	res.stdoutUnmarshals(t, &workspaces)
 }
 
-func Test_envs_ls_by_provider(t *testing.T) {
+func Test_workspaces_ls_by_provider(t *testing.T) {
 	skipIfNoAuth(t)
 	for _, test := range []struct {
 		name    string
@@ -45,8 +45,8 @@ func Test_envs_ls_by_provider(t *testing.T) {
 			name:    "list as json",
 			command: []string{"envs", "ls", "--provider", "built-in", "--output", "json"},
 			assert: func(r result) {
-				var envs []coder.Environment
-				r.stdoutUnmarshals(t, &envs)
+				var workspaces []coder.Workspace
+				r.stdoutUnmarshals(t, &workspaces)
 			},
 		},
 	} {
@@ -57,27 +57,27 @@ func Test_envs_ls_by_provider(t *testing.T) {
 	}
 }
 
-func Test_env_create(t *testing.T) {
+func Test_workspace_create(t *testing.T) {
 	skipIfNoAuth(t)
 	ctx := context.Background()
 
 	// Minimum args not received.
-	res := execute(t, nil, "envs", "create")
+	res := execute(t, nil, "workspaces", "create")
 	res.error(t)
 	res.stderrContains(t, "accepts 1 arg(s), received 0")
 
 	// Successfully output help.
-	res = execute(t, nil, "envs", "create", "--help")
+	res = execute(t, nil, "workspaces", "create", "--help")
 	res.success(t)
-	res.stdoutContains(t, "Create a new Coder environment.")
+	res.stdoutContains(t, "Create a new Coder workspace.")
 
 	// Image unset
-	res = execute(t, nil, "envs", "create", "test-env")
+	res = execute(t, nil, "workspaces", "create", "test-workspace")
 	res.error(t)
 	res.stderrContains(t, "fatal: required flag(s) \"image\" not set")
 
 	// Image not imported
-	res = execute(t, nil, "envs", "create", "test-env", "--image=doestexist")
+	res = execute(t, nil, "workspaces", "create", "test-workspace", "--image=doestexist")
 	res.error(t)
 	res.stderrContains(t, "fatal: image not found - did you forget to import this image?")
 
@@ -86,7 +86,7 @@ func Test_env_create(t *testing.T) {
 	name := randString(10)
 	cpu := 2.3
 
-	// attempt to remove the environment on cleanup
+	// attempt to remove the workspace on cleanup
 	t.Cleanup(func() { _ = execute(t, nil, "envs", "rm", name, "--force") })
 
 	res = execute(t, nil, "envs", "create", name, "--image=ubuntu", fmt.Sprintf("--cpu=%f", cpu))
@@ -96,17 +96,17 @@ func Test_env_create(t *testing.T) {
 	res.success(t)
 	res.stdoutContains(t, name)
 
-	var envs []coder.Environment
+	var workspaces []coder.Workspace
 	res = execute(t, nil, "envs", "ls", "--output=json")
 	res.success(t)
-	res.stdoutUnmarshals(t, &envs)
-	env := assertEnv(t, name, envs)
-	assert.Equal(t, "env cpu", cpu, float64(env.CPUCores), floatComparer)
+	res.stdoutUnmarshals(t, &workspaces)
+	workspace := assertWorkspace(t, name, workspaces)
+	assert.Equal(t, "workspace cpu", cpu, float64(workspace.CPUCores), floatComparer)
 
 	res = execute(t, nil, "envs", "watch-build", name)
 	res.success(t)
 
-	// edit the CPU of the environment
+	// edit the CPU of the workspace
 	cpu = 2.1
 	res = execute(t, nil, "envs", "edit", name, fmt.Sprintf("--cpu=%f", cpu), "--follow", "--force")
 	res.success(t)
@@ -114,21 +114,21 @@ func Test_env_create(t *testing.T) {
 	// assert that the CPU actually did change after edit
 	res = execute(t, nil, "envs", "ls", "--output=json")
 	res.success(t)
-	res.stdoutUnmarshals(t, &envs)
-	env = assertEnv(t, name, envs)
-	assert.Equal(t, "env cpu", cpu, float64(env.CPUCores), floatComparer)
+	res.stdoutUnmarshals(t, &workspaces)
+	workspace = assertWorkspace(t, name, workspaces)
+	assert.Equal(t, "workspace cpu", cpu, float64(workspace.CPUCores), floatComparer)
 
 	res = execute(t, nil, "envs", "rm", name, "--force")
 	res.success(t)
 }
 
-func assertEnv(t *testing.T, name string, envs []coder.Environment) *coder.Environment {
-	for _, e := range envs {
+func assertWorkspace(t *testing.T, name string, workspaces []coder.Workspace) *coder.Workspace {
+	for _, e := range workspaces {
 		if name == e.Name {
 			return &e
 		}
 	}
-	slogtest.Fatal(t, "env not found", slog.F("name", name), slog.F("envs", envs))
+	slogtest.Fatal(t, "workspace not found", slog.F("name", name), slog.F("workspaces", workspaces))
 	return nil
 }
 

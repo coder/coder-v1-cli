@@ -1,10 +1,10 @@
 ## coder envs ls
 
-list all environments owned by the active user
+list all workspaces owned by the active user
 
 ### Synopsis
 
-List all Coder environments owned by the active user.
+List all Coder workspaces owned by the active user.
 
 ```
 coder envs ls [flags]
@@ -15,7 +15,7 @@ coder envs ls [flags]
 ```
   -h, --help              help for ls
   -o, --output string     human | json (default "human")
-  -p, --provider string   Filter environments by a particular workspace provider name.
+  -p, --provider string   Filter workspaces by a particular workspace provider name.
       --user string       Specify the user whose resources to target (default "me")
 ```
 
@@ -27,5 +27,4 @@ coder envs ls [flags]
 
 ### SEE ALSO
 
-* [coder envs](coder_envs.md)	 - Interact with Coder environments
-
+* [coder envs](coder_envs.md)	 - Interact with Coder workspaces

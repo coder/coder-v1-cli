@@ -42,7 +42,7 @@ func TestStaticAuth(t *testing.T) {
 			tcli.Success(),
 		)
 
-		// should error when the environment variabels aren't set
+		// should error when the environment variables aren't set
 		c.Run(ctx, "coder envs ls").Assert(t,
 			tcli.Error(),
 		)

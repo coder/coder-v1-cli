@@ -16,19 +16,19 @@ const pushInterval = time.Minute
 // Pusher pushes activity metrics no more than once per pushInterval. Pushes
 // within the same interval are a no-op.
 type Pusher struct {
-	envID  string
-	source string
+	workspaceID string
+	source      string
 
 	client coder.Client
 	rate   *rate.Limiter // Use a rate limiter to control the sampling rate.
 }
 
 // NewPusher instantiates a new instance of Pusher.
-func NewPusher(c coder.Client, envID, source string) *Pusher {
+func NewPusher(c coder.Client, workspaceID, source string) *Pusher {
 	return &Pusher{
-		envID:  envID,
-		source: source,
-		client: c,
+		workspaceID: workspaceID,
+		source:      source,
+		client:      c,
 		// Sample only 1 per interval to avoid spamming the api.
 		rate: rate.NewLimiter(rate.Every(pushInterval), 1),
 	}
@@ -41,7 +41,7 @@ func (p *Pusher) Push(ctx context.Context) {
 		return
 	}
 
-	if err := p.client.PushActivity(ctx, p.source, p.envID); err != nil {
+	if err := p.client.PushActivity(ctx, p.source, p.workspaceID); err != nil {
 		clog.Log(clog.Error(fmt.Sprintf("push activity: %s", err)))
 	}
 }

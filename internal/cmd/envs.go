@@ -21,22 +21,22 @@ import (
 
 const defaultImgTag = "latest"
 
-func envsCmd() *cobra.Command {
+func workspacesCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "envs",
-		Short: "Interact with Coder environments",
-		Long:  "Perform operations on the Coder environments owned by the active user.",
+		Short: "Interact with Coder workspaces",
+		Long:  "Perform operations on the Coder workspaces owned by the active user.",
 	}
 
 	cmd.AddCommand(
-		lsEnvsCommand(),
-		stopEnvsCmd(),
-		rmEnvsCmd(),
+		lsWorkspacesCommand(),
+		stopWorkspacesCmd(),
+		rmWorkspacesCmd(),
 		watchBuildLogCommand(),
-		rebuildEnvCommand(),
-		createEnvCmd(),
-		createEnvFromConfigCmd(),
-		editEnvCmd(),
+		rebuildWorkspaceCommand(),
+		createWorkspaceCmd(),
+		createWorkspaceFromConfigCmd(),
+		editWorkspaceCmd(),
 	)
 	return cmd
 }
@@ -46,7 +46,7 @@ const (
 	jsonOutput  = "json"
 )
 
-func lsEnvsCommand() *cobra.Command {
+func lsWorkspacesCommand() *cobra.Command {
 	var (
 		outputFmt string
 		user      string
@@ -55,45 +55,45 @@ func lsEnvsCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "ls",
-		Short: "list all environments owned by the active user",
-		Long:  "List all Coder environments owned by the active user.",
+		Short: "list all workspaces owned by the active user",
+		Long:  "List all Coder workspaces owned by the active user.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
-			envs, err := getEnvs(ctx, client, user)
+			workspaces, err := getWorkspaces(ctx, client, user)
 			if err != nil {
 				return err
 			}
 			if provider != "" {
-				envs, err = getEnvsByProvider(ctx, client, provider, user)
+				workspaces, err = getWorkspacesByProvider(ctx, client, provider, user)
 				if err != nil {
 					return err
 				}
 			}
-			if len(envs) < 1 {
-				clog.LogInfo("no environments found")
-				envs = []coder.Environment{} // ensures that json output still marshals
+			if len(workspaces) < 1 {
+				clog.LogInfo("no workspaces found")
+				workspaces = []coder.Workspace{} // ensures that json output still marshals
 			}
 
 			switch outputFmt {
 			case humanOutput:
-				envs, err := coderutil.EnvsHumanTable(ctx, client, envs)
+				workspaces, err := coderutil.WorkspacesHumanTable(ctx, client, workspaces)
 				if err != nil {
 					return err
 				}
-				err = tablewriter.WriteTable(cmd.OutOrStdout(), len(envs), func(i int) interface{} {
-					return envs[i]
+				err = tablewriter.WriteTable(cmd.OutOrStdout(), len(workspaces), func(i int) interface{} {
+					return workspaces[i]
 				})
 				if err != nil {
 					return xerrors.Errorf("write table: %w", err)
 				}
 			case jsonOutput:
-				err := json.NewEncoder(cmd.OutOrStdout()).Encode(envs)
+				err := json.NewEncoder(cmd.OutOrStdout()).Encode(workspaces)
 				if err != nil {
-					return xerrors.Errorf("write environments as JSON: %w", err)
+					return xerrors.Errorf("write workspaces as JSON: %w", err)
 				}
 			default:
 				return xerrors.Errorf("unknown --output value %q", outputFmt)
@@ -104,24 +104,24 @@ func lsEnvsCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	cmd.Flags().StringVarP(&outputFmt, "output", "o", humanOutput, "human | json")
-	cmd.Flags().StringVarP(&provider, "provider", "p", "", "Filter environments by a particular workspace provider name.")
+	cmd.Flags().StringVarP(&provider, "provider", "p", "", "Filter workspaces by a particular workspace provider name.")
 
 	return cmd
 }
 
-func stopEnvsCmd() *cobra.Command {
+func stopWorkspacesCmd() *cobra.Command {
 	var user string
 	cmd := &cobra.Command{
-		Use:   "stop [...environment_names]",
-		Short: "stop Coder environments by name",
-		Long:  "Stop Coder environments by name",
-		Example: `coder envs stop front-end-env
-coder envs stop front-end-env backend-env
+		Use:   "stop [...workspace_names]",
+		Short: "stop Coder workspaces by name",
+		Long:  "Stop Coder workspaces by name",
+		Example: `coder envs stop front-end-workspace
+coder envs stop front-end-workspace backend-workspace
 
-# stop all of your environments
+# stop all of your workspaces
 coder envs ls -o json | jq -c '.[].name' | xargs coder envs stop
 
-# stop all environments for a given user
+# stop all workspaces for a given user
 coder envs --user charlie@coder.com ls -o json \
 	| jq -c '.[].name' \
 	| xargs coder envs --user charlie@coder.com stop`,
@@ -134,21 +134,21 @@ coder envs --user charlie@coder.com ls -o json \
 			}
 
 			egroup := clog.LoggedErrGroup()
-			for _, envName := range args {
-				envName := envName
+			for _, workspaceName := range args {
+				workspaceName := workspaceName
 				egroup.Go(func() error {
-					env, err := findEnv(ctx, client, envName, user)
+					workspace, err := findWorkspace(ctx, client, workspaceName, user)
 					if err != nil {
 						return err
 					}
 
-					if err = client.StopEnvironment(ctx, env.ID); err != nil {
-						return clog.Error(fmt.Sprintf("stop environment %q", env.Name),
+					if err = client.StopWorkspace(ctx, workspace.ID); err != nil {
+						return clog.Error(fmt.Sprintf("stop workspace %q", workspace.Name),
 							clog.Causef(err.Error()), clog.BlankLine,
-							clog.Hintf("current environment status is %q", env.LatestStat.ContainerStatus),
+							clog.Hintf("current workspace status is %q", workspace.LatestStat.ContainerStatus),
 						)
 					}
-					clog.LogSuccess(fmt.Sprintf("successfully stopped environment %q", envName))
+					clog.LogSuccess(fmt.Sprintf("successfully stopped workspace %q", workspaceName))
 					return nil
 				})
 			}
@@ -160,7 +160,7 @@ coder envs --user charlie@coder.com ls -o json \
 	return cmd
 }
 
-func createEnvCmd() *cobra.Command {
+func createWorkspaceCmd() *cobra.Command {
 	var (
 		org             string
 		cpu             float32
@@ -176,13 +176,13 @@ func createEnvCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "create [environment_name]",
-		Short: "create a new environment.",
+		Use:   "create [workspace_name]",
+		Short: "create a new workspace.",
 		Args:  xcobra.ExactArgs(1),
-		Long:  "Create a new Coder environment.",
-		Example: `# create a new environment using default resource amounts
-coder envs create my-new-env --image ubuntu
-coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ubuntu`,
+		Long:  "Create a new Coder workspace.",
+		Example: `# create a new workspace using default resource amounts
+coder envs create my-new-workspace --image ubuntu
+coder envs create my-new-powerful-workspace --cpu 12 --disk 100 --memory 16 --image ubuntu`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			if img == "" {
@@ -225,7 +225,7 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 			}
 
 			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
-			createReq := &coder.CreateEnvironmentRequest{
+			createReq := &coder.CreateWorkspaceRequest{
 				Name:            args[0],
 				ImageID:         importedImg.ID,
 				OrgID:           importedImg.OrganizationID,
@@ -252,66 +252,66 @@ coder envs create my-new-powerful-env --cpu 12 --disk 100 --memory 16 --image ub
 				createReq.DiskGB = importedImg.DefaultDiskGB
 			}
 
-			env, err := client.CreateEnvironment(ctx, *createReq)
+			workspace, err := client.CreateWorkspace(ctx, *createReq)
 			if err != nil {
-				return xerrors.Errorf("create environment: %w", err)
+				return xerrors.Errorf("create workspace: %w", err)
 			}
 
 			if follow {
-				clog.LogSuccess("creating environment...")
-				if err := trailBuildLogs(ctx, client, env.ID); err != nil {
+				clog.LogSuccess("creating workspace...")
+				if err := trailBuildLogs(ctx, client, workspace.ID); err != nil {
 					return err
 				}
 				return nil
 			}
 
-			clog.LogSuccess("creating environment...",
+			clog.LogSuccess("creating workspace...",
 				clog.BlankLine,
-				clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, env.Name),
+				clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, workspace.Name),
 			)
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the environment should be created under.")
-	cmd.Flags().StringVarP(&tag, "tag", "t", defaultImgTag, "tag of the image the environment will be based off of.")
-	cmd.Flags().Float32VarP(&cpu, "cpu", "c", 0, "number of cpu cores the environment should be provisioned with.")
-	cmd.Flags().Float32VarP(&memory, "memory", "m", 0, "GB of RAM an environment should be provisioned with.")
-	cmd.Flags().IntVarP(&disk, "disk", "d", 0, "GB of disk storage an environment should be provisioned with.")
-	cmd.Flags().IntVarP(&gpus, "gpus", "g", 0, "number GPUs an environment should be provisioned with.")
-	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image to base the environment off of.")
-	cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the environment")
+	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the workspace should be created under.")
+	cmd.Flags().StringVarP(&tag, "tag", "t", defaultImgTag, "tag of the image the workspace will be based off of.")
+	cmd.Flags().Float32VarP(&cpu, "cpu", "c", 0, "number of cpu cores the workspace should be provisioned with.")
+	cmd.Flags().Float32VarP(&memory, "memory", "m", 0, "GB of RAM a workspace should be provisioned with.")
+	cmd.Flags().IntVarP(&disk, "disk", "d", 0, "GB of disk storage a workspace should be provisioned with.")
+	cmd.Flags().IntVarP(&gpus, "gpus", "g", 0, "number GPUs a workspace should be provisioned with.")
+	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image to base the workspace off of.")
+	cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the workspace")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
-	cmd.Flags().BoolVar(&useCVM, "container-based-vm", false, "deploy the environment as a Container-based VM")
-	cmd.Flags().BoolVar(&enableAutostart, "enable-autostart", false, "automatically start this environment at your preferred time.")
+	cmd.Flags().BoolVar(&useCVM, "container-based-vm", false, "deploy the workspace as a Container-based VM")
+	cmd.Flags().BoolVar(&enableAutostart, "enable-autostart", false, "automatically start this workspace at your preferred time.")
 	_ = cmd.MarkFlagRequired("image")
 	return cmd
 }
 
-func createEnvFromConfigCmd() *cobra.Command {
+func createWorkspaceFromConfigCmd() *cobra.Command {
 	var (
-		ref          string
-		repo         string
-		follow       bool
-		filepath     string
-		org          string
-		providerName string
-		envName      string
+		ref           string
+		repo          string
+		follow        bool
+		filepath      string
+		org           string
+		providerName  string
+		workspaceName string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "create-from-config",
-		Short: "create a new environment from a template",
-		Long:  "Create a new Coder environment using a Workspaces As Code template.",
-		Example: `# create a new environment from git repository
-coder envs create-from-config --name="dev-env" --repo-url https://github.com/cdr/m --ref my-branch
-coder envs create-from-config --name="dev-env" -f coder.yaml`,
+		Short: "create a new workspace from a template",
+		Long:  "Create a new Coder workspace using a Workspaces As Code template.",
+		Example: `# create a new workspace from git repository
+coder envs create-from-config --name="dev-workspace" --repo-url https://github.com/cdr/m --ref my-branch
+coder envs create-from-config --name="dev-workspace" -f coder.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			if envName == "" {
-				return clog.Error("Must provide a environment name.",
+			if workspaceName == "" {
+				return clog.Error("Must provide a workspace name.",
 					clog.BlankLine,
-					clog.Tipf("Use --name=<env-name> to name your environment"),
+					clog.Tipf("Use --name=<workspace-name> to name your workspace"),
 				)
 			}
 
@@ -378,43 +378,43 @@ coder envs create-from-config --name="dev-env" -f coder.yaml`,
 				return xerrors.Errorf("default workspace provider: %w", err)
 			}
 
-			env, err := client.CreateEnvironment(ctx, coder.CreateEnvironmentRequest{
+			workspace, err := client.CreateWorkspace(ctx, coder.CreateWorkspaceRequest{
 				OrgID:          userOrg.ID,
 				TemplateID:     version.TemplateID,
 				ResourcePoolID: provider.ID,
 				Namespace:      provider.DefaultNamespace,
-				Name:           envName,
+				Name:           workspaceName,
 			})
 			if err != nil {
 				return handleAPIError(err)
 			}
 
 			if follow {
-				clog.LogSuccess("creating environment...")
-				if err := trailBuildLogs(ctx, client, env.ID); err != nil {
+				clog.LogSuccess("creating workspace...")
+				if err := trailBuildLogs(ctx, client, workspace.ID); err != nil {
 					return err
 				}
 				return nil
 			}
 
-			clog.LogSuccess("creating environment...",
+			clog.LogSuccess("creating workspace...",
 				clog.BlankLine,
-				clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, env.Name),
+				clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, workspace.Name),
 			)
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the environment should be created under.")
+	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the workspace should be created under.")
 	cmd.Flags().StringVarP(&filepath, "filepath", "f", "", "path to local template file.")
 	cmd.Flags().StringVarP(&ref, "ref", "", "master", "git reference to pull template from. May be a branch, tag, or commit hash.")
 	cmd.Flags().StringVarP(&repo, "repo-url", "r", "", "URL of the git repository to pull the config from. Config file must live in '.coder/coder.yaml'.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
-	cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the environment")
-	cmd.Flags().StringVar(&envName, "name", "", "name of the environment to be created")
+	cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the workspace")
+	cmd.Flags().StringVar(&workspaceName, "name", "", "name of the workspace to be created")
 	return cmd
 }
 
-func editEnvCmd() *cobra.Command {
+func editWorkspaceCmd() *cobra.Command {
 	var (
 		org    string
 		img    string
@@ -430,12 +430,12 @@ func editEnvCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "edit",
-		Short: "edit an existing environment and initiate a rebuild.",
+		Short: "edit an existing workspace and initiate a rebuild.",
 		Args:  xcobra.ExactArgs(1),
-		Long:  "Edit an existing environment and initate a rebuild.",
-		Example: `coder envs edit back-end-env --cpu 4
+		Long:  "Edit an existing workspace and initate a rebuild.",
+		Example: `coder envs edit back-end-workspace --cpu 4
 
-coder envs edit back-end-env --disk 20`,
+coder envs edit back-end-workspace --disk 20`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx, true)
@@ -443,9 +443,9 @@ coder envs edit back-end-env --disk 20`,
 				return err
 			}
 
-			envName := args[0]
+			workspaceName := args[0]
 
-			env, err := findEnv(ctx, client, envName, user)
+			workspace, err := findWorkspace(ctx, client, workspaceName, user)
 			if err != nil {
 				return err
 			}
@@ -461,23 +461,23 @@ coder envs edit back-end-env --disk 20`,
 			}
 
 			req, err := buildUpdateReq(ctx, client, updateConf{
-				cpu:         cpu,
-				memGB:       memory,
-				diskGB:      disk,
-				gpus:        gpus,
-				environment: env,
-				user:        user,
-				image:       img,
-				imageTag:    tag,
-				orgName:     org,
+				cpu:       cpu,
+				memGB:     memory,
+				diskGB:    disk,
+				gpus:      gpus,
+				workspace: workspace,
+				user:      user,
+				image:     img,
+				imageTag:  tag,
+				orgName:   org,
 			})
 			if err != nil {
 				return err
 			}
 
-			if !force && env.LatestStat.ContainerStatus == coder.EnvironmentOn {
+			if !force && workspace.LatestStat.ContainerStatus == coder.WorkspaceOn {
 				_, err = (&promptui.Prompt{
-					Label:     fmt.Sprintf("Rebuild environment %q? (will destroy any work outside of your home directory)", env.Name),
+					Label:     fmt.Sprintf("Rebuild workspace %q? (will destroy any work outside of your home directory)", workspace.Name),
 					IsConfirm: true,
 				}).Run()
 				if err != nil {
@@ -488,47 +488,47 @@ coder envs edit back-end-env --disk 20`,
 				}
 			}
 
-			if err := client.EditEnvironment(ctx, env.ID, *req); err != nil {
-				return xerrors.Errorf("failed to apply changes to environment %q: %w", envName, err)
+			if err := client.EditWorkspace(ctx, workspace.ID, *req); err != nil {
+				return xerrors.Errorf("failed to apply changes to workspace %q: %w", workspaceName, err)
 			}
 
 			if follow {
-				clog.LogSuccess("applied changes to the environment, rebuilding...")
-				if err := trailBuildLogs(ctx, client, env.ID); err != nil {
+				clog.LogSuccess("applied changes to the workspace, rebuilding...")
+				if err := trailBuildLogs(ctx, client, workspace.ID); err != nil {
 					return err
 				}
 				return nil
 			}
 
-			clog.LogSuccess("applied changes to the environment, rebuilding...",
+			clog.LogSuccess("applied changes to the workspace, rebuilding...",
 				clog.BlankLine,
-				clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, envName),
+				clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, workspaceName),
 			)
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the environment should be created under.")
-	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image you want the environment to be based off of.")
-	cmd.Flags().StringVarP(&tag, "tag", "t", "latest", "image tag of the image you want to base the environment off of.")
-	cmd.Flags().Float32VarP(&cpu, "cpu", "c", 0, "The number of cpu cores the environment should be provisioned with.")
-	cmd.Flags().Float32VarP(&memory, "memory", "m", 0, "The amount of RAM an environment should be provisioned with.")
-	cmd.Flags().IntVarP(&disk, "disk", "d", 0, "The amount of disk storage an environment should be provisioned with.")
-	cmd.Flags().IntVarP(&gpus, "gpu", "g", 0, "The amount of disk storage to provision the environment with.")
+	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the workspace should be created under.")
+	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image you want the workspace to be based off of.")
+	cmd.Flags().StringVarP(&tag, "tag", "t", "latest", "image tag of the image you want to base the workspace off of.")
+	cmd.Flags().Float32VarP(&cpu, "cpu", "c", 0, "The number of cpu cores the workspace should be provisioned with.")
+	cmd.Flags().Float32VarP(&memory, "memory", "m", 0, "The amount of RAM a workspace should be provisioned with.")
+	cmd.Flags().IntVarP(&disk, "disk", "d", 0, "The amount of disk storage a workspace should be provisioned with.")
+	cmd.Flags().IntVarP(&gpus, "gpu", "g", 0, "The amount of disk storage to provision the workspace with.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	cmd.Flags().BoolVar(&force, "force", false, "force rebuild without showing a confirmation prompt")
 	return cmd
 }
 
-func rmEnvsCmd() *cobra.Command {
+func rmWorkspacesCmd() *cobra.Command {
 	var (
 		force bool
 		user  string
 	)
 
 	cmd := &cobra.Command{
-		Use:   "rm [...environment_names]",
-		Short: "remove Coder environments by name",
+		Use:   "rm [...workspace_names]",
+		Short: "remove Coder workspaces by name",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -538,7 +538,7 @@ func rmEnvsCmd() *cobra.Command {
 			}
 			if !force {
 				confirm := promptui.Prompt{
-					Label:     fmt.Sprintf("Delete environments %q? (all data will be lost)", args),
+					Label:     fmt.Sprintf("Delete workspaces %q? (all data will be lost)", args),
 					IsConfirm: true,
 				}
 				if _, err := confirm.Run(); err != nil {
@@ -550,52 +550,52 @@ func rmEnvsCmd() *cobra.Command {
 			}
 
 			egroup := clog.LoggedErrGroup()
-			for _, envName := range args {
-				envName := envName
+			for _, workspaceName := range args {
+				workspaceName := workspaceName
 				egroup.Go(func() error {
-					env, err := findEnv(ctx, client, envName, user)
+					workspace, err := findWorkspace(ctx, client, workspaceName, user)
 					if err != nil {
 						return err
 					}
-					if err = client.DeleteEnvironment(ctx, env.ID); err != nil {
+					if err = client.DeleteWorkspace(ctx, workspace.ID); err != nil {
 						return clog.Error(
-							fmt.Sprintf(`failed to delete environment "%s"`, env.Name),
+							fmt.Sprintf(`failed to delete workspace "%s"`, workspace.Name),
 							clog.Causef(err.Error()),
 						)
 					}
-					clog.LogSuccess(fmt.Sprintf("deleted environment %q", env.Name))
+					clog.LogSuccess(fmt.Sprintf("deleted workspace %q", workspace.Name))
 					return nil
 				})
 			}
 			return egroup.Wait()
 		},
 	}
-	cmd.Flags().BoolVarP(&force, "force", "f", false, "force remove the specified environments without prompting first")
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "force remove the specified workspaces without prompting first")
 	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	return cmd
 }
 
 type updateConf struct {
-	cpu         float32
-	memGB       float32
-	diskGB      int
-	gpus        int
-	environment *coder.Environment
-	user        string
-	image       string
-	imageTag    string
-	orgName     string
+	cpu       float32
+	memGB     float32
+	diskGB    int
+	gpus      int
+	workspace *coder.Workspace
+	user      string
+	image     string
+	imageTag  string
+	orgName   string
 }
 
-func buildUpdateReq(ctx context.Context, client coder.Client, conf updateConf) (*coder.UpdateEnvironmentReq, error) {
+func buildUpdateReq(ctx context.Context, client coder.Client, conf updateConf) (*coder.UpdateWorkspaceReq, error) {
 	var (
-		updateReq       coder.UpdateEnvironmentReq
+		updateReq       coder.UpdateWorkspaceReq
 		defaultCPUCores float32
 		defaultMemGB    float32
 		defaultDiskGB   int
 	)
 
-	// If this is not empty it means the user is requesting to change the environment image.
+	// If this is not empty it means the user is requesting to change the workspace image.
 	if conf.image != "" {
 		importedImg, err := findImg(ctx, client, findImgConf{
 			email:   conf.user,
@@ -607,12 +607,12 @@ func buildUpdateReq(ctx context.Context, client coder.Client, conf updateConf) (
 		}
 
 		// If the user passes an image arg of the image that
-		// the environment is already using, it was most likely a mistake.
+		// the workspace is already using, it was most likely a mistake.
 		if conf.image != importedImg.Repository {
-			return nil, xerrors.Errorf("environment is already using image %q", conf.image)
+			return nil, xerrors.Errorf("workspace is already using image %q", conf.image)
 		}
 
-		// Since the environment image is being changed,
+		// Since the workspace image is being changed,
 		// the resource amount defaults should be changed to
 		// reflect that of the default resource amounts of the new image.
 		defaultCPUCores = importedImg.DefaultCPUCores
@@ -620,17 +620,17 @@ func buildUpdateReq(ctx context.Context, client coder.Client, conf updateConf) (
 		defaultDiskGB = importedImg.DefaultDiskGB
 		updateReq.ImageID = &importedImg.ID
 	} else {
-		// if the environment image is not being changed, the default
+		// if the workspace image is not being changed, the default
 		// resource amounts should reflect the default resource amounts
-		// of the image the environment is already using.
-		defaultCPUCores = conf.environment.CPUCores
-		defaultMemGB = conf.environment.MemoryGB
-		defaultDiskGB = conf.environment.DiskGB
-		updateReq.ImageID = &conf.environment.ImageID
+		// of the image the workspace is already using.
+		defaultCPUCores = conf.workspace.CPUCores
+		defaultMemGB = conf.workspace.MemoryGB
+		defaultDiskGB = conf.workspace.DiskGB
+		updateReq.ImageID = &conf.workspace.ImageID
 	}
 
 	// The following logic checks to see if the user specified
-	// any resource amounts for the environment that need to be changed.
+	// any resource amounts for the workspace that need to be changed.
 	// If they did not, then we will get the zero value back
 	// and should set the resource amount to the default.
 
@@ -652,14 +652,14 @@ func buildUpdateReq(ctx context.Context, client coder.Client, conf updateConf) (
 		updateReq.DiskGB = &conf.diskGB
 	}
 
-	// Environment disks can not be shrink so we have to overwrite this
+	// Workspace disks can not be shrink so we have to overwrite this
 	// if the user accidentally requests it or if the default diskGB value for a
-	// newly requested image is smaller than the current amount the environment is using.
-	if *updateReq.DiskGB < conf.environment.DiskGB {
+	// newly requested image is smaller than the current amount the workspace is using.
+	if *updateReq.DiskGB < conf.workspace.DiskGB {
 		clog.LogWarn("disk can not be shrunk",
-			fmt.Sprintf("keeping environment disk at %d GB", conf.environment.DiskGB),
+			fmt.Sprintf("keeping workspace disk at %d GB", conf.workspace.DiskGB),
 		)
-		updateReq.DiskGB = &conf.environment.DiskGB
+		updateReq.DiskGB = &conf.workspace.DiskGB
 	}
 
 	if conf.gpus != 0 {

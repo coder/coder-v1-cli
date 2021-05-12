@@ -12,7 +12,7 @@ import (
 // This is an interface to allow for mocking of coder-sdk client usage.
 type Client interface {
 	// PushActivity pushes CLI activity to Coder.
-	PushActivity(ctx context.Context, source, envID string) error
+	PushActivity(ctx context.Context, source, workspaceID string) error
 
 	// Me gets the details of the authenticated user.
 	Me(ctx context.Context) (*User, error)
@@ -66,75 +66,75 @@ type Client interface {
 	SiteConfigWorkspaces(ctx context.Context) (*ConfigWorkspaces, error)
 
 	// DeleteDevURL deletes the specified devurl.
-	DeleteDevURL(ctx context.Context, envID, urlID string) error
+	DeleteDevURL(ctx context.Context, workspaceID, urlID string) error
 
 	// CreateDevURL inserts a new devurl for the authenticated user.
-	CreateDevURL(ctx context.Context, envID string, req CreateDevURLReq) error
+	CreateDevURL(ctx context.Context, workspaceID string, req CreateDevURLReq) error
 
-	// DevURLs fetches the Dev URLs for a given environment.
-	DevURLs(ctx context.Context, envID string) ([]DevURL, error)
+	// DevURLs fetches the Dev URLs for a given workspace.
+	DevURLs(ctx context.Context, workspaceID string) ([]DevURL, error)
 
 	// PutDevURL updates an existing devurl for the authenticated user.
-	PutDevURL(ctx context.Context, envID, urlID string, req PutDevURLReq) error
+	PutDevURL(ctx context.Context, workspaceID, urlID string, req PutDevURLReq) error
 
-	// CreateEnvironment sends a request to create an environment.
-	CreateEnvironment(ctx context.Context, req CreateEnvironmentRequest) (*Environment, error)
+	// CreateWorkspace sends a request to create a workspace.
+	CreateWorkspace(ctx context.Context, req CreateWorkspaceRequest) (*Workspace, error)
 
 	// ParseTemplate parses a template config. It support both remote repositories and local files.
 	// If a local file is specified then all other values in the request are ignored.
 	ParseTemplate(ctx context.Context, req ParseTemplateRequest) (*TemplateVersion, error)
 
-	// CreateEnvironmentFromRepo sends a request to create an environment from a repository.
-	CreateEnvironmentFromRepo(ctx context.Context, orgID string, req TemplateVersion) (*Environment, error)
+	// CreateWorkspaceFromRepo sends a request to create a workspace from a repository.
+	CreateWorkspaceFromRepo(ctx context.Context, orgID string, req TemplateVersion) (*Workspace, error)
 
-	// Environments lists environments returned by the given filter.
-	Environments(ctx context.Context) ([]Environment, error)
+	// Workspaces lists workspaces returned by the given filter.
+	Workspaces(ctx context.Context) ([]Workspace, error)
 
-	// UserEnvironmentsByOrganization gets the list of environments owned by the given user.
-	UserEnvironmentsByOrganization(ctx context.Context, userID, orgID string) ([]Environment, error)
+	// UserWorkspacesByOrganization gets the list of workspaces owned by the given user.
+	UserWorkspacesByOrganization(ctx context.Context, userID, orgID string) ([]Workspace, error)
 
-	// DeleteEnvironment deletes the environment.
-	DeleteEnvironment(ctx context.Context, envID string) error
+	// DeleteWorkspace deletes the workspace.
+	DeleteWorkspace(ctx context.Context, workspaceID string) error
 
-	// StopEnvironment stops the environment.
-	StopEnvironment(ctx context.Context, envID string) error
+	// StopWorkspace stops the workspace.
+	StopWorkspace(ctx context.Context, workspaceID string) error
 
-	// RebuildEnvironment requests that the given envID is rebuilt with no changes to its specification.
-	RebuildEnvironment(ctx context.Context, envID string) error
+	// RebuildWorkspace requests that the given workspaceID is rebuilt with no changes to its specification.
+	RebuildWorkspace(ctx context.Context, workspaceID string) error
 
-	// EditEnvironment modifies the environment specification and initiates a rebuild.
-	EditEnvironment(ctx context.Context, envID string, req UpdateEnvironmentReq) error
+	// EditWorkspace modifies the workspace specification and initiates a rebuild.
+	EditWorkspace(ctx context.Context, workspaceID string, req UpdateWorkspaceReq) error
 
-	// DialWsep dials an environments command execution interface
+	// DialWsep dials a workspace's command execution interface
 	// See https://github.com/cdr/wsep for details.
-	DialWsep(ctx context.Context, baseURL *url.URL, envID string) (*websocket.Conn, error)
+	DialWsep(ctx context.Context, baseURL *url.URL, workspaceID string) (*websocket.Conn, error)
 
-	// DialExecutor gives a remote execution interface for performing commands inside an environment.
-	DialExecutor(ctx context.Context, baseURL *url.URL, envID string) (wsep.Execer, error)
+	// DialExecutor gives a remote execution interface for performing commands inside a workspace.
+	DialExecutor(ctx context.Context, baseURL *url.URL, workspaceID string) (wsep.Execer, error)
 
-	// DialIDEStatus opens a websocket connection for cpu load metrics on the environment.
-	DialIDEStatus(ctx context.Context, baseURL *url.URL, envID string) (*websocket.Conn, error)
+	// DialIDEStatus opens a websocket connection for cpu load metrics on the workspace.
+	DialIDEStatus(ctx context.Context, baseURL *url.URL, workspaceID string) (*websocket.Conn, error)
 
-	// DialEnvironmentBuildLog opens a websocket connection for the environment build log messages.
-	DialEnvironmentBuildLog(ctx context.Context, envID string) (*websocket.Conn, error)
+	// DialWorkspaceBuildLog opens a websocket connection for the workspace build log messages.
+	DialWorkspaceBuildLog(ctx context.Context, workspaceID string) (*websocket.Conn, error)
 
-	// FollowEnvironmentBuildLog trails the build log of a Coder environment.
-	FollowEnvironmentBuildLog(ctx context.Context, envID string) (<-chan BuildLogFollowMsg, error)
+	// FollowWorkspaceBuildLog trails the build log of a Coder workspace.
+	FollowWorkspaceBuildLog(ctx context.Context, workspaceID string) (<-chan BuildLogFollowMsg, error)
 
-	// DialEnvironmentStats opens a websocket connection for environment stats.
-	DialEnvironmentStats(ctx context.Context, envID string) (*websocket.Conn, error)
+	// DialWorkspaceStats opens a websocket connection for workspace stats.
+	DialWorkspaceStats(ctx context.Context, workspaceID string) (*websocket.Conn, error)
 
-	// DialResourceLoad opens a websocket connection for cpu load metrics on the environment.
-	DialResourceLoad(ctx context.Context, envID string) (*websocket.Conn, error)
+	// DialResourceLoad opens a websocket connection for cpu load metrics on the workspace.
+	DialResourceLoad(ctx context.Context, workspaceID string) (*websocket.Conn, error)
 
-	// WaitForEnvironmentReady will watch the build log and return when done.
-	WaitForEnvironmentReady(ctx context.Context, envID string) error
+	// WaitForWorkspaceReady will watch the build log and return when done.
+	WaitForWorkspaceReady(ctx context.Context, workspaceID string) error
 
-	// EnvironmentByID get the details of an environment by its id.
-	EnvironmentByID(ctx context.Context, id string) (*Environment, error)
+	// WorkspaceByID get the details of a workspace by its id.
+	WorkspaceByID(ctx context.Context, id string) (*Workspace, error)
 
-	// EnvironmentsByWorkspaceProvider returns environments that belong to a particular workspace provider.
-	EnvironmentsByWorkspaceProvider(ctx context.Context, wpID string) ([]Environment, error)
+	// WorkspacesByWorkspaceProvider returns workspaces that belong to a particular workspace provider.
+	WorkspacesByWorkspaceProvider(ctx context.Context, wpID string) ([]Workspace, error)
 
 	// ImportImage creates a new image and optionally a new registry.
 	ImportImage(ctx context.Context, req ImportImageReq) (*Image, error)

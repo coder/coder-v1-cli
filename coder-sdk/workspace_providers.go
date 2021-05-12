@@ -10,7 +10,7 @@ type WorkspaceProviders struct {
 	Kubernetes []KubernetesProvider `json:"kubernetes"`
 }
 
-// KubernetesProvider defines an entity capable of deploying and acting as an ingress for Coder environments.
+// KubernetesProvider defines an entity capable of deploying and acting as an ingress for Coder workspaces.
 type KubernetesProvider struct {
 	ID                 string                  `json:"id"                  table:"-"`
 	Name               string                  `json:"name"                table:"Name"`

@@ -17,30 +17,30 @@ import (
 	"cdr.dev/coder-cli/pkg/clog"
 )
 
-func rebuildEnvCommand() *cobra.Command {
+func rebuildWorkspaceCommand() *cobra.Command {
 	var follow bool
 	var force bool
 	var user string
 	cmd := &cobra.Command{
-		Use:   "rebuild [environment_name]",
-		Short: "rebuild a Coder environment",
+		Use:   "rebuild [workspace_name]",
+		Short: "rebuild a Coder workspace",
 		Args:  xcobra.ExactArgs(1),
-		Example: `coder envs rebuild front-end-env --follow
-coder envs rebuild backend-env --force`,
+		Example: `coder envs rebuild front-end-workspace --follow
+coder envs rebuild backend-workspace --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
-			env, err := findEnv(ctx, client, args[0], user)
+			workspace, err := findWorkspace(ctx, client, args[0], user)
 			if err != nil {
 				return err
 			}
 
-			if !force && env.LatestStat.ContainerStatus == coder.EnvironmentOn {
+			if !force && workspace.LatestStat.ContainerStatus == coder.WorkspaceOn {
 				_, err = (&promptui.Prompt{
-					Label:     fmt.Sprintf("Rebuild environment %q? (will destroy any work outside of your home directory)", env.Name),
+					Label:     fmt.Sprintf("Rebuild workspace %q? (will destroy any work outside of your home directory)", workspace.Name),
 					IsConfirm: true,
 				}).Run()
 				if err != nil {
@@ -51,17 +51,17 @@ coder envs rebuild backend-env --force`,
 				}
 			}
 
-			if err = client.RebuildEnvironment(ctx, env.ID); err != nil {
+			if err = client.RebuildWorkspace(ctx, workspace.ID); err != nil {
 				return err
 			}
 			if follow {
-				if err = trailBuildLogs(ctx, client, env.ID); err != nil {
+				if err = trailBuildLogs(ctx, client, workspace.ID); err != nil {
 					return err
 				}
 			} else {
 				clog.LogSuccess(
 					"successfully started rebuild",
-					clog.Tipf("run \"coder envs watch-build %s\" to follow the build logs", env.Name),
+					clog.Tipf("run \"coder envs watch-build %s\" to follow the build logs", workspace.Name),
 				)
 			}
 			return nil
@@ -74,9 +74,9 @@ coder envs rebuild backend-env --force`,
 	return cmd
 }
 
-// trailBuildLogs follows the build log for a given environment and prints the staged
+// trailBuildLogs follows the build log for a given workspace and prints the staged
 // output with loaders and success/failure indicators for each stage.
-func trailBuildLogs(ctx context.Context, client coder.Client, envID string) error {
+func trailBuildLogs(ctx context.Context, client coder.Client, workspaceID string) error {
 	const check = "✅"
 	const failure = "❌"
 
@@ -85,7 +85,7 @@ func trailBuildLogs(ctx context.Context, client coder.Client, envID string) erro
 	// this tells us whether to show dynamic loaders when printing output
 	isTerminal := showInteractiveOutput
 
-	logs, err := client.FollowEnvironmentBuildLog(ctx, envID)
+	logs, err := client.FollowWorkspaceBuildLog(ctx, workspaceID)
 	if err != nil {
 		return err
 	}
@@ -160,9 +160,9 @@ func trailBuildLogs(ctx context.Context, client coder.Client, envID string) erro
 func watchBuildLogCommand() *cobra.Command {
 	var user string
 	cmd := &cobra.Command{
-		Use:     "watch-build [environment_name]",
-		Example: "coder envs watch-build front-end-env",
-		Short:   "trail the build log of a Coder environment",
+		Use:     "watch-build [workspace_name]",
+		Example: "coder envs watch-build front-end-workspace",
+		Short:   "trail the build log of a Coder workspace",
 		Args:    xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -170,12 +170,12 @@ func watchBuildLogCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			env, err := findEnv(ctx, client, args[0], user)
+			workspace, err := findWorkspace(ctx, client, args[0], user)
 			if err != nil {
 				return err
 			}
 
-			if err = trailBuildLogs(ctx, client, env.ID); err != nil {
+			if err = trailBuildLogs(ctx, client, workspace.ID); err != nil {
 				return err
 			}
 			return nil

@@ -21,18 +21,18 @@ func urlCmd() *cobra.Command {
 	var outputFmt string
 	cmd := &cobra.Command{
 		Use:   "urls",
-		Short: "Interact with environment DevURLs",
+		Short: "Interact with workspace DevURLs",
 	}
 	lsCmd := &cobra.Command{
-		Use:   "ls [environment_name]",
-		Short: "List all DevURLs for an environment",
+		Use:   "ls [workspace_name]",
+		Short: "List all DevURLs for a workspace",
 		Args:  xcobra.ExactArgs(1),
 		RunE:  listDevURLsCmd(&outputFmt),
 	}
 	lsCmd.Flags().StringVarP(&outputFmt, "output", "o", humanOutput, "human|json")
 
 	rmCmd := &cobra.Command{
-		Use:   "rm [environment_name] [port]",
+		Use:   "rm [workspace_name] [port]",
 		Args:  cobra.ExactArgs(2),
 		Short: "Remove a dev url",
 		RunE:  removeDevURL,
@@ -77,7 +77,7 @@ func accessLevelIsValid(level string) bool {
 }
 
 // Run gets the list of active devURLs from the cemanager for the
-// specified environment and outputs info to stdout.
+// specified workspace and outputs info to stdout.
 func listDevURLsCmd(outputFmt *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
@@ -85,9 +85,9 @@ func listDevURLsCmd(outputFmt *string) func(cmd *cobra.Command, args []string) e
 		if err != nil {
 			return err
 		}
-		envName := args[0]
+		workspaceName := args[0]
 
-		devURLs, err := urlList(ctx, client, envName)
+		devURLs, err := urlList(ctx, client, workspaceName)
 		if err != nil {
 			return err
 		}
@@ -95,7 +95,7 @@ func listDevURLsCmd(outputFmt *string) func(cmd *cobra.Command, args []string) e
 		switch *outputFmt {
 		case humanOutput:
 			if len(devURLs) < 1 {
-				clog.LogInfo(fmt.Sprintf("no devURLs found for environment %q", envName))
+				clog.LogInfo(fmt.Sprintf("no devURLs found for workspace %q", workspaceName))
 				return nil
 			}
 			err := tablewriter.WriteTable(cmd.OutOrStdout(), len(devURLs), func(i int) interface{} {
@@ -129,9 +129,9 @@ func createDevURLCmd() *cobra.Command {
 		Example: `coder urls create my-workspace 8080 --name my-dev-url`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var (
-				envName = args[0]
-				port    = args[1]
-				ctx     = cmd.Context()
+				workspaceName = args[0]
+				port          = args[1]
+				ctx           = cmd.Context()
 			)
 
 			portNum, err := validatePort(port)
@@ -152,36 +152,36 @@ func createDevURLCmd() *cobra.Command {
 				return err
 			}
 
-			env, err := findEnv(ctx, client, envName, coder.Me)
+			workspace, err := findWorkspace(ctx, client, workspaceName, coder.Me)
 			if err != nil {
 				return err
 			}
 
-			urls, err := urlList(ctx, client, envName)
+			urls, err := urlList(ctx, client, workspaceName)
 			if err != nil {
 				return err
 			}
 
 			urlID, found := devURLID(portNum, urls)
 			if found {
-				err := client.PutDevURL(ctx, env.ID, urlID, coder.PutDevURLReq{
-					Port:   portNum,
-					Name:   urlname,
-					Access: access,
-					EnvID:  env.ID,
-					Scheme: scheme,
+				err := client.PutDevURL(ctx, workspace.ID, urlID, coder.PutDevURLReq{
+					Port:        portNum,
+					Name:        urlname,
+					Access:      access,
+					WorkspaceID: workspace.ID,
+					Scheme:      scheme,
 				})
 				if err != nil {
 					return xerrors.Errorf("update DevURL: %w", err)
 				}
 				clog.LogSuccess(fmt.Sprintf("patched devurl for port %s", port))
 			} else {
-				err := client.CreateDevURL(ctx, env.ID, coder.CreateDevURLReq{
-					Port:   portNum,
-					Name:   urlname,
-					Access: access,
-					EnvID:  env.ID,
-					Scheme: scheme,
+				err := client.CreateDevURL(ctx, workspace.ID, coder.CreateDevURLReq{
+					Port:        portNum,
+					Name:        urlname,
+					Access:      access,
+					WorkspaceID: workspace.ID,
+					Scheme:      scheme,
 				})
 				if err != nil {
 					return xerrors.Errorf("insert DevURL: %w", err)
@@ -203,7 +203,7 @@ func createDevURLCmd() *cobra.Command {
 // consist solely of letters and digits, with a max length of 64 chars.
 var devURLNameValidRx = regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9]{0,63}$")
 
-// devURLID returns the ID of a devURL, given the env name and port
+// devURLID returns the ID of a devURL, given the workspace name and port
 // from a list of DevURL records.
 // ("", false) is returned if no match is found.
 func devURLID(port int, urls []coder.DevURL) (string, bool) {
@@ -215,12 +215,12 @@ func devURLID(port int, urls []coder.DevURL) (string, bool) {
 	return "", false
 }
 
-// Run deletes a devURL, specified by env ID and port, from the cemanager.
+// Run deletes a devURL, specified by workspace ID and port, from the cemanager.
 func removeDevURL(cmd *cobra.Command, args []string) error {
 	var (
-		envName = args[0]
-		port    = args[1]
-		ctx     = cmd.Context()
+		workspaceName = args[0]
+		port          = args[1]
+		ctx           = cmd.Context()
 	)
 
 	portNum, err := validatePort(port)
@@ -232,12 +232,12 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	env, err := findEnv(ctx, client, envName, coder.Me)
+	workspace, err := findWorkspace(ctx, client, workspaceName, coder.Me)
 	if err != nil {
 		return err
 	}
 
-	urls, err := urlList(ctx, client, envName)
+	urls, err := urlList(ctx, client, workspaceName)
 	if err != nil {
 		return err
 	}
@@ -249,17 +249,17 @@ func removeDevURL(cmd *cobra.Command, args []string) error {
 		return xerrors.Errorf("No devurl found for port %v", port)
 	}
 
-	if err := client.DeleteDevURL(ctx, env.ID, urlID); err != nil {
+	if err := client.DeleteDevURL(ctx, workspace.ID, urlID); err != nil {
 		return xerrors.Errorf("delete DevURL: %w", err)
 	}
 	return nil
 }
 
 // urlList returns the list of active devURLs from the cemanager.
-func urlList(ctx context.Context, client coder.Client, envName string) ([]coder.DevURL, error) {
-	env, err := findEnv(ctx, client, envName, coder.Me)
+func urlList(ctx context.Context, client coder.Client, workspaceName string) ([]coder.DevURL, error) {
+	workspace, err := findWorkspace(ctx, client, workspaceName, coder.Me)
 	if err != nil {
 		return nil, err
 	}
-	return client.DevURLs(ctx, env.ID)
+	return client.DevURLs(ctx, workspace.ID)
 }

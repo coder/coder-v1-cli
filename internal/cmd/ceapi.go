@@ -32,8 +32,8 @@ func lookupUserOrgs(user *coder.User, orgs []coder.Organization) []coder.Organiz
 	return userOrgs
 }
 
-// getEnvs returns all environments for the user.
-func getEnvs(ctx context.Context, client coder.Client, email string) ([]coder.Environment, error) {
+// getWorkspaces returns all workspaces for the user.
+func getWorkspaces(ctx context.Context, client coder.Client, email string) ([]coder.Workspace, error) {
 	user, err := client.UserByEmail(ctx, email)
 	if err != nil {
 		return nil, xerrors.Errorf("get user: %w", err)
@@ -46,51 +46,51 @@ func getEnvs(ctx context.Context, client coder.Client, email string) ([]coder.En
 
 	orgs = lookupUserOrgs(user, orgs)
 
-	// NOTE: We don't know in advance how many envs we have so we can't pre-alloc.
-	var allEnvs []coder.Environment
+	// NOTE: We don't know in advance how many workspaces we have so we can't pre-alloc.
+	var allWorkspaces []coder.Workspace
 
 	for _, org := range orgs {
-		envs, err := client.UserEnvironmentsByOrganization(ctx, user.ID, org.ID)
+		workspaces, err := client.UserWorkspacesByOrganization(ctx, user.ID, org.ID)
 		if err != nil {
-			return nil, xerrors.Errorf("get envs for %s: %w", org.Name, err)
+			return nil, xerrors.Errorf("get workspaces for %s: %w", org.Name, err)
 		}
 
-		allEnvs = append(allEnvs, envs...)
+		allWorkspaces = append(allWorkspaces, workspaces...)
 	}
-	return allEnvs, nil
+	return allWorkspaces, nil
 }
 
-// searchForEnv searches a user's environments to find the specified envName. If none is found, the haystack of
-// environment names is returned.
-func searchForEnv(ctx context.Context, client coder.Client, envName, userEmail string) (_ *coder.Environment, haystack []string, _ error) {
-	envs, err := getEnvs(ctx, client, userEmail)
+// searchForWorkspace searches a user's workspaces to find the specified workspaceName. If none is found, the haystack of
+// workspace names is returned.
+func searchForWorkspace(ctx context.Context, client coder.Client, workspaceName, userEmail string) (_ *coder.Workspace, haystack []string, _ error) {
+	workspaces, err := getWorkspaces(ctx, client, userEmail)
 	if err != nil {
-		return nil, nil, xerrors.Errorf("get environments: %w", err)
+		return nil, nil, xerrors.Errorf("get workspaces: %w", err)
 	}
 
-	// NOTE: We don't know in advance where we will find the env, so we can't pre-alloc.
-	for _, env := range envs {
-		if env.Name == envName {
-			return &env, nil, nil
+	// NOTE: We don't know in advance where we will find the workspace, so we can't pre-alloc.
+	for _, workspace := range workspaces {
+		if workspace.Name == workspaceName {
+			return &workspace, nil, nil
 		}
 		// Keep track of what we found for the logs.
-		haystack = append(haystack, env.Name)
+		haystack = append(haystack, workspace.Name)
 	}
 	return nil, haystack, coder.ErrNotFound
 }
 
-// findEnv returns a single environment by name (if it exists.).
-func findEnv(ctx context.Context, client coder.Client, envName, userEmail string) (*coder.Environment, error) {
-	env, haystack, err := searchForEnv(ctx, client, envName, userEmail)
+// findWorkspace returns a single workspace by name (if it exists.).
+func findWorkspace(ctx context.Context, client coder.Client, workspaceName, userEmail string) (*coder.Workspace, error) {
+	workspace, haystack, err := searchForWorkspace(ctx, client, workspaceName, userEmail)
 	if err != nil {
 		return nil, clog.Fatal(
-			"failed to find environment",
-			fmt.Sprintf("environment %q not found in %q", envName, haystack),
+			"failed to find workspace",
+			fmt.Sprintf("workspace %q not found in %q", workspaceName, haystack),
 			clog.BlankLine,
-			clog.Tipf("run \"coder envs ls\" to view your environments"),
+			clog.Tipf("run \"coder envs ls\" to view your workspaces"),
 		)
 	}
-	return env, nil
+	return workspace, nil
 }
 
 type findImgConf struct {
@@ -204,35 +204,35 @@ func getUserOrgs(ctx context.Context, client coder.Client, email string) ([]code
 	return lookupUserOrgs(u, orgs), nil
 }
 
-func getEnvsByProvider(ctx context.Context, client coder.Client, wpName, userEmail string) ([]coder.Environment, error) {
+func getWorkspacesByProvider(ctx context.Context, client coder.Client, wpName, userEmail string) ([]coder.Workspace, error) {
 	wp, err := coderutil.ProviderByName(ctx, client, wpName)
 	if err != nil {
 		return nil, err
 	}
 
-	envs, err := client.EnvironmentsByWorkspaceProvider(ctx, wp.ID)
+	workspaces, err := client.WorkspacesByWorkspaceProvider(ctx, wp.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	envs, err = filterEnvsByUser(ctx, client, userEmail, envs)
+	workspaces, err = filterWorkspacesByUser(ctx, client, userEmail, workspaces)
 	if err != nil {
 		return nil, err
 	}
-	return envs, nil
+	return workspaces, nil
 }
 
-func filterEnvsByUser(ctx context.Context, client coder.Client, userEmail string, envs []coder.Environment) ([]coder.Environment, error) {
+func filterWorkspacesByUser(ctx context.Context, client coder.Client, userEmail string, workspaces []coder.Workspace) ([]coder.Workspace, error) {
 	user, err := client.UserByEmail(ctx, userEmail)
 	if err != nil {
 		return nil, xerrors.Errorf("get user: %w", err)
 	}
 
-	var filteredEnvs []coder.Environment
-	for _, env := range envs {
-		if env.UserID == user.ID {
-			filteredEnvs = append(filteredEnvs, env)
+	var filteredWorkspaces []coder.Workspace
+	for _, workspace := range workspaces {
+		if workspace.UserID == user.ID {
+			filteredWorkspaces = append(filteredWorkspaces, workspace)
 		}
 	}
-	return filteredEnvs, nil
+	return filteredWorkspaces, nil
 }

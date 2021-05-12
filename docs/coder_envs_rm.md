@@ -1,15 +1,15 @@
 ## coder envs rm
 
-remove Coder environments by name
+remove Coder workspaces by name
 
 ```
-coder envs rm [...environment_names] [flags]
+coder envs rm [...workspace_names] [flags]
 ```
 
 ### Options
 
 ```
-  -f, --force         force remove the specified environments without prompting first
+  -f, --force         force remove the specified workspaces without prompting first
   -h, --help          help for rm
       --user string   Specify the user whose resources to target (default "me")
 ```
@@ -22,5 +22,4 @@ coder envs rm [...environment_names] [flags]
 
 ### SEE ALSO
 
-* [coder envs](coder_envs.md)	 - Interact with Coder environments
-
+* [coder envs](coder_envs.md)	 - Interact with Coder workspaces

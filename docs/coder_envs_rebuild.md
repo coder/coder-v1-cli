@@ -1,16 +1,16 @@
 ## coder envs rebuild
 
-rebuild a Coder environment
+rebuild a Coder workspace
 
 ```
-coder envs rebuild [environment_name] [flags]
+coder envs rebuild [workspace_name] [flags]
 ```
 
 ### Examples
 
 ```
-coder envs rebuild front-end-env --follow
-coder envs rebuild backend-env --force
+coder envs rebuild front-end-workspace --follow
+coder envs rebuild backend-workspace --force
 ```
 
 ### Options
@@ -30,5 +30,4 @@ coder envs rebuild backend-env --force
 
 ### SEE ALSO
 
-* [coder envs](coder_envs.md)	 - Interact with Coder environments
-
+* [coder envs](coder_envs.md)	 - Interact with Coder workspaces
