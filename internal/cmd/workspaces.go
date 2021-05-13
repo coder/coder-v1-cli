@@ -21,12 +21,20 @@ import (
 
 const defaultImgTag = "latest"
 
+func envCmd() *cobra.Command {
+	cmd := workspacesCmd()
+	cmd.Use = "envs"
+	cmd.Deprecated = "use \"ws\" instead"
+	cmd.Aliases = []string{}
+	return cmd
+}
+
 func workspacesCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "ws",
 		Short:   "Interact with Coder workspaces",
 		Long:    "Perform operations on the Coder workspaces owned by the active user.",
-		Aliases: []string{"envs", "workspaces"},
+		Aliases: []string{"workspaces"},
 	}
 
 	cmd.AddCommand(

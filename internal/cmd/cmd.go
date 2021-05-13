@@ -28,6 +28,7 @@ func Make() *cobra.Command {
 		usersCmd(),
 		tagsCmd(),
 		configSSHCmd(),
+		envCmd(), // DEPRECATED.
 		workspacesCmd(),
 		syncCmd(),
 		urlCmd(),
