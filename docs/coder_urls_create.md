@@ -30,3 +30,4 @@ coder urls create my-workspace 8080 --name my-dev-url
 ### SEE ALSO
 
 * [coder urls](coder_urls.md)	 - Interact with workspace DevURLs
+

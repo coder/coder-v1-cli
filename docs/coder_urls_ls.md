@@ -22,3 +22,4 @@ coder urls ls [workspace_name] [flags]
 ### SEE ALSO
 
 * [coder urls](coder_urls.md)	 - Interact with workspace DevURLs
+

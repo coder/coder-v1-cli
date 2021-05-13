@@ -25,8 +25,8 @@ func rebuildWorkspaceCommand() *cobra.Command {
 		Use:   "rebuild [workspace_name]",
 		Short: "rebuild a Coder workspace",
 		Args:  xcobra.ExactArgs(1),
-		Example: `coder envs rebuild front-end-workspace --follow
-coder envs rebuild backend-workspace --force`,
+		Example: `coder ws rebuild front-end-workspace --follow
+coder ws rebuild backend-workspace --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx, true)
@@ -61,7 +61,7 @@ coder envs rebuild backend-workspace --force`,
 			} else {
 				clog.LogSuccess(
 					"successfully started rebuild",
-					clog.Tipf("run \"coder envs watch-build %s\" to follow the build logs", workspace.Name),
+					clog.Tipf("run \"coder ws watch-build %s\" to follow the build logs", workspace.Name),
 				)
 			}
 			return nil
@@ -161,7 +161,7 @@ func watchBuildLogCommand() *cobra.Command {
 	var user string
 	cmd := &cobra.Command{
 		Use:     "watch-build [workspace_name]",
-		Example: "coder envs watch-build front-end-workspace",
+		Example: "coder ws watch-build front-end-workspace",
 		Short:   "trail the build log of a Coder workspace",
 		Args:    xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

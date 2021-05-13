@@ -15,7 +15,7 @@ func TestSSH(t *testing.T) {
 
 		// TODO remove this once we can create a workspace if there aren't any
 		var workspaces []coder.Workspace
-		c.Run(ctx, "coder envs ls --output json").Assert(t,
+		c.Run(ctx, "coder ws ls --output json").Assert(t,
 			tcli.Success(),
 			tcli.StdoutJSONUnmarshal(&workspaces),
 		)

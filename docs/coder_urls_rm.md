@@ -21,3 +21,4 @@ coder urls rm [workspace_name] [port] [flags]
 ### SEE ALSO
 
 * [coder urls](coder_urls.md)	 - Interact with workspace DevURLs
+

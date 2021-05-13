@@ -87,7 +87,7 @@ func findWorkspace(ctx context.Context, client coder.Client, workspaceName, user
 			"failed to find workspace",
 			fmt.Sprintf("workspace %q not found in %q", workspaceName, haystack),
 			clog.BlankLine,
-			clog.Tipf("run \"coder envs ls\" to view your workspaces"),
+			clog.Tipf("run \"coder ws ls\" to view your workspaces"),
 		)
 	}
 	return workspace, nil

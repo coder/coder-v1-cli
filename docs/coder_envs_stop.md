@@ -1,4 +1,4 @@
-## coder envs stop
+## coder ws stop
 
 stop Coder workspaces by name
 
@@ -7,22 +7,22 @@ stop Coder workspaces by name
 Stop Coder workspaces by name
 
 ```
-coder envs stop [...workspace_names] [flags]
+coder ws stop [...workspace_names] [flags]
 ```
 
 ### Examples
 
 ```
-coder envs stop front-end-workspace
-coder envs stop front-end-workspace backend-workspace
+coder ws stop front-end-workspace
+coder ws stop front-end-workspace backend-workspace
 
 # stop all of your workspaces
-coder envs ls -o json | jq -c '.[].name' | xargs coder envs stop
+coder ws ls -o json | jq -c '.[].name' | xargs coder ws stop
 
 # stop all workspaces for a given user
-coder envs --user charlie@coder.com ls -o json \
+coder ws --user charlie@coder.com ls -o json \
 	| jq -c '.[].name' \
-	| xargs coder envs --user charlie@coder.com stop
+	| xargs coder ws --user charlie@coder.com stop
 ```
 
 ### Options
@@ -40,4 +40,5 @@ coder envs --user charlie@coder.com ls -o json \
 
 ### SEE ALSO
 
-* [coder envs](coder_envs.md)	 - Interact with Coder workspaces
+* [coder ws](coder_ws.md)	 - Interact with Coder workspaces
+

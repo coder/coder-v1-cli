@@ -19,10 +19,10 @@ import (
 
 func Test_workspaces_ls(t *testing.T) {
 	skipIfNoAuth(t)
-	res := execute(t, nil, "envs", "ls")
+	res := execute(t, nil, "ws", "ls")
 	res.success(t)
 
-	res = execute(t, nil, "envs", "ls", "--output=json")
+	res = execute(t, nil, "ws", "ls", "--output=json")
 	res.success(t)
 
 	var workspaces []coder.Workspace
@@ -38,12 +38,12 @@ func Test_workspaces_ls_by_provider(t *testing.T) {
 	}{
 		{
 			name:    "simple list",
-			command: []string{"envs", "ls", "--provider", "built-in"},
+			command: []string{"ws", "ls", "--provider", "built-in"},
 			assert:  func(r result) { r.success(t) },
 		},
 		{
 			name:    "list as json",
-			command: []string{"envs", "ls", "--provider", "built-in", "--output", "json"},
+			command: []string{"ws", "ls", "--provider", "built-in", "--output", "json"},
 			assert: func(r result) {
 				var workspaces []coder.Workspace
 				r.stdoutUnmarshals(t, &workspaces)
@@ -87,38 +87,38 @@ func Test_workspace_create(t *testing.T) {
 	cpu := 2.3
 
 	// attempt to remove the workspace on cleanup
-	t.Cleanup(func() { _ = execute(t, nil, "envs", "rm", name, "--force") })
+	t.Cleanup(func() { _ = execute(t, nil, "ws", "rm", name, "--force") })
 
-	res = execute(t, nil, "envs", "create", name, "--image=ubuntu", fmt.Sprintf("--cpu=%f", cpu))
+	res = execute(t, nil, "ws", "create", name, "--image=ubuntu", fmt.Sprintf("--cpu=%f", cpu))
 	res.success(t)
 
-	res = execute(t, nil, "envs", "ls")
+	res = execute(t, nil, "ws", "ls")
 	res.success(t)
 	res.stdoutContains(t, name)
 
 	var workspaces []coder.Workspace
-	res = execute(t, nil, "envs", "ls", "--output=json")
+	res = execute(t, nil, "ws", "ls", "--output=json")
 	res.success(t)
 	res.stdoutUnmarshals(t, &workspaces)
 	workspace := assertWorkspace(t, name, workspaces)
 	assert.Equal(t, "workspace cpu", cpu, float64(workspace.CPUCores), floatComparer)
 
-	res = execute(t, nil, "envs", "watch-build", name)
+	res = execute(t, nil, "ws", "watch-build", name)
 	res.success(t)
 
 	// edit the CPU of the workspace
 	cpu = 2.1
-	res = execute(t, nil, "envs", "edit", name, fmt.Sprintf("--cpu=%f", cpu), "--follow", "--force")
+	res = execute(t, nil, "ws", "edit", name, fmt.Sprintf("--cpu=%f", cpu), "--follow", "--force")
 	res.success(t)
 
 	// assert that the CPU actually did change after edit
-	res = execute(t, nil, "envs", "ls", "--output=json")
+	res = execute(t, nil, "ws", "ls", "--output=json")
 	res.success(t)
 	res.stdoutUnmarshals(t, &workspaces)
 	workspace = assertWorkspace(t, name, workspaces)
 	assert.Equal(t, "workspace cpu", cpu, float64(workspace.CPUCores), floatComparer)
 
-	res = execute(t, nil, "envs", "rm", name, "--force")
+	res = execute(t, nil, "ws", "rm", name, "--force")
 	res.success(t)
 }
 

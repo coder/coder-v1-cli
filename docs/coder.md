@@ -13,7 +13,6 @@ coder provides a CLI for working with an existing Coder installation
 
 * [coder completion](coder_completion.md)	 - Generate completion script
 * [coder config-ssh](coder_config-ssh.md)	 - Configure SSH to access Coder workspaces
-* [coder envs](coder_envs.md)	 - Interact with Coder workspaces
 * [coder images](coder_images.md)	 - Manage Coder images
 * [coder login](coder_login.md)	 - Authenticate this client for future operations
 * [coder logout](coder_logout.md)	 - Remove local authentication credentials if any exist
@@ -22,3 +21,5 @@ coder provides a CLI for working with an existing Coder installation
 * [coder tokens](coder_tokens.md)	 - manage Coder API tokens for the active user
 * [coder urls](coder_urls.md)	 - Interact with workspace DevURLs
 * [coder users](coder_users.md)	 - Interact with Coder user accounts
+* [coder ws](coder_ws.md)	 - Interact with Coder workspaces
+
