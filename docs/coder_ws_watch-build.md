@@ -1,15 +1,15 @@
-## coder ws watch-build
+## coder workspaces watch-build
 
 trail the build log of a Coder workspace
 
 ```
-coder ws watch-build [workspace_name] [flags]
+coder workspaces watch-build [workspace_name] [flags]
 ```
 
 ### Examples
 
 ```
-coder ws watch-build front-end-workspace
+coder workspaces watch-build front-end-workspace
 ```
 
 ### Options
@@ -27,5 +27,4 @@ coder ws watch-build front-end-workspace
 
 ### SEE ALSO
 
-* [coder ws](coder_ws.md)	 - Interact with Coder workspaces
-
+* [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces

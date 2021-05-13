@@ -1,4 +1,4 @@
-## coder ws ls
+## coder workspaces ls
 
 list all workspaces owned by the active user
 
@@ -7,7 +7,7 @@ list all workspaces owned by the active user
 List all Coder workspaces owned by the active user.
 
 ```
-coder ws ls [flags]
+coder workspaces ls [flags]
 ```
 
 ### Options
@@ -27,5 +27,4 @@ coder ws ls [flags]
 
 ### SEE ALSO
 
-* [coder ws](coder_ws.md)	 - Interact with Coder workspaces
-
+* [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces

@@ -1,4 +1,4 @@
-## coder ws stop
+## coder workspaces stop
 
 stop Coder workspaces by name
 
@@ -7,22 +7,22 @@ stop Coder workspaces by name
 Stop Coder workspaces by name
 
 ```
-coder ws stop [...workspace_names] [flags]
+coder workspaces stop [...workspace_names] [flags]
 ```
 
 ### Examples
 
 ```
-coder ws stop front-end-workspace
-coder ws stop front-end-workspace backend-workspace
+coder workspaces stop front-end-workspace
+coder workspaces stop front-end-workspace backend-workspace
 
 # stop all of your workspaces
-coder ws ls -o json | jq -c '.[].name' | xargs coder ws stop
+coder workspaces ls -o json | jq -c '.[].name' | xargs coder workspaces stop
 
 # stop all workspaces for a given user
-coder ws --user charlie@coder.com ls -o json \
+coder workspaces --user charlie@coder.com ls -o json \
 	| jq -c '.[].name' \
-	| xargs coder ws --user charlie@coder.com stop
+	| xargs coder workspaces --user charlie@coder.com stop
 ```
 
 ### Options
@@ -40,5 +40,4 @@ coder ws --user charlie@coder.com ls -o json \
 
 ### SEE ALSO
 
-* [coder ws](coder_ws.md)	 - Interact with Coder workspaces
-
+* [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces

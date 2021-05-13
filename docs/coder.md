@@ -21,5 +21,4 @@ coder provides a CLI for working with an existing Coder installation
 * [coder tokens](coder_tokens.md)	 - manage Coder API tokens for the active user
 * [coder urls](coder_urls.md)	 - Interact with workspace DevURLs
 * [coder users](coder_users.md)	 - Interact with Coder user accounts
-* [coder ws](coder_ws.md)	 - Interact with Coder workspaces
-
+* [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces

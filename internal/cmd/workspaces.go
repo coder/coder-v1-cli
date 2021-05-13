@@ -24,17 +24,17 @@ const defaultImgTag = "latest"
 func envCmd() *cobra.Command {
 	cmd := workspacesCmd()
 	cmd.Use = "envs"
-	cmd.Deprecated = "use \"ws\" instead"
+	cmd.Deprecated = "use \"workspaces\" instead"
 	cmd.Aliases = []string{}
 	return cmd
 }
 
 func workspacesCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "ws",
+		Use:     "workspaces",
 		Short:   "Interact with Coder workspaces",
 		Long:    "Perform operations on the Coder workspaces owned by the active user.",
-		Aliases: []string{"workspaces"},
+		Aliases: []string{"ws"},
 	}
 
 	cmd.AddCommand(
@@ -124,16 +124,16 @@ func stopWorkspacesCmd() *cobra.Command {
 		Use:   "stop [...workspace_names]",
 		Short: "stop Coder workspaces by name",
 		Long:  "Stop Coder workspaces by name",
-		Example: `coder ws stop front-end-workspace
-coder ws stop front-end-workspace backend-workspace
+		Example: `coder workspaces stop front-end-workspace
+coder workspaces stop front-end-workspace backend-workspace
 
 # stop all of your workspaces
-coder ws ls -o json | jq -c '.[].name' | xargs coder ws stop
+coder workspaces ls -o json | jq -c '.[].name' | xargs coder workspaces stop
 
 # stop all workspaces for a given user
-coder ws --user charlie@coder.com ls -o json \
+coder workspaces --user charlie@coder.com ls -o json \
 	| jq -c '.[].name' \
-	| xargs coder ws --user charlie@coder.com stop`,
+	| xargs coder workspaces --user charlie@coder.com stop`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -190,8 +190,8 @@ func createWorkspaceCmd() *cobra.Command {
 		Args:  xcobra.ExactArgs(1),
 		Long:  "Create a new Coder workspace.",
 		Example: `# create a new workspace using default resource amounts
-coder ws create my-new-workspace --image ubuntu
-coder ws create my-new-powerful-workspace --cpu 12 --disk 100 --memory 16 --image ubuntu`,
+coder workspaces create my-new-workspace --image ubuntu
+coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 16 --image ubuntu`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			if img == "" {
@@ -276,7 +276,7 @@ coder ws create my-new-powerful-workspace --cpu 12 --disk 100 --memory 16 --imag
 
 			clog.LogSuccess("creating workspace...",
 				clog.BlankLine,
-				clog.Tipf(`run "coder ws watch-build %s" to trail the build logs`, workspace.Name),
+				clog.Tipf(`run "coder workspaces watch-build %s" to trail the build logs`, workspace.Name),
 			)
 			return nil
 		},
@@ -312,8 +312,8 @@ func createWorkspaceFromConfigCmd() *cobra.Command {
 		Short: "create a new workspace from a template",
 		Long:  "Create a new Coder workspace using a Workspaces As Code template.",
 		Example: `# create a new workspace from git repository
-coder ws create-from-config --name="dev-workspace" --repo-url https://github.com/cdr/m --ref my-branch
-coder ws create-from-config --name="dev-workspace" -f coder.yaml`,
+coder workspaces create-from-config --name="dev-workspace" --repo-url https://github.com/cdr/m --ref my-branch
+coder workspaces create-from-config --name="dev-workspace" -f coder.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
@@ -408,7 +408,7 @@ coder ws create-from-config --name="dev-workspace" -f coder.yaml`,
 
 			clog.LogSuccess("creating workspace...",
 				clog.BlankLine,
-				clog.Tipf(`run "coder ws watch-build %s" to trail the build logs`, workspace.Name),
+				clog.Tipf(`run "coder workspaces watch-build %s" to trail the build logs`, workspace.Name),
 			)
 			return nil
 		},
@@ -442,9 +442,9 @@ func editWorkspaceCmd() *cobra.Command {
 		Short: "edit an existing workspace and initiate a rebuild.",
 		Args:  xcobra.ExactArgs(1),
 		Long:  "Edit an existing workspace and initate a rebuild.",
-		Example: `coder ws edit back-end-workspace --cpu 4
+		Example: `coder workspaces edit back-end-workspace --cpu 4
 
-coder ws edit back-end-workspace --disk 20`,
+coder workspaces edit back-end-workspace --disk 20`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx, true)
@@ -511,7 +511,7 @@ coder ws edit back-end-workspace --disk 20`,
 
 			clog.LogSuccess("applied changes to the workspace, rebuilding...",
 				clog.BlankLine,
-				clog.Tipf(`run "coder ws watch-build %s" to trail the build logs`, workspaceName),
+				clog.Tipf(`run "coder workspaces watch-build %s" to trail the build logs`, workspaceName),
 			)
 			return nil
 		},

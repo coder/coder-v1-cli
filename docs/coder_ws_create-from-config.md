@@ -1,4 +1,4 @@
-## coder ws create-from-config
+## coder workspaces create-from-config
 
 create a new workspace from a template
 
@@ -7,15 +7,15 @@ create a new workspace from a template
 Create a new Coder workspace using a Workspaces As Code template.
 
 ```
-coder ws create-from-config [flags]
+coder workspaces create-from-config [flags]
 ```
 
 ### Examples
 
 ```
 # create a new workspace from git repository
-coder ws create-from-config --name="dev-workspace" --repo-url https://github.com/cdr/m --ref my-branch
-coder ws create-from-config --name="dev-workspace" -f coder.yaml
+coder workspaces create-from-config --name="dev-workspace" --repo-url https://github.com/cdr/m --ref my-branch
+coder workspaces create-from-config --name="dev-workspace" -f coder.yaml
 ```
 
 ### Options
@@ -39,5 +39,4 @@ coder ws create-from-config --name="dev-workspace" -f coder.yaml
 
 ### SEE ALSO
 
-* [coder ws](coder_ws.md)	 - Interact with Coder workspaces
-
+* [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces

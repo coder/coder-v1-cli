@@ -1,4 +1,4 @@
-## coder ws create
+## coder workspaces create
 
 create a new workspace.
 
@@ -7,15 +7,15 @@ create a new workspace.
 Create a new Coder workspace.
 
 ```
-coder ws create [workspace_name] [flags]
+coder workspaces create [workspace_name] [flags]
 ```
 
 ### Examples
 
 ```
 # create a new workspace using default resource amounts
-coder ws create my-new-workspace --image ubuntu
-coder ws create my-new-powerful-workspace --cpu 12 --disk 100 --memory 16 --image ubuntu
+coder workspaces create my-new-workspace --image ubuntu
+coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 16 --image ubuntu
 ```
 
 ### Options
@@ -43,5 +43,4 @@ coder ws create my-new-powerful-workspace --cpu 12 --disk 100 --memory 16 --imag
 
 ### SEE ALSO
 
-* [coder ws](coder_ws.md)	 - Interact with Coder workspaces
-
+* [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces

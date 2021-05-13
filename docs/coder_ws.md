@@ -1,4 +1,4 @@
-## coder ws
+## coder workspaces
 
 Interact with Coder workspaces
 
@@ -9,7 +9,7 @@ Perform operations on the Coder workspaces owned by the active user.
 ### Options
 
 ```
-  -h, --help   help for ws
+  -h, --help   help for workspaces
 ```
 
 ### Options inherited from parent commands
@@ -21,12 +21,11 @@ Perform operations on the Coder workspaces owned by the active user.
 ### SEE ALSO
 
 * [coder](coder.md)	 - coder provides a CLI for working with an existing Coder installation
-* [coder ws create](coder_ws_create.md)	 - create a new workspace.
-* [coder ws create-from-config](coder_ws_create-from-config.md)	 - create a new workspace from a template
-* [coder ws edit](coder_ws_edit.md)	 - edit an existing workspace and initiate a rebuild.
-* [coder ws ls](coder_ws_ls.md)	 - list all workspaces owned by the active user
-* [coder ws rebuild](coder_ws_rebuild.md)	 - rebuild a Coder workspace
-* [coder ws rm](coder_ws_rm.md)	 - remove Coder workspaces by name
-* [coder ws stop](coder_ws_stop.md)	 - stop Coder workspaces by name
-* [coder ws watch-build](coder_ws_watch-build.md)	 - trail the build log of a Coder workspace
-
+* [coder workspaces create](coder_workspaces_create.md)	 - create a new workspace.
+* [coder workspaces create-from-config](coder_workspaces_create-from-config.md)	 - create a new workspace from a template
+* [coder workspaces edit](coder_workspaces_edit.md)	 - edit an existing workspace and initiate a rebuild.
+* [coder workspaces ls](coder_workspaces_ls.md)	 - list all workspaces owned by the active user
+* [coder workspaces rebuild](coder_workspaces_rebuild.md)	 - rebuild a Coder workspace
+* [coder workspaces rm](coder_workspaces_rm.md)	 - remove Coder workspaces by name
+* [coder workspaces stop](coder_workspaces_stop.md)	 - stop Coder workspaces by name
+* [coder workspaces watch-build](coder_workspaces_watch-build.md)	 - trail the build log of a Coder workspace

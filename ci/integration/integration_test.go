@@ -53,15 +53,15 @@ func TestCoderCLI(t *testing.T) {
 
 		headlessLogin(ctx, t, c)
 
-		c.Run(ctx, "coder ws").Assert(t,
+		c.Run(ctx, "coder workspaces").Assert(t,
 			tcli.Success(),
 		)
 
-		c.Run(ctx, "coder ws ls").Assert(t,
+		c.Run(ctx, "coder workspaces ls").Assert(t,
 			tcli.Success(),
 		)
 
-		c.Run(ctx, "coder ws ls -o json").Assert(t,
+		c.Run(ctx, "coder workspaces ls -o json").Assert(t,
 			tcli.Success(),
 		)
 
@@ -93,7 +93,7 @@ func TestCoderCLI(t *testing.T) {
 			tcli.Success(),
 		)
 
-		c.Run(ctx, "coder ws ls").Assert(t,
+		c.Run(ctx, "coder workspaces ls").Assert(t,
 			tcli.Error(),
 		)
 

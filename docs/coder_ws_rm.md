@@ -1,9 +1,9 @@
-## coder ws rm
+## coder workspaces rm
 
 remove Coder workspaces by name
 
 ```
-coder ws rm [...workspace_names] [flags]
+coder workspaces rm [...workspace_names] [flags]
 ```
 
 ### Options
@@ -22,5 +22,4 @@ coder ws rm [...workspace_names] [flags]
 
 ### SEE ALSO
 
-* [coder ws](coder_ws.md)	 - Interact with Coder workspaces
-
+* [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces

@@ -53,7 +53,7 @@ func shell(cmd *cobra.Command, args []string) error {
 		return clog.Error("workspace not available",
 			fmt.Sprintf("current status: \"%s\"", workspace.LatestStat.ContainerStatus),
 			clog.BlankLine,
-			clog.Tipf("use \"coder ws rebuild %s\" to rebuild this workspace", workspace.Name),
+			clog.Tipf("use \"coder workspaces rebuild %s\" to rebuild this workspace", workspace.Name),
 		)
 	}
 	wp, err := client.WorkspaceProviderByID(ctx, workspace.ResourcePoolID)
@@ -108,7 +108,7 @@ func shValidArgs(cmd *cobra.Command, args []string) error {
 			return clog.Error("missing [workspace_name] argument",
 				fmt.Sprintf("specify one of %q", haystack),
 				clog.BlankLine,
-				clog.Tipf("run \"coder ws ls\" to view your workspaces"),
+				clog.Tipf("run \"coder workspaces ls\" to view your workspaces"),
 			)
 		}
 		return clog.Error("missing [workspace_name] argument")

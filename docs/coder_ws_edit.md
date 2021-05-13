@@ -1,4 +1,4 @@
-## coder ws edit
+## coder workspaces edit
 
 edit an existing workspace and initiate a rebuild.
 
@@ -7,15 +7,15 @@ edit an existing workspace and initiate a rebuild.
 Edit an existing workspace and initate a rebuild.
 
 ```
-coder ws edit [flags]
+coder workspaces edit [flags]
 ```
 
 ### Examples
 
 ```
-coder ws edit back-end-workspace --cpu 4
+coder workspaces edit back-end-workspace --cpu 4
 
-coder ws edit back-end-workspace --disk 20
+coder workspaces edit back-end-workspace --disk 20
 ```
 
 ### Options
@@ -42,5 +42,4 @@ coder ws edit back-end-workspace --disk 20
 
 ### SEE ALSO
 
-* [coder ws](coder_ws.md)	 - Interact with Coder workspaces
-
+* [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces
