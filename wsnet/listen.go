@@ -49,7 +49,7 @@ func Listen(ctx context.Context, broker string) (io.Closer, error) {
 					case <-ctx.Done():
 						err = ctx.Err()
 					}
-					if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+					if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 						break
 					}
 				}
