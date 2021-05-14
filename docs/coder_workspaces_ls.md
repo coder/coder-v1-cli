@@ -28,3 +28,4 @@ coder workspaces ls [flags]
 ### SEE ALSO
 
 * [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces
+

@@ -1,21 +1,16 @@
-## coder workspaces watch-build
+## coder workspaces rm
 
-trail the build log of a Coder workspace
-
-```
-coder workspaces watch-build [workspace_name] [flags]
-```
-
-### Examples
+remove Coder workspaces by name
 
 ```
-coder workspaces watch-build front-end-workspace
+coder workspaces rm [...workspace_names] [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help          help for watch-build
+  -f, --force         force remove the specified workspaces without prompting first
+  -h, --help          help for rm
       --user string   Specify the user whose resources to target (default "me")
 ```
 
@@ -28,3 +23,4 @@ coder workspaces watch-build front-end-workspace
 ### SEE ALSO
 
 * [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces
+

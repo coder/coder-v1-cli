@@ -40,3 +40,4 @@ coder workspaces create-from-config --name="dev-workspace" -f coder.yaml
 ### SEE ALSO
 
 * [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces
+

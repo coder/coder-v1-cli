@@ -43,3 +43,4 @@ coder workspaces edit back-end-workspace --disk 20
 ### SEE ALSO
 
 * [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces
+

@@ -44,3 +44,4 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 ### SEE ALSO
 
 * [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces
+

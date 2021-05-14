@@ -29,3 +29,4 @@ Perform operations on the Coder workspaces owned by the active user.
 * [coder workspaces rm](coder_workspaces_rm.md)	 - remove Coder workspaces by name
 * [coder workspaces stop](coder_workspaces_stop.md)	 - stop Coder workspaces by name
 * [coder workspaces watch-build](coder_workspaces_watch-build.md)	 - trail the build log of a Coder workspace
+

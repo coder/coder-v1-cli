@@ -31,3 +31,4 @@ coder workspaces rebuild backend-workspace --force
 ### SEE ALSO
 
 * [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces
+

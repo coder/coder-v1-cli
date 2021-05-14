@@ -22,3 +22,4 @@ coder provides a CLI for working with an existing Coder installation
 * [coder urls](coder_urls.md)	 - Interact with workspace DevURLs
 * [coder users](coder_users.md)	 - Interact with Coder user accounts
 * [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces
+

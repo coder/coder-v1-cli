@@ -41,3 +41,4 @@ coder workspaces --user charlie@coder.com ls -o json \
 ### SEE ALSO
 
 * [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces
+
