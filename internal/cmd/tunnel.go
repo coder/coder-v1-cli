@@ -55,19 +55,19 @@ coder tunnel my-dev 3000 3000
 			}
 			baseURL := sdk.BaseURL()
 
-			envs, err := getEnvs(ctx, sdk, coder.Me)
+			workspaces, err := getWorkspaces(ctx, sdk, coder.Me)
 			if err != nil {
 				return xerrors.Errorf("get workspaces: %w", err)
 			}
 
-			var envID string
-			for _, env := range envs {
-				if env.Name == args[0] {
-					envID = env.ID
+			var workspaceID string
+			for _, workspace := range workspaces {
+				if workspace.Name == args[0] {
+					workspaceID = workspace.ID
 					break
 				}
 			}
-			if envID == "" {
+			if workspaceID == "" {
 				return xerrors.Errorf("No workspace found by name '%s'", args[0])
 			}
 
@@ -75,7 +75,7 @@ coder tunnel my-dev 3000 3000
 				log:         log,
 				brokerAddr:  &baseURL,
 				token:       sdk.Token(),
-				workspaceID: envID,
+				workspaceID: workspaceID,
 				stdio:       args[2] == "stdio",
 				localPort:   uint16(localPort),
 				remotePort:  uint16(remotePort),

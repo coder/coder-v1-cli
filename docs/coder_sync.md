@@ -1,9 +1,9 @@
 ## coder sync
 
-Establish a one way directory sync to a Coder environment
+Establish a one way directory sync to a Coder workspace
 
 ```
-coder sync [local directory] [<env name>:<remote directory>] [flags]
+coder sync [local directory] [<workspace name>:<remote directory>] [flags]
 ```
 
 ### Options

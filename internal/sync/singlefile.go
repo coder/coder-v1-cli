@@ -17,9 +17,9 @@ import (
 	"cdr.dev/coder-cli/internal/coderutil"
 )
 
-// SingleFile copies the given file into the remote dir or remote path of the given coder.Environment.
-func SingleFile(ctx context.Context, local, remoteDir string, env *coder.Environment, client coder.Client) error {
-	conn, err := coderutil.DialEnvWsep(ctx, client, env)
+// SingleFile copies the given file into the remote dir or remote path of the given coder.Workspace.
+func SingleFile(ctx context.Context, local, remoteDir string, workspace *coder.Workspace, client coder.Client) error {
+	conn, err := coderutil.DialWorkspaceWsep(ctx, client, workspace)
 	if err != nil {
 		return xerrors.Errorf("dial remote execer: %w", err)
 	}

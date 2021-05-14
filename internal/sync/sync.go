@@ -1,4 +1,4 @@
-// Package sync contains logic for establishing a file sync between a local machine and a Coder environment.
+// Package sync contains logic for establishing a file sync between a local machine and a Coder workspace.
 package sync
 
 import (
@@ -41,7 +41,7 @@ type Sync struct {
 	// DisableMetrics disables activity metric pushing.
 	DisableMetrics bool
 
-	Env                 coder.Environment
+	Workspace           coder.Workspace
 	Client              coder.Client
 	OutW                io.Writer
 	ErrW                io.Writer
@@ -61,7 +61,7 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 	args := []string{"-zz",
 		"-a",
 		"--delete",
-		"-e", self + " sh", local, s.Env.Name + ":" + remote,
+		"-e", self + " sh", local, s.Workspace.Name + ":" + remote,
 	}
 	if delete {
 		args = append([]string{"--delete"}, args...)
@@ -95,7 +95,7 @@ func (s Sync) syncPaths(delete bool, local, remote string) error {
 }
 
 func (s Sync) remoteCmd(ctx context.Context, prog string, args ...string) error {
-	conn, err := coderutil.DialEnvWsep(ctx, s.Client, &s.Env)
+	conn, err := coderutil.DialWorkspaceWsep(ctx, s.Client, &s.Workspace)
 	if err != nil {
 		return xerrors.Errorf("dial executor: %w", err)
 	}
@@ -276,9 +276,9 @@ func (s Sync) Version() (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	conn, err := coderutil.DialEnvWsep(ctx, s.Client, &s.Env)
+	conn, err := coderutil.DialWorkspaceWsep(ctx, s.Client, &s.Workspace)
 	if err != nil {
-		return "", xerrors.Errorf("dial env executor: %w", err)
+		return "", xerrors.Errorf("dial workspace executor: %w", err)
 	}
 	defer func() { _ = conn.Close(websocket.CloseNormalClosure, "") }() // Best effort.
 
@@ -327,7 +327,7 @@ func (s Sync) Run() error {
 		return xerrors.Errorf("create remote directory: %w", err)
 	}
 
-	ap := activity.NewPusher(s.Client, s.Env.ID, activityName)
+	ap := activity.NewPusher(s.Client, s.Workspace.ID, activityName)
 	ap.Push(ctx)
 
 	setConsoleTitle("⏳ syncing project", s.IsInteractiveOutput)

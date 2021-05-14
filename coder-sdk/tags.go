@@ -8,14 +8,14 @@ import (
 
 // ImageTag is a Docker image tag.
 type ImageTag struct {
-	ImageID           string         `json:"image_id"             table:"-"`
-	Tag               string         `json:"tag"                  table:"Tag"`
-	LatestHash        string         `json:"latest_hash"          table:"-"`
-	HashLastUpdatedAt time.Time      `json:"hash_last_updated_at" table:"-"`
-	OSRelease         *OSRelease     `json:"os_release"           table:"OS"`
-	Environments      []*Environment `json:"environments"         table:"-"`
-	UpdatedAt         time.Time      `json:"updated_at"           table:"UpdatedAt"`
-	CreatedAt         time.Time      `json:"created_at"           table:"-"`
+	ImageID           string       `json:"image_id"             table:"-"`
+	Tag               string       `json:"tag"                  table:"Tag"`
+	LatestHash        string       `json:"latest_hash"          table:"-"`
+	HashLastUpdatedAt time.Time    `json:"hash_last_updated_at" table:"-"`
+	OSRelease         *OSRelease   `json:"os_release"           table:"OS"`
+	Workspaces        []*Workspace `json:"workspaces"         table:"-"`
+	UpdatedAt         time.Time    `json:"updated_at"           table:"UpdatedAt"`
+	CreatedAt         time.Time    `json:"created_at"           table:"-"`
 }
 
 func (i ImageTag) String() string {

@@ -1,6 +1,6 @@
 ## coder config-ssh
 
-Configure SSH to access Coder environments
+Configure SSH to access Coder workspaces
 
 ### Synopsis
 

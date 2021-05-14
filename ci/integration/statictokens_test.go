@@ -35,15 +35,15 @@ func TestStaticAuth(t *testing.T) {
 
 		// make requests with token environment variable authentication
 		cmd := exec.CommandContext(ctx, "sh", "-c",
-			fmt.Sprintf("export CODER_URL=%s && export CODER_TOKEN=$(cat) && coder envs ls", os.Getenv("CODER_URL")),
+			fmt.Sprintf("export CODER_URL=%s && export CODER_TOKEN=$(cat) && coder workspaces ls", os.Getenv("CODER_URL")),
 		)
 		cmd.Stdin = strings.NewReader(string(result.Stdout))
 		c.RunCmd(cmd).Assert(t,
 			tcli.Success(),
 		)
 
-		// should error when the environment variabels aren't set
-		c.Run(ctx, "coder envs ls").Assert(t,
+		// should error when the environment variables aren't set
+		c.Run(ctx, "coder workspaces ls").Assert(t,
 			tcli.Error(),
 		)
 	})

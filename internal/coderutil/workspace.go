@@ -13,34 +13,34 @@ import (
 	"cdr.dev/coder-cli/pkg/clog"
 )
 
-// DialEnvWsep dials the executor endpoint using the https://github.com/cdr/wsep message protocol.
+// DialWorkspaceWsep dials the executor endpoint using the https://github.com/cdr/wsep message protocol.
 // The proper workspace provider envproxy access URL is used.
-func DialEnvWsep(ctx context.Context, client coder.Client, env *coder.Environment) (*websocket.Conn, error) {
-	workspaceProvider, err := client.WorkspaceProviderByID(ctx, env.ResourcePoolID)
+func DialWorkspaceWsep(ctx context.Context, client coder.Client, workspace *coder.Workspace) (*websocket.Conn, error) {
+	workspaceProvider, err := client.WorkspaceProviderByID(ctx, workspace.ResourcePoolID)
 	if err != nil {
-		return nil, xerrors.Errorf("get env workspace provider: %w", err)
+		return nil, xerrors.Errorf("get workspace workspace provider: %w", err)
 	}
 	accessURL, err := url.Parse(workspaceProvider.EnvproxyAccessURL)
 	if err != nil {
 		return nil, xerrors.Errorf("invalid workspace provider envproxy access url: %w", err)
 	}
 
-	conn, err := client.DialWsep(ctx, accessURL, env.ID)
+	conn, err := client.DialWsep(ctx, accessURL, workspace.ID)
 	if err != nil {
 		return nil, xerrors.Errorf("dial websocket: %w", err)
 	}
 	return conn, nil
 }
 
-// EnvWithWorkspaceProvider composes an Environment entity with its associated WorkspaceProvider.
-type EnvWithWorkspaceProvider struct {
-	Env               coder.Environment
+// WorkspaceWithWorkspaceProvider composes an Workspace entity with its associated WorkspaceProvider.
+type WorkspaceWithWorkspaceProvider struct {
+	Workspace         coder.Workspace
 	WorkspaceProvider coder.KubernetesProvider
 }
 
-// EnvsWithProvider performs the composition of each Environment with its associated WorkspaceProvider.
-func EnvsWithProvider(ctx context.Context, client coder.Client, envs []coder.Environment) ([]EnvWithWorkspaceProvider, error) {
-	pooledEnvs := make([]EnvWithWorkspaceProvider, 0, len(envs))
+// WorkspacesWithProvider performs the composition of each Workspace with its associated WorkspaceProvider.
+func WorkspacesWithProvider(ctx context.Context, client coder.Client, workspaces []coder.Workspace) ([]WorkspaceWithWorkspaceProvider, error) {
+	pooledWorkspaces := make([]WorkspaceWithWorkspaceProvider, 0, len(workspaces))
 	providers, err := client.WorkspaceProviders(ctx)
 	if err != nil {
 		return nil, err
@@ -49,20 +49,20 @@ func EnvsWithProvider(ctx context.Context, client coder.Client, envs []coder.Env
 	for _, p := range providers.Kubernetes {
 		providerMap[p.ID] = p
 	}
-	for _, e := range envs {
-		envProvider, ok := providerMap[e.ResourcePoolID]
+	for _, e := range workspaces {
+		workspaceProvider, ok := providerMap[e.ResourcePoolID]
 		if !ok {
-			return nil, xerrors.Errorf("fetch env workspace provider: %w", coder.ErrNotFound)
+			return nil, xerrors.Errorf("fetch workspace workspace provider: %w", coder.ErrNotFound)
 		}
-		pooledEnvs = append(pooledEnvs, EnvWithWorkspaceProvider{
-			Env:               e,
-			WorkspaceProvider: envProvider,
+		pooledWorkspaces = append(pooledWorkspaces, WorkspaceWithWorkspaceProvider{
+			Workspace:         e,
+			WorkspaceProvider: workspaceProvider,
 		})
 	}
-	return pooledEnvs, nil
+	return pooledWorkspaces, nil
 }
 
-// DefaultWorkspaceProvider returns the default provider with which to create environments.
+// DefaultWorkspaceProvider returns the default provider with which to create workspaces.
 func DefaultWorkspaceProvider(ctx context.Context, c coder.Client) (*coder.KubernetesProvider, error) {
 	provider, err := c.WorkspaceProviders(ctx)
 	if err != nil {
@@ -76,9 +76,9 @@ func DefaultWorkspaceProvider(ctx context.Context, c coder.Client) (*coder.Kuber
 	return nil, coder.ErrNotFound
 }
 
-// EnvTable defines an Environment-like structure with associated entities composed in a human
+// WorkspaceTable defines an Workspace-like structure with associated entities composed in a human
 // readable form.
-type EnvTable struct {
+type WorkspaceTable struct {
 	Name     string  `table:"Name"`
 	Image    string  `table:"Image"`
 	CPU      float32 `table:"vCPU"`
@@ -89,14 +89,14 @@ type EnvTable struct {
 	CVM      bool    `table:"CVM"`
 }
 
-// EnvsHumanTable performs the composition of each Environment with its associated ProviderName and ImageRepo.
-func EnvsHumanTable(ctx context.Context, client coder.Client, envs []coder.Environment) ([]EnvTable, error) {
-	imageMap, err := MakeImageMap(ctx, client, envs)
+// WorkspacesHumanTable performs the composition of each Workspace with its associated ProviderName and ImageRepo.
+func WorkspacesHumanTable(ctx context.Context, client coder.Client, workspaces []coder.Workspace) ([]WorkspaceTable, error) {
+	imageMap, err := MakeImageMap(ctx, client, workspaces)
 	if err != nil {
 		return nil, err
 	}
 
-	pooledEnvs := make([]EnvTable, 0, len(envs))
+	pooledWorkspaces := make([]WorkspaceTable, 0, len(workspaces))
 	providers, err := client.WorkspaceProviders(ctx)
 	if err != nil {
 		return nil, err
@@ -105,33 +105,33 @@ func EnvsHumanTable(ctx context.Context, client coder.Client, envs []coder.Envir
 	for _, p := range providers.Kubernetes {
 		providerMap[p.ID] = p
 	}
-	for _, e := range envs {
-		envProvider, ok := providerMap[e.ResourcePoolID]
+	for _, e := range workspaces {
+		workspaceProvider, ok := providerMap[e.ResourcePoolID]
 		if !ok {
-			return nil, xerrors.Errorf("fetch env workspace provider: %w", coder.ErrNotFound)
+			return nil, xerrors.Errorf("fetch workspace workspace provider: %w", coder.ErrNotFound)
 		}
-		pooledEnvs = append(pooledEnvs, EnvTable{
+		pooledWorkspaces = append(pooledWorkspaces, WorkspaceTable{
 			Name:     e.Name,
 			Image:    fmt.Sprintf("%s:%s", imageMap[e.ImageID].Repository, e.ImageTag),
 			CPU:      e.CPUCores,
 			MemoryGB: e.MemoryGB,
 			DiskGB:   e.DiskGB,
 			Status:   string(e.LatestStat.ContainerStatus),
-			Provider: envProvider.Name,
+			Provider: workspaceProvider.Name,
 			CVM:      e.UseContainerVM,
 		})
 	}
-	return pooledEnvs, nil
+	return pooledWorkspaces, nil
 }
 
-// MakeImageMap fetches all image entities specified in the slice of environments, then places them into an ID map.
-func MakeImageMap(ctx context.Context, client coder.Client, envs []coder.Environment) (map[string]*coder.Image, error) {
+// MakeImageMap fetches all image entities specified in the slice of workspaces, then places them into an ID map.
+func MakeImageMap(ctx context.Context, client coder.Client, workspaces []coder.Workspace) (map[string]*coder.Image, error) {
 	var (
 		mu     sync.Mutex
 		egroup = clog.LoggedErrGroup()
 	)
 	imageMap := make(map[string]*coder.Image)
-	for _, e := range envs {
+	for _, e := range workspaces {
 		// put all the image IDs into a map to remove duplicates
 		imageMap[e.ImageID] = nil
 	}

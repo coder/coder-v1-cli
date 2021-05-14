@@ -28,7 +28,8 @@ func Make() *cobra.Command {
 		usersCmd(),
 		tagsCmd(),
 		configSSHCmd(),
-		envsCmd(),
+		envCmd(), // DEPRECATED.
+		workspacesCmd(),
 		syncCmd(),
 		urlCmd(),
 		tokensCmd(),
@@ -83,7 +84,7 @@ MacOS:
 
 Zsh:
 
-If shell completion is not already enabled in your environment you will need
+If shell completion is not already enabled in your workspace you will need
 to enable it.  You can execute the following once:
 
 $ echo "autoload -U compinit; compinit" >> ~/.zshrc

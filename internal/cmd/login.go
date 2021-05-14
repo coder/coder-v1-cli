@@ -47,11 +47,11 @@ func loginCmd() *cobra.Command {
 	}
 }
 
-// storeConfig writes the env URL and session token to the local config directory.
+// storeConfig writes the workspace URL and session token to the local config directory.
 // The config lib will handle the local config path lookup and creation.
-func storeConfig(envURL *url.URL, sessionToken string, urlCfg, sessionCfg config.File) error {
-	if err := urlCfg.Write(envURL.String()); err != nil {
-		return xerrors.Errorf("store env url: %w", err)
+func storeConfig(workspaceURL *url.URL, sessionToken string, urlCfg, sessionCfg config.File) error {
+	if err := urlCfg.Write(workspaceURL.String()); err != nil {
+		return xerrors.Errorf("store workspace url: %w", err)
 	}
 	if err := sessionCfg.Write(sessionToken); err != nil {
 		return xerrors.Errorf("store session token: %w", err)
@@ -59,9 +59,9 @@ func storeConfig(envURL *url.URL, sessionToken string, urlCfg, sessionCfg config
 	return nil
 }
 
-func login(cmd *cobra.Command, envURL *url.URL) error {
-	authURL := *envURL
-	authURL.Path = envURL.Path + "/internal-auth"
+func login(cmd *cobra.Command, workspaceURL *url.URL) error {
+	authURL := *workspaceURL
+	authURL.Path = workspaceURL.Path + "/internal-auth"
 	q := authURL.Query()
 	q.Add("show_token", "true")
 	authURL.RawQuery = q.Encode()
@@ -81,10 +81,10 @@ func login(cmd *cobra.Command, envURL *url.URL) error {
 		return xerrors.Errorf("reading standard input: %w", err)
 	}
 
-	if err := pingAPI(cmd.Context(), envURL, token); err != nil {
+	if err := pingAPI(cmd.Context(), workspaceURL, token); err != nil {
 		return xerrors.Errorf("ping API with credentials: %w", err)
 	}
-	if err := storeConfig(envURL, token, config.URL, config.Session); err != nil {
+	if err := storeConfig(workspaceURL, token, config.URL, config.Session); err != nil {
 		return xerrors.Errorf("store auth: %w", err)
 	}
 	clog.LogSuccess("logged in")
@@ -93,9 +93,9 @@ func login(cmd *cobra.Command, envURL *url.URL) error {
 
 // pingAPI creates a client from the given url/token and try to exec an api call.
 // Not using the SDK as we want to verify the url/token pair before storing the config files.
-func pingAPI(ctx context.Context, envURL *url.URL, token string) error {
+func pingAPI(ctx context.Context, workspaceURL *url.URL, token string) error {
 	client, err := coder.NewClient(coder.ClientOptions{
-		BaseURL: envURL,
+		BaseURL: workspaceURL,
 		Token:   token,
 	})
 	if err != nil {
