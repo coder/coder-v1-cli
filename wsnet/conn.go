@@ -19,7 +19,8 @@ func TURNEndpoint(baseURL *url.URL) string {
 	if baseURL.Scheme == httpScheme {
 		turnScheme = "turn"
 	}
-	return fmt.Sprintf("%s:%s:5349?transport=tcp", turnScheme, baseURL.Host)
+
+	return fmt.Sprintf("%s:%s:5349?transport=tcp", turnScheme, baseURL.Hostname())
 }
 
 // ListenEndpoint returns the Coder endpoint to listen for workspace connections.
