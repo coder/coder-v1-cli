@@ -17,7 +17,7 @@ func tokensCmd() *cobra.Command {
 		Use:   "tokens",
 		Short: "manage Coder API tokens for the active user",
 		Long: "Create and manage API Tokens for authenticating the CLI.\n" +
-			"Statically authenticate using the token value with the " + "`" + "CODER_TOKEN" + "`" + " and " + "`" + "CODER_URL" + "`" + " environment variables.",
+			"Statically authenticate using the token value with the " + "`" + "CODER_TOKEN" + "`" + " and " + "`" + "CODER_URL" + "`" + " workspace variables.",
 	}
 	cmd.AddCommand(
 		lsTokensCmd(),

@@ -133,6 +133,9 @@ func TestDial(t *testing.T) {
 			t.Error(err)
 			return
 		}
+		go func() {
+			_, _ = listener.Accept()
+		}()
 		connectAddr, listenAddr := createDumbBroker(t)
 		srv, err := Listen(context.Background(), listenAddr)
 		if err != nil {

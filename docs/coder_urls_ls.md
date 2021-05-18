@@ -1,9 +1,9 @@
 ## coder urls ls
 
-List all DevURLs for an environment
+List all DevURLs for a workspace
 
 ```
-coder urls ls [environment_name] [flags]
+coder urls ls [workspace_name] [flags]
 ```
 
 ### Options
@@ -21,5 +21,5 @@ coder urls ls [environment_name] [flags]
 
 ### SEE ALSO
 
-* [coder urls](coder_urls.md)	 - Interact with environment DevURLs
+* [coder urls](coder_urls.md)	 - Interact with workspace DevURLs
 

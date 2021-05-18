@@ -1,9 +1,9 @@
 ## coder ssh
 
-Enter a shell of execute a command over SSH into a Coder environment
+Enter a shell of execute a command over SSH into a Coder workspace
 
 ```
-coder ssh [environment_name] [<command [args...]>]
+coder ssh [workspace_name] [<command [args...]>]
 ```
 
 ### Examples

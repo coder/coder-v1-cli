@@ -19,7 +19,7 @@ import (
 func resourceCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "resources",
-		Short:  "manage Coder resources with platform-level context (users, organizations, environments)",
+		Short:  "manage Coder resources with platform-level context (users, organizations, workspaces)",
 		Hidden: true,
 	}
 	cmd.AddCommand(resourceTop())
@@ -53,8 +53,8 @@ coder resources top --sort-by memory --show-empty`,
 	cmd.Flags().StringVar(&options.user, "user", "", "filter by a user email")
 	cmd.Flags().StringVar(&options.org, "org", "", "filter by the name of an organization")
 	cmd.Flags().StringVar(&options.provider, "provider", "", "filter by the name of a workspace provider")
-	cmd.Flags().StringVar(&options.sortBy, "sort-by", "cpu", "field to sort aggregate groups and environments by (cpu|memory)")
-	cmd.Flags().BoolVar(&options.showEmptyGroups, "show-empty", false, "show groups with zero active environments")
+	cmd.Flags().StringVar(&options.sortBy, "sort-by", "cpu", "field to sort aggregate groups and workspaces by (cpu|memory)")
+	cmd.Flags().BoolVar(&options.showEmptyGroups, "show-empty", false, "show groups with zero active workspaces")
 
 	return cmd
 }
@@ -69,15 +69,15 @@ func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args [
 
 		// NOTE: it's not worth parrallelizing these calls yet given that this specific endpoint
 		// takes about 20x times longer than the other two
-		allEnvs, err := client.Environments(ctx)
+		allWorkspaces, err := client.Workspaces(ctx)
 		if err != nil {
-			return xerrors.Errorf("get environments %w", err)
+			return xerrors.Errorf("get workspaces %w", err)
 		}
-		// only include environments whose last status was "ON"
-		envs := make([]coder.Environment, 0)
-		for _, e := range allEnvs {
-			if e.LatestStat.ContainerStatus == coder.EnvironmentOn {
-				envs = append(envs, e)
+		// only include workspaces whose last status was "ON"
+		workspaces := make([]coder.Workspace, 0)
+		for _, e := range allWorkspaces {
+			if e.LatestStat.ContainerStatus == coder.WorkspaceOn {
+				workspaces = append(workspaces, e)
 			}
 		}
 
@@ -85,7 +85,7 @@ func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args [
 		if err != nil {
 			return xerrors.Errorf("get users: %w", err)
 		}
-		images, err := coderutil.MakeImageMap(ctx, client, envs)
+		images, err := coderutil.MakeImageMap(ctx, client, workspaces)
 		if err != nil {
 			return xerrors.Errorf("get images: %w", err)
 		}
@@ -100,11 +100,11 @@ func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args [
 			return xerrors.Errorf("get workspace providers: %w", err)
 		}
 		data := entities{
-			providers: providers.Kubernetes,
-			users:     users,
-			orgs:      orgs,
-			envs:      envs,
-			images:    images,
+			providers:  providers.Kubernetes,
+			users:      users,
+			orgs:       orgs,
+			workspaces: workspaces,
+			images:     images,
 		}
 		return presentEntites(cmd.OutOrStdout(), data, *options)
 	}
@@ -113,7 +113,7 @@ func runResourceTop(options *resourceTopOptions) func(cmd *cobra.Command, args [
 func presentEntites(w io.Writer, data entities, options resourceTopOptions) error {
 	var (
 		groups  []groupable
-		labeler envLabeler
+		labeler workspaceLabeler
 	)
 	switch options.group {
 	case "user":
@@ -130,32 +130,32 @@ func presentEntites(w io.Writer, data entities, options resourceTopOptions) erro
 }
 
 type entities struct {
-	providers []coder.KubernetesProvider
-	users     []coder.User
-	orgs      []coder.Organization
-	envs      []coder.Environment
-	images    map[string]*coder.Image
+	providers  []coder.KubernetesProvider
+	users      []coder.User
+	orgs       []coder.Organization
+	workspaces []coder.Workspace
+	images     map[string]*coder.Image
 }
 
-func aggregateByUser(data entities, options resourceTopOptions) ([]groupable, envLabeler) {
+func aggregateByUser(data entities, options resourceTopOptions) ([]groupable, workspaceLabeler) {
 	var groups []groupable
 	providerIDMap := providerIDs(data.providers)
 	orgIDMap := make(map[string]coder.Organization)
 	for _, o := range data.orgs {
 		orgIDMap[o.ID] = o
 	}
-	userEnvs := make(map[string][]coder.Environment, len(data.users))
-	for _, e := range data.envs {
+	userWorkspaces := make(map[string][]coder.Workspace, len(data.users))
+	for _, e := range data.workspaces {
 		if options.org != "" && orgIDMap[e.OrganizationID].Name != options.org {
 			continue
 		}
-		userEnvs[e.UserID] = append(userEnvs[e.UserID], e)
+		userWorkspaces[e.UserID] = append(userWorkspaces[e.UserID], e)
 	}
 	for _, u := range data.users {
 		if options.user != "" && u.Email != options.user {
 			continue
 		}
-		groups = append(groups, userGrouping{user: u, envs: userEnvs[u.ID]})
+		groups = append(groups, userGrouping{user: u, userWorkspaces: userWorkspaces[u.ID]})
 	}
 	return groups, labelAll(imgLabeler(data.images), providerLabeler(providerIDMap), orgLabeler(orgIDMap))
 }
@@ -168,22 +168,22 @@ func userIDs(users []coder.User) map[string]coder.User {
 	return userIDMap
 }
 
-func aggregateByOrg(data entities, options resourceTopOptions) ([]groupable, envLabeler) {
+func aggregateByOrg(data entities, options resourceTopOptions) ([]groupable, workspaceLabeler) {
 	var groups []groupable
 	providerIDMap := providerIDs(data.providers)
-	orgEnvs := make(map[string][]coder.Environment, len(data.orgs))
+	orgWorkspaces := make(map[string][]coder.Workspace, len(data.orgs))
 	userIDMap := userIDs(data.users)
-	for _, e := range data.envs {
+	for _, e := range data.workspaces {
 		if options.user != "" && userIDMap[e.UserID].Email != options.user {
 			continue
 		}
-		orgEnvs[e.OrganizationID] = append(orgEnvs[e.OrganizationID], e)
+		orgWorkspaces[e.OrganizationID] = append(orgWorkspaces[e.OrganizationID], e)
 	}
 	for _, o := range data.orgs {
 		if options.org != "" && o.Name != options.org {
 			continue
 		}
-		groups = append(groups, orgGrouping{org: o, envs: orgEnvs[o.ID]})
+		groups = append(groups, orgGrouping{org: o, orgWorkspaces: orgWorkspaces[o.ID]})
 	}
 	return groups, labelAll(imgLabeler(data.images), userLabeler(userIDMap), providerLabeler(providerIDMap))
 }
@@ -196,39 +196,39 @@ func providerIDs(providers []coder.KubernetesProvider) map[string]coder.Kubernet
 	return providerIDMap
 }
 
-func aggregateByProvider(data entities, options resourceTopOptions) ([]groupable, envLabeler) {
+func aggregateByProvider(data entities, options resourceTopOptions) ([]groupable, workspaceLabeler) {
 	var groups []groupable
 	providerIDMap := providerIDs(data.providers)
 	userIDMap := userIDs(data.users)
-	providerEnvs := make(map[string][]coder.Environment, len(data.providers))
-	for _, e := range data.envs {
+	providerWorkspaces := make(map[string][]coder.Workspace, len(data.providers))
+	for _, e := range data.workspaces {
 		if options.provider != "" && providerIDMap[e.ResourcePoolID].Name != options.provider {
 			continue
 		}
-		providerEnvs[e.ResourcePoolID] = append(providerEnvs[e.ResourcePoolID], e)
+		providerWorkspaces[e.ResourcePoolID] = append(providerWorkspaces[e.ResourcePoolID], e)
 	}
 	for _, p := range data.providers {
 		if options.provider != "" && p.Name != options.provider {
 			continue
 		}
-		groups = append(groups, providerGrouping{provider: p, envs: providerEnvs[p.ID]})
+		groups = append(groups, providerGrouping{provider: p, providerWorkspaces: providerWorkspaces[p.ID]})
 	}
 	return groups, labelAll(imgLabeler(data.images), userLabeler(userIDMap)) // TODO: consider adding an org label here
 }
 
-// groupable specifies a structure capable of being an aggregation group of environments (user, org, all).
+// groupable specifies a structure capable of being an aggregation group of workspaces (user, org, all).
 type groupable interface {
 	header() string
-	environments() []coder.Environment
+	workspaces() []coder.Workspace
 }
 
 type userGrouping struct {
-	user coder.User
-	envs []coder.Environment
+	user           coder.User
+	userWorkspaces []coder.Workspace
 }
 
-func (u userGrouping) environments() []coder.Environment {
-	return u.envs
+func (u userGrouping) workspaces() []coder.Workspace {
+	return u.userWorkspaces
 }
 
 func (u userGrouping) header() string {
@@ -236,12 +236,12 @@ func (u userGrouping) header() string {
 }
 
 type orgGrouping struct {
-	org  coder.Organization
-	envs []coder.Environment
+	org           coder.Organization
+	orgWorkspaces []coder.Workspace
 }
 
-func (o orgGrouping) environments() []coder.Environment {
-	return o.envs
+func (o orgGrouping) workspaces() []coder.Workspace {
+	return o.orgWorkspaces
 }
 
 func (o orgGrouping) header() string {
@@ -253,29 +253,29 @@ func (o orgGrouping) header() string {
 }
 
 type providerGrouping struct {
-	provider coder.KubernetesProvider
-	envs     []coder.Environment
+	provider           coder.KubernetesProvider
+	providerWorkspaces []coder.Workspace
 }
 
-func (p providerGrouping) environments() []coder.Environment {
-	return p.envs
+func (p providerGrouping) workspaces() []coder.Workspace {
+	return p.providerWorkspaces
 }
 
 func (p providerGrouping) header() string {
 	return fmt.Sprintf("%s\t", truncate(p.provider.Name, 20, "..."))
 }
 
-func printResourceTop(writer io.Writer, groups []groupable, labeler envLabeler, showEmptyGroups bool, sortBy string) error {
+func printResourceTop(writer io.Writer, groups []groupable, labeler workspaceLabeler, showEmptyGroups bool, sortBy string) error {
 	tabwriter := tabwriter.NewWriter(writer, 0, 0, 4, ' ', 0)
 	defer func() { _ = tabwriter.Flush() }()
 
 	var userResources []aggregatedResources
 	for _, group := range groups {
-		if !showEmptyGroups && len(group.environments()) < 1 {
+		if !showEmptyGroups && len(group.workspaces()) < 1 {
 			continue
 		}
 		userResources = append(userResources, aggregatedResources{
-			groupable: group, resources: aggregateEnvResources(group.environments()),
+			groupable: group, resources: aggregateWorkspaceResources(group.workspaces()),
 		})
 	}
 
@@ -287,19 +287,19 @@ func printResourceTop(writer io.Writer, groups []groupable, labeler envLabeler, 
 	for _, u := range userResources {
 		_, _ = fmt.Fprintf(tabwriter, "%s\t%s", u.header(), u.resources)
 		if verbose {
-			if len(u.environments()) > 0 {
+			if len(u.workspaces()) > 0 {
 				_, _ = fmt.Fprintf(tabwriter, "\f")
 			}
-			for _, env := range u.environments() {
+			for _, workspace := range u.workspaces() {
 				_, _ = fmt.Fprintf(tabwriter, "\t")
-				_, _ = fmt.Fprintln(tabwriter, fmtEnvResources(env, labeler))
+				_, _ = fmt.Fprintln(tabwriter, fmtWorkspaceResources(workspace, labeler))
 			}
 		}
 		_, _ = fmt.Fprint(tabwriter, "\n")
 	}
 	if len(userResources) == 0 {
 		clog.LogInfo(
-			"no groups for the given filters exist with active environments",
+			"no groups for the given filters exist with active workspaces",
 			clog.Tipf("run \"--show-empty\" to see groups with no resources."),
 		)
 	}
@@ -322,12 +322,12 @@ func sortAggregatedResources(resources []aggregatedResources, sortBy string) err
 		return xerrors.Errorf("unknown --sort-by value of \"%s\"", sortBy)
 	}
 	for _, group := range resources {
-		envs := group.environments()
+		workspaces := group.workspaces()
 		switch sortBy {
 		case cpu:
-			sort.Slice(envs, func(i, j int) bool { return envs[i].CPUCores > envs[j].CPUCores })
+			sort.Slice(workspaces, func(i, j int) bool { return workspaces[i].CPUCores > workspaces[j].CPUCores })
 		case memory:
-			sort.Slice(envs, func(i, j int) bool { return envs[i].MemoryGB > envs[j].MemoryGB })
+			sort.Slice(workspaces, func(i, j int) bool { return workspaces[i].MemoryGB > workspaces[j].MemoryGB })
 		default:
 			return xerrors.Errorf("unknown --sort-by value of \"%s\"", sortBy)
 		}
@@ -340,28 +340,28 @@ type aggregatedResources struct {
 	resources
 }
 
-func resourcesFromEnv(env coder.Environment) resources {
+func resourcesFromWorkspace(workspace coder.Workspace) resources {
 	return resources{
-		cpuAllocation:  env.CPUCores,
-		cpuUtilization: env.LatestStat.CPUUsage,
-		memAllocation:  env.MemoryGB,
-		memUtilization: env.LatestStat.MemoryUsage,
+		cpuAllocation:  workspace.CPUCores,
+		cpuUtilization: workspace.LatestStat.CPUUsage,
+		memAllocation:  workspace.MemoryGB,
+		memUtilization: workspace.LatestStat.MemoryUsage,
 	}
 }
 
-func fmtEnvResources(env coder.Environment, labeler envLabeler) string {
-	return fmt.Sprintf("%s\t%s\t%s", truncate(env.Name, 20, "..."), resourcesFromEnv(env), labeler.label(env))
+func fmtWorkspaceResources(workspace coder.Workspace, labeler workspaceLabeler) string {
+	return fmt.Sprintf("%s\t%s\t%s", truncate(workspace.Name, 20, "..."), resourcesFromWorkspace(workspace), labeler.label(workspace))
 }
 
-type envLabeler interface {
-	label(coder.Environment) string
+type workspaceLabeler interface {
+	label(coder.Workspace) string
 }
 
-func labelAll(labels ...envLabeler) envLabeler { return multiLabeler(labels) }
+func labelAll(labels ...workspaceLabeler) workspaceLabeler { return multiLabeler(labels) }
 
-type multiLabeler []envLabeler
+type multiLabeler []workspaceLabeler
 
-func (m multiLabeler) label(e coder.Environment) string {
+func (m multiLabeler) label(e coder.Workspace) string {
 	var str strings.Builder
 	for i, labeler := range m {
 		if i != 0 {
@@ -374,31 +374,31 @@ func (m multiLabeler) label(e coder.Environment) string {
 
 type orgLabeler map[string]coder.Organization
 
-func (o orgLabeler) label(e coder.Environment) string {
+func (o orgLabeler) label(e coder.Workspace) string {
 	return fmt.Sprintf("[org: %s]", o[e.OrganizationID].Name)
 }
 
 type imgLabeler map[string]*coder.Image
 
-func (i imgLabeler) label(e coder.Environment) string {
+func (i imgLabeler) label(e coder.Workspace) string {
 	return fmt.Sprintf("[img: %s:%s]", i[e.ImageID].Repository, e.ImageTag)
 }
 
 type userLabeler map[string]coder.User
 
-func (u userLabeler) label(e coder.Environment) string {
+func (u userLabeler) label(e coder.Workspace) string {
 	return fmt.Sprintf("[user: %s]", u[e.UserID].Email)
 }
 
 type providerLabeler map[string]coder.KubernetesProvider
 
-func (p providerLabeler) label(e coder.Environment) string {
+func (p providerLabeler) label(e coder.Workspace) string {
 	return fmt.Sprintf("[provider: %s]", p[e.ResourcePoolID].Name)
 }
 
-func aggregateEnvResources(envs []coder.Environment) resources {
+func aggregateWorkspaceResources(workspaces []coder.Workspace) resources {
 	var aggregate resources
-	for _, e := range envs {
+	for _, e := range workspaces {
 		aggregate.cpuAllocation += e.CPUCores
 		aggregate.cpuUtilization += e.LatestStat.CPUUsage
 		aggregate.memAllocation += e.MemoryGB

@@ -20,8 +20,8 @@ import (
 func syncCmd() *cobra.Command {
 	var init bool
 	cmd := &cobra.Command{
-		Use:   "sync [local directory] [<env name>:<remote directory>]",
-		Short: "Establish a one way directory sync to a Coder environment",
+		Use:   "sync [local directory] [<workspace name>:<remote directory>]",
+		Short: "Establish a one way directory sync to a Coder workspace",
 		Args:  xcobra.ExactArgs(2),
 		RunE:  makeRunSync(&init),
 	}
@@ -64,11 +64,11 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 			return xerrors.New("remote malformatted")
 		}
 		var (
-			envName   = remoteTokens[0]
-			remoteDir = remoteTokens[1]
+			workspaceName = remoteTokens[0]
+			remoteDir     = remoteTokens[1]
 		)
 
-		env, err := findEnv(ctx, client, envName, coder.Me)
+		workspace, err := findWorkspace(ctx, client, workspaceName, coder.Me)
 		if err != nil {
 			return err
 		}
@@ -78,7 +78,7 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		if info.Mode().IsRegular() {
-			return sync.SingleFile(ctx, local, remoteDir, env, client)
+			return sync.SingleFile(ctx, local, remoteDir, workspace, client)
 		}
 		if !info.IsDir() {
 			return xerrors.Errorf("local path must lead to a regular file or directory: %w", err)
@@ -91,7 +91,7 @@ func makeRunSync(init *bool) func(cmd *cobra.Command, args []string) error {
 
 		s := sync.Sync{
 			Init:                *init,
-			Env:                 *env,
+			Workspace:           *workspace,
 			RemoteDir:           remoteDir,
 			LocalDir:            absLocal,
 			Client:              client,

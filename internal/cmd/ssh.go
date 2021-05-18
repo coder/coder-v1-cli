@@ -22,8 +22,8 @@ var (
 
 func sshCmd() *cobra.Command {
 	cmd := cobra.Command{
-		Use:   "ssh [environment_name] [<command [args...]>]",
-		Short: "Enter a shell of execute a command over SSH into a Coder environment",
+		Use:   "ssh [workspace_name] [<command [args...]>]",
+		Short: "Enter a shell of execute a command over SSH into a Coder workspace",
 		Args:  shValidArgs,
 		Example: `coder ssh my-dev
 coder ssh my-dev pwd`,
@@ -45,18 +45,18 @@ func shell(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	env, err := findEnv(ctx, client, args[0], coder.Me)
+	workspace, err := findWorkspace(ctx, client, args[0], coder.Me)
 	if err != nil {
 		return err
 	}
-	if env.LatestStat.ContainerStatus != coder.EnvironmentOn {
-		return clog.Error("environment not available",
-			fmt.Sprintf("current status: \"%s\"", env.LatestStat.ContainerStatus),
+	if workspace.LatestStat.ContainerStatus != coder.WorkspaceOn {
+		return clog.Error("workspace not available",
+			fmt.Sprintf("current status: \"%s\"", workspace.LatestStat.ContainerStatus),
 			clog.BlankLine,
-			clog.Tipf("use \"coder envs rebuild %s\" to rebuild this environment", env.Name),
+			clog.Tipf("use \"coder workspaces rebuild %s\" to rebuild this workspace", workspace.Name),
 		)
 	}
-	wp, err := client.WorkspaceProviderByID(ctx, env.ResourcePoolID)
+	wp, err := client.WorkspaceProviderByID(ctx, workspace.ResourcePoolID)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func shell(cmd *cobra.Command, args []string) error {
 	}
 	ssh := exec.CommandContext(ctx,
 		"ssh", "-i"+privateKeyFilepath,
-		fmt.Sprintf("%s-%s@%s", me.Username, env.Name, u.Hostname()),
+		fmt.Sprintf("%s-%s@%s", me.Username, workspace.Name, u.Hostname()),
 	)
 	if len(args) > 1 {
 		ssh.Args = append(ssh.Args, args[1:]...)
@@ -101,17 +101,17 @@ func shValidArgs(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		client, err := newClient(ctx, true)
 		if err != nil {
-			return clog.Error("missing [environment_name] argument")
+			return clog.Error("missing [workspace_name] argument")
 		}
-		_, haystack, err := searchForEnv(ctx, client, "", coder.Me)
+		_, haystack, err := searchForWorkspace(ctx, client, "", coder.Me)
 		if err != nil {
-			return clog.Error("missing [environment_name] argument",
+			return clog.Error("missing [workspace_name] argument",
 				fmt.Sprintf("specify one of %q", haystack),
 				clog.BlankLine,
-				clog.Tipf("run \"coder envs ls\" to view your environments"),
+				clog.Tipf("run \"coder workspaces ls\" to view your workspaces"),
 			)
 		}
-		return clog.Error("missing [environment_name] argument")
+		return clog.Error("missing [workspace_name] argument")
 	}
 	return nil
 }

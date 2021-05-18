@@ -85,7 +85,7 @@ func mockResourceTopEntities() entities {
 	imageIDs := [...]string{randString(10), randString(10), randString(10)}
 	providerIDs := [...]string{randString(10), randString(10), randString(10)}
 	userIDs := [...]string{randString(10), randString(10), randString(10)}
-	envIDs := [...]string{randString(10), randString(10), randString(10), randString(10)}
+	workspaceIDs := [...]string{randString(10), randString(10), randString(10), randString(10)}
 
 	return entities{
 		providers: []coder.KubernetesProvider{
@@ -126,47 +126,47 @@ func mockResourceTopEntities() entities {
 				Members: []coder.OrganizationUser{{}, {}},
 			},
 		},
-		envs: []coder.Environment{
+		workspaces: []coder.Workspace{
 			{
-				ID:             envIDs[0],
+				ID:             workspaceIDs[0],
 				ResourcePoolID: providerIDs[0],
 				ImageID:        imageIDs[0],
 				OrganizationID: orgIDs[0],
 				UserID:         userIDs[0],
-				Name:           "dev-env",
+				Name:           "dev-workspace",
 				ImageTag:       "20.04",
 				CPUCores:       12.2,
 				MemoryGB:       64.4,
-				LatestStat: coder.EnvironmentStat{
-					ContainerStatus: coder.EnvironmentOn,
+				LatestStat: coder.WorkspaceStat{
+					ContainerStatus: coder.WorkspaceOn,
 				},
 			},
 			{
-				ID:             envIDs[1],
+				ID:             workspaceIDs[1],
 				ResourcePoolID: providerIDs[1],
 				ImageID:        imageIDs[1],
 				OrganizationID: orgIDs[1],
 				UserID:         userIDs[1],
-				Name:           "another-env",
+				Name:           "another-workspace",
 				ImageTag:       "10.2",
 				CPUCores:       4,
 				MemoryGB:       16,
-				LatestStat: coder.EnvironmentStat{
-					ContainerStatus: coder.EnvironmentOn,
+				LatestStat: coder.WorkspaceStat{
+					ContainerStatus: coder.WorkspaceOn,
 				},
 			},
 			{
-				ID:             envIDs[2],
+				ID:             workspaceIDs[2],
 				ResourcePoolID: providerIDs[1],
 				ImageID:        imageIDs[1],
 				OrganizationID: orgIDs[1],
 				UserID:         userIDs[1],
-				Name:           "yet-another-env",
+				Name:           "yet-another-workspace",
 				ImageTag:       "10.2",
 				CPUCores:       100,
 				MemoryGB:       2,
-				LatestStat: coder.EnvironmentStat{
-					ContainerStatus: coder.EnvironmentOn,
+				LatestStat: coder.WorkspaceStat{
+					ContainerStatus: coder.WorkspaceOn,
 				},
 			},
 		},

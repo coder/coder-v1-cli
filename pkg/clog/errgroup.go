@@ -10,7 +10,7 @@ import (
 
 // ErrGroup wraps the /x/sync/errgroup.(Group) and adds clog logging and rich error propagation.
 //
-// Take for example, a case in which we are concurrently stopping a slice of environments.
+// Take for example, a case in which we are concurrently stopping a slice of workspaces.
 // In this case, we want to log errors as they happen, not pass them through the callstack as errors.
 // When the operations complete, we want to log how many, if any, failed. The caller is still expected
 // to handle success and info logging.

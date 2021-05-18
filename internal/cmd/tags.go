@@ -36,7 +36,7 @@ func tagsCreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "create [tag]",
 		Short:   "add an image tag",
-		Long:    "allow users to create environments with this image tag",
+		Long:    "allow users to create workspaces with this image tag",
 		Example: `coder tags create latest --image ubuntu --org default`,
 		Args:    xcobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -6,15 +6,15 @@ import (
 )
 
 type activityRequest struct {
-	Source        string `json:"source"`
-	EnvironmentID string `json:"environment_id"`
+	Source      string `json:"source"`
+	WorkspaceID string `json:"workspace_id"`
 }
 
 // PushActivity pushes CLI activity to Coder.
-func (c *DefaultClient) PushActivity(ctx context.Context, source, envID string) error {
+func (c *DefaultClient) PushActivity(ctx context.Context, source, workspaceID string) error {
 	resp, err := c.request(ctx, http.MethodPost, "/api/private/metrics/usage/push", activityRequest{
-		Source:        source,
-		EnvironmentID: envID,
+		Source:      source,
+		WorkspaceID: workspaceID,
 	})
 	if err != nil {
 		return err
