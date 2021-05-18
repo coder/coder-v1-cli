@@ -44,7 +44,8 @@ func workspacesCmd() *cobra.Command {
 		watchBuildLogCommand(),
 		rebuildWorkspaceCommand(),
 		createWorkspaceCmd(),
-		createWorkspaceFromConfigCmd(),
+		workspaceFromConfigCmd(true),
+		workspaceFromConfigCmd(false),
 		editWorkspaceCmd(),
 	)
 	return cmd
@@ -296,130 +297,195 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 	return cmd
 }
 
-func createWorkspaceFromConfigCmd() *cobra.Command {
+// selectOrg finds the organization in the list or returns the default organization
+// if the needle isn't found.
+func selectOrg(needle string, haystack []coder.Organization) (*coder.Organization, error) {
+	var userOrg *coder.Organization
+	for i := range haystack {
+		// Look for org by name
+		if haystack[i].Name == needle {
+			userOrg = &haystack[i]
+			break
+		}
+		// Or use default if the provided is blank
+		if needle == "" && haystack[i].Default {
+			userOrg = &haystack[i]
+			break
+		}
+	}
+
+	if userOrg == nil {
+		if needle != "" {
+			return nil, xerrors.Errorf("Unable to locate org '%s'", needle)
+		}
+		return nil, xerrors.Errorf("Unable to locate a default organization for the user")
+	}
+	return userOrg, nil
+}
+
+// workspaceFromConfigCmd will return a create or an update workspace for a template'd workspace.
+// The code for create/update is nearly identical.
+// If `update` is true, the update command is returned. If false, the create command.
+func workspaceFromConfigCmd(update bool) *cobra.Command {
 	var (
-		ref           string
-		repo          string
-		follow        bool
-		filepath      string
-		org           string
-		providerName  string
-		workspaceName string
+		ref          string
+		repo         string
+		follow       bool
+		filepath     string
+		org          string
+		providerName string
+		envName      string
 	)
 
-	cmd := &cobra.Command{
-		Use:   "create-from-config",
-		Short: "create a new workspace from a template",
-		Long:  "Create a new Coder workspace using a Workspaces As Code template.",
-		Example: `# create a new workspace from git repository
-coder workspaces create-from-config --name="dev-workspace" --repo-url https://github.com/cdr/m --ref my-branch
-coder workspaces create-from-config --name="dev-workspace" -f coder.yaml`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
+	run := func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
 
-			if workspaceName == "" {
-				return clog.Error("Must provide a workspace name.",
-					clog.BlankLine,
-					clog.Tipf("Use --name=<workspace-name> to name your workspace"),
-				)
-			}
+		// Update requires the env name, and the name should be the first argument.
+		if update {
+			envName = args[0]
+		} else if envName == "" {
+			// Create takes the name as a flag, and it must be set
+			return clog.Error("Must provide a workspace name.",
+				clog.BlankLine,
+				clog.Tipf("Use --name=<workspace-name> to name your workspace"),
+			)
+		}
 
-			client, err := newClient(ctx, true)
-			if err != nil {
-				return err
-			}
+		client, err := newClient(ctx, true)
+		if err != nil {
+			return err
+		}
 
-			orgs, err := getUserOrgs(ctx, client, coder.Me)
-			if err != nil {
-				return err
-			}
+		orgs, err := getUserOrgs(ctx, client, coder.Me)
+		if err != nil {
+			return err
+		}
 
-			multiOrgMember := len(orgs) > 1
-			if multiOrgMember && org == "" {
-				return xerrors.New("org is required for multi-org members")
-			}
+		multiOrgMember := len(orgs) > 1
+		if multiOrgMember && org == "" {
+			return xerrors.New("org is required for multi-org members")
+		}
 
-			var userOrg *coder.Organization
-			for i := range orgs {
-				// Look for org by name
-				if orgs[i].Name == org {
-					userOrg = &orgs[i]
-					break
-				}
-				// Or use default if the provided is blank
-				if org == "" && orgs[i].Default {
-					userOrg = &orgs[i]
-					break
-				}
-			}
+		// This is the env to be updated/created
+		var env *coder.Workspace
 
-			if userOrg == nil {
-				if org != "" {
-					return xerrors.Errorf("Unable to locate org '%s'", org)
-				}
-				return xerrors.Errorf("Unable to locate a default organization for the user")
-			}
-
-			var rd io.Reader
-			if filepath != "" {
-				b, err := ioutil.ReadFile(filepath)
-				if err != nil {
-					return xerrors.Errorf("read local file: %w", err)
-				}
-				rd = bytes.NewReader(b)
-			}
-
-			req := coder.ParseTemplateRequest{
-				RepoURL:  repo,
-				Ref:      ref,
-				Local:    rd,
-				OrgID:    userOrg.ID,
-				Filepath: ".coder/coder.yaml",
-			}
-
-			version, err := client.ParseTemplate(ctx, req)
+		// OrgID is the org where the template and env should be created.
+		// If we are updating an env, use the orgID from the workspace.
+		var orgID string
+		if update {
+			env, err = findWorkspace(ctx, client, envName, coder.Me)
 			if err != nil {
 				return handleAPIError(err)
 			}
-
-			provider, err := coderutil.DefaultWorkspaceProvider(ctx, client)
+			orgID = env.OrganizationID
+		} else {
+			var userOrg *coder.Organization
+			// Select org in list or use default
+			userOrg, err := selectOrg(org, orgs)
 			if err != nil {
-				return xerrors.Errorf("default workspace provider: %w", err)
+				return err
 			}
 
-			workspace, err := client.CreateWorkspace(ctx, coder.CreateWorkspaceRequest{
-				OrgID:          userOrg.ID,
+			orgID = userOrg.ID
+		}
+
+		if filepath == "" && ref == "" && repo == "" {
+			return clog.Error("Must specify a configuration source",
+				"A template source is either sourced from a local file (-f) or from a git repository (--repo-url and --ref)",
+			)
+		}
+
+		var rd io.Reader
+		if filepath != "" {
+			b, err := ioutil.ReadFile(filepath)
+			if err != nil {
+				return xerrors.Errorf("read local file: %w", err)
+			}
+			rd = bytes.NewReader(b)
+		}
+
+		req := coder.ParseTemplateRequest{
+			RepoURL:  repo,
+			Ref:      ref,
+			Local:    rd,
+			OrgID:    orgID,
+			Filepath: ".coder/coder.yaml",
+		}
+
+		version, err := client.ParseTemplate(ctx, req)
+		if err != nil {
+			return handleAPIError(err)
+		}
+
+		provider, err := coderutil.DefaultWorkspaceProvider(ctx, client)
+		if err != nil {
+			return xerrors.Errorf("default workspace provider: %w", err)
+		}
+
+		if update {
+			err = client.EditWorkspace(ctx, env.ID, coder.UpdateWorkspaceReq{
+				TemplateID: &version.TemplateID,
+			})
+		} else {
+			env, err = client.CreateWorkspace(ctx, coder.CreateWorkspaceRequest{
+				OrgID:          orgID,
 				TemplateID:     version.TemplateID,
 				ResourcePoolID: provider.ID,
 				Namespace:      provider.DefaultNamespace,
-				Name:           workspaceName,
+				Name:           envName,
 			})
-			if err != nil {
-				return handleAPIError(err)
-			}
+		}
+		if err != nil {
+			return handleAPIError(err)
+		}
 
-			if follow {
-				clog.LogSuccess("creating workspace...")
-				if err := trailBuildLogs(ctx, client, workspace.ID); err != nil {
-					return err
-				}
-				return nil
+		if follow {
+			clog.LogSuccess("creating workspace...")
+			if err := trailBuildLogs(ctx, client, env.ID); err != nil {
+				return err
 			}
-
-			clog.LogSuccess("creating workspace...",
-				clog.BlankLine,
-				clog.Tipf(`run "coder workspaces watch-build %s" to trail the build logs`, workspace.Name),
-			)
 			return nil
-		},
+		}
+
+		clog.LogSuccess("creating workspace...",
+			clog.BlankLine,
+			clog.Tipf(`run "coder envs watch-build %s" to trail the build logs`, env.Name),
+		)
+		return nil
 	}
-	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the workspace should be created under.")
+
+	var cmd *cobra.Command
+	if update {
+		cmd = &cobra.Command{
+			Use:   "edit-from-config",
+			Short: "change the template a workspace is tracking",
+			Long:  "Edit an existing Coder workspace using a Workspaces As Code template.",
+			Args:  cobra.ExactArgs(1),
+			Example: `# edit a new workspace from git repository
+coder envs edit-from-config dev-env --repo-url https://github.com/cdr/m --ref my-branch
+coder envs edit-from-config dev-env -f coder.yaml`,
+			RunE: run,
+		}
+	} else {
+		cmd = &cobra.Command{
+			Use:   "create-from-config",
+			Short: "create a new workspace from a template",
+			Long:  "Create a new Coder workspace using a Workspaces As Code template.",
+			Example: `# create a new workspace from git repository
+coder envs create-from-config --name="dev-env" --repo-url https://github.com/cdr/m --ref my-branch
+coder envs create-from-config --name="dev-env" -f coder.yaml`,
+			RunE: run,
+		}
+		cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the workspace")
+		cmd.Flags().StringVar(&envName, "name", "", "name of the workspace to be created")
+		cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the workspace should be created under.")
+		// Ref and repo-url can only be used for create
+		cmd.Flags().StringVarP(&ref, "ref", "", "master", "git reference to pull template from. May be a branch, tag, or commit hash.")
+		cmd.Flags().StringVarP(&repo, "repo-url", "r", "", "URL of the git repository to pull the config from. Config file must live in '.coder/coder.yaml'.")
+	}
+
 	cmd.Flags().StringVarP(&filepath, "filepath", "f", "", "path to local template file.")
-	cmd.Flags().StringVarP(&ref, "ref", "", "master", "git reference to pull template from. May be a branch, tag, or commit hash.")
-	cmd.Flags().StringVarP(&repo, "repo-url", "r", "", "URL of the git repository to pull the config from. Config file must live in '.coder/coder.yaml'.")
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
-	cmd.Flags().StringVar(&providerName, "provider", "", "name of Workspace Provider with which to create the workspace")
-	cmd.Flags().StringVar(&workspaceName, "name", "", "name of the workspace to be created")
 	return cmd
 }
 

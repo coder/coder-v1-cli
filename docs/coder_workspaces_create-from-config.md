@@ -14,8 +14,8 @@ coder workspaces create-from-config [flags]
 
 ```
 # create a new workspace from git repository
-coder workspaces create-from-config --name="dev-workspace" --repo-url https://github.com/cdr/m --ref my-branch
-coder workspaces create-from-config --name="dev-workspace" -f coder.yaml
+coder envs create-from-config --name="dev-env" --repo-url https://github.com/cdr/m --ref my-branch
+coder envs create-from-config --name="dev-env" -f coder.yaml
 ```
 
 ### Options
