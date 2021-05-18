@@ -1,19 +1,19 @@
-## coder envs edit-from-config
+## coder workspaces edit-from-config
 
-change the template an environment is tracking
+change the template a workspace is tracking
 
 ### Synopsis
 
-Edit an existing Coder environment using a Workspaces As Code template.
+Edit an existing Coder workspace using a Workspaces As Code template.
 
 ```
-coder envs edit-from-config [flags]
+coder workspaces edit-from-config [flags]
 ```
 
 ### Examples
 
 ```
-# edit a new environment from git repository
+# edit a new workspace from git repository
 coder envs edit-from-config dev-env --repo-url https://github.com/cdr/m --ref my-branch
 coder envs edit-from-config dev-env -f coder.yaml
 ```
@@ -34,5 +34,5 @@ coder envs edit-from-config dev-env -f coder.yaml
 
 ### SEE ALSO
 
-* [coder envs](coder_envs.md)	 - Interact with Coder environments
+* [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces
 
