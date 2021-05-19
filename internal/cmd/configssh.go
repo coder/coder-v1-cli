@@ -230,8 +230,6 @@ func makeSSHConfig(host, userName, workspaceName, privateKeyFilepath string, tun
    ConnectTimeout=0
    IdentitiesOnly yes
    IdentityFile="%s"
-   ServerAliveInterval 60
-   ServerAliveCountMax 3
 `, workspaceName, workspaceName, workspaceName, privateKeyFilepath)
 	}
 
@@ -243,8 +241,6 @@ func makeSSHConfig(host, userName, workspaceName, privateKeyFilepath string, tun
    ConnectTimeout=0
    IdentitiesOnly yes
    IdentityFile="%s"
-   ServerAliveInterval 60
-   ServerAliveCountMax 3
 `, workspaceName, host, userName, workspaceName, privateKeyFilepath)
 }
 
