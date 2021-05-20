@@ -56,6 +56,11 @@ func createDumbBroker(t *testing.T) (connectAddr string, listenAddr string) {
 		c, err := websocket.Accept(w, r, nil)
 		if err != nil {
 			t.Error(err)
+			return
+		}
+		if sess == nil {
+			t.Error("listen not called")
+			return
 		}
 		nc := websocket.NetConn(context.Background(), c, websocket.MessageBinary)
 		mut.Lock()
