@@ -9,6 +9,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.16.3'
       - name: Build
         run: make -j build/linux build/windows
       - name: Upload linux
@@ -36,6 +39,9 @@ jobs:
         with:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.16.3'
       - name: Build Release Assets
         run: make build/macos
         env:
