@@ -117,9 +117,6 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 
 		binPath, err := binPath()
 		if err != nil {
-			if runtime.GOOS == "windows" {
-				return xerrors.Errorf("Failed to ensure `coder` is in $PATH, please move the `coder` binary to a location in $PATH (such as System32): %w", err)
-			}
 			return xerrors.Errorf("Failed to get executable path: %w", err)
 		}
 
@@ -159,14 +156,21 @@ func binPath() (string, error) {
 		return "", xerrors.Errorf("get executable path: %w", err)
 	}
 
-	// On Windows, the coder-cli executable must be in $PATH for Msys2 and Git
-	// Bash to function correctly. To prevent weird behavior when people switch
-	// between the two, we require this for all users.
+	// On Windows, the coder-cli executable must be in $PATH for both Msys2/Git
+	// Bash and OpenSSH for Windows (used by Powershell and VS Code) to function
+	// correctly. Check if the current executable is in $PATH, and warn the user
+	// if it isn't.
 	if runtime.GOOS == "windows" {
 		binName := filepath.Base(exePath)
 		pathPath, err := exec.LookPath(exePath)
 		if err != nil {
-			return "", xerrors.Errorf("locate %q in $PATH: %w", binName, err)
+			clog.LogWarn(
+				"The current executable is not in $PATH.",
+				"This may lead to problems connecting to your workspace via SSH.",
+				fmt.Sprintf("Please move %q to a location in your $PATH (such as System32) and run `%s config-ssh` again.", binName, binName),
+			)
+			// Return the exePath so SSH at least works outside of Msys2.
+			return exePath, nil
 		}
 
 		// Warn the user if the current executable is not the same as the one in
