@@ -6,20 +6,19 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"os/exec"
 	"os/user"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
 
-	"cdr.dev/coder-cli/pkg/clog"
-
+	"github.com/cli/safeexec"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/coderutil"
+	"cdr.dev/coder-cli/pkg/clog"
 )
 
 const sshStartToken = "# ------------START-CODER-ENTERPRISE-----------"
@@ -162,7 +161,10 @@ func binPath() (string, error) {
 	// if it isn't.
 	if runtime.GOOS == "windows" {
 		binName := filepath.Base(exePath)
-		pathPath, err := exec.LookPath(exePath)
+		// We use safeexec instead of os/exec because os/exec returns paths in
+		// the current working directory, which we will run into very often when
+		// looking for our own path.
+		pathPath, err := safeexec.LookPath(binName)
 		if err != nil {
 			clog.LogWarn(
 				"The current executable is not in $PATH.",
