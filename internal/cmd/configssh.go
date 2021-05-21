@@ -132,7 +132,12 @@ func configSSH(configpath *string, remove *bool, next *bool) func(cmd *cobra.Com
 			}
 		}
 
-		newConfig := makeNewConfigs(user.Username, workspacesWithProviders, privateKeyFilepath, p2p)
+		binPath, err := os.Executable()
+		if err != nil {
+			return xerrors.Errorf("Failed to get executable path: %w", err)
+		}
+
+		newConfig := makeNewConfigs(binPath, user.Username, workspacesWithProviders, privateKeyFilepath, p2p)
 
 		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
 		if err != nil {
@@ -193,7 +198,7 @@ func writeSSHKey(ctx context.Context, client coder.Client, privateKeyPath string
 	return ioutil.WriteFile(privateKeyPath, []byte(key.PrivateKey), 0600)
 }
 
-func makeNewConfigs(userName string, workspaces []coderutil.WorkspaceWithWorkspaceProvider, privateKeyFilepath string, p2p bool) string {
+func makeNewConfigs(binPath, userName string, workspaces []coderutil.WorkspaceWithWorkspaceProvider, privateKeyFilepath string, p2p bool) string {
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", sshStartToken, sshStartMessage)
 
 	sort.Slice(workspaces, func(i, j int) bool { return workspaces[i].Workspace.Name < workspaces[j].Workspace.Name })
@@ -213,24 +218,24 @@ func makeNewConfigs(userName string, workspaces []coderutil.WorkspaceWithWorkspa
 		}
 
 		useTunnel := workspace.WorkspaceProvider.BuiltIn && p2p
-		newConfig += makeSSHConfig(u.Host, userName, workspace.Workspace.Name, privateKeyFilepath, useTunnel)
+		newConfig += makeSSHConfig(binPath, u.Host, userName, workspace.Workspace.Name, privateKeyFilepath, useTunnel)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", sshEndToken)
 
 	return newConfig
 }
 
-func makeSSHConfig(host, userName, workspaceName, privateKeyFilepath string, tunnel bool) string {
+func makeSSHConfig(binPath, host, userName, workspaceName, privateKeyFilepath string, tunnel bool) string {
 	if tunnel {
 		return fmt.Sprintf(
 			`Host coder.%s
    HostName coder.%s
-   ProxyCommand coder tunnel %s 12213 stdio
+   ProxyCommand %s tunnel %s 12213 stdio
    StrictHostKeyChecking no
    ConnectTimeout=0
    IdentitiesOnly yes
    IdentityFile="%s"
-`, workspaceName, workspaceName, workspaceName, privateKeyFilepath)
+`, workspaceName, workspaceName, binPath, workspaceName, privateKeyFilepath)
 	}
 
 	return fmt.Sprintf(
