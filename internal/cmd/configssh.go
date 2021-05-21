@@ -235,6 +235,8 @@ func makeSSHConfig(binPath, host, userName, envName, privateKeyFilepath string, 
    ConnectTimeout=0
    IdentitiesOnly yes
    IdentityFile="%s"
+   ServerAliveInterval 60
+   ServerAliveCountMax 3
 `, envName, envName, binPath, envName, privateKeyFilepath)
 	}
 
