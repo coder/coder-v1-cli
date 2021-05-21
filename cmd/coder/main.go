@@ -25,15 +25,21 @@ func main() {
 		}()
 	}
 
-	stdoutState, err := xterminal.MakeOutputRaw(os.Stdout.Fd())
-	if err != nil {
-		clog.Log(clog.Fatal(fmt.Sprintf("set output to raw: %s", err)))
-		cancel()
-		os.Exit(1)
-	}
-	restoreTerminal := func() {
-		// Best effort. Would result in broken terminal on window but nothing we can do about it.
-		_ = xterminal.Restore(os.Stdout.Fd(), stdoutState)
+	restoreTerminal := func() {}
+
+	// Janky, but SSH on windows sets the output to raw.
+	// If we set it ourselves, SSH fails because the FD isn't found.
+	if len(os.Args) >= 2 && os.Args[1] != "tunnel" {
+		state, err := xterminal.MakeOutputRaw(os.Stdout.Fd())
+		if err != nil {
+			clog.Log(clog.Fatal(fmt.Sprintf("set output to raw: %s", err)))
+			cancel()
+			os.Exit(1)
+		}
+		restoreTerminal = func() {
+			// Best effort. Would result in broken terminal on window but nothing we can do about it.
+			_ = xterminal.Restore(os.Stdout.Fd(), state)
+		}
 	}
 
 	app := cmd.Make()
