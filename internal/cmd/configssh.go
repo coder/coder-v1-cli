@@ -132,7 +132,12 @@ func configSSH(configpath *string, remove *bool, next *bool) func(cmd *cobra.Com
 			}
 		}
 
-		newConfig := makeNewConfigs(user.Username, envsWithProviders, privateKeyFilepath, p2p)
+		binPath, err := os.Executable()
+		if err != nil {
+			return xerrors.Errorf("Failed to get executable path: %w", err)
+		}
+
+		newConfig := makeNewConfigs(binPath, user.Username, envsWithProviders, privateKeyFilepath, p2p)
 
 		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
 		if err != nil {
@@ -193,7 +198,7 @@ func writeSSHKey(ctx context.Context, client coder.Client, privateKeyPath string
 	return ioutil.WriteFile(privateKeyPath, []byte(key.PrivateKey), 0600)
 }
 
-func makeNewConfigs(userName string, envs []coderutil.EnvWithWorkspaceProvider, privateKeyFilepath string, p2p bool) string {
+func makeNewConfigs(binPath, userName string, envs []coderutil.EnvWithWorkspaceProvider, privateKeyFilepath string, p2p bool) string {
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", sshStartToken, sshStartMessage)
 
 	sort.Slice(envs, func(i, j int) bool { return envs[i].Env.Name < envs[j].Env.Name })
@@ -213,26 +218,24 @@ func makeNewConfigs(userName string, envs []coderutil.EnvWithWorkspaceProvider, 
 		}
 
 		useTunnel := env.WorkspaceProvider.BuiltIn && p2p
-		newConfig += makeSSHConfig(u.Host, userName, env.Env.Name, privateKeyFilepath, useTunnel)
+		newConfig += makeSSHConfig(binPath, u.Host, userName, env.Env.Name, privateKeyFilepath, useTunnel)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", sshEndToken)
 
 	return newConfig
 }
 
-func makeSSHConfig(host, userName, envName, privateKeyFilepath string, tunnel bool) string {
+func makeSSHConfig(binPath, host, userName, envName, privateKeyFilepath string, tunnel bool) string {
 	if tunnel {
 		return fmt.Sprintf(
 			`Host coder.%s
    HostName coder.%s
-   ProxyCommand coder tunnel %s 12213 stdio
+   ProxyCommand %s tunnel %s 12213 stdio
    StrictHostKeyChecking no
    ConnectTimeout=0
    IdentitiesOnly yes
    IdentityFile="%s"
-   ServerAliveInterval 60
-   ServerAliveCountMax 3
-`, envName, envName, envName, privateKeyFilepath)
+`, envName, envName, binPath, envName, privateKeyFilepath)
 	}
 
 	return fmt.Sprintf(
