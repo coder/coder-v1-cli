@@ -45,7 +45,7 @@ type WorkspaceProviderType string
 
 // Workspace Provider types.
 const (
-	WorkspaceProviderKubernetes WorkspaceProviderType = "kubernetes"
+	WorkspaceProviderTypeKubernetes WorkspaceProviderType = "kubernetes"
 )
 
 // WorkspaceProviderByID fetches a workspace provider entity by its unique ID.
@@ -67,27 +67,55 @@ func (c *DefaultClient) WorkspaceProviders(ctx context.Context) (*WorkspaceProvi
 	}
 	return &providers, nil
 }
-
-// CreateWorkspaceProviderReq defines the request parameters for creating a new workspace provider entity.
-type CreateWorkspaceProviderReq struct {
-	Name           string                `json:"name"`
-	Type           WorkspaceProviderType `json:"type"`
-	Hostname       string                `json:"hostname"`
-	ClusterAddress string                `json:"cluster_address"`
+// WorkspaceProviderKubernetesCreateRequest defines the request parameters for creating a new kubernetes workspace provider.
+type WorkspaceProviderKubernetesCreateRequest struct {
+	Name                string   `json:"name"`
+	ClusterCA           string   `json:"cluster_ca"`
+	ClusterAddress      string   `json:"cluster_address"`
+	SAToken             string   `json:"sa_token"`
+	DefaultNamespace    string   `json:"default_namespace"`
+	StorageClass        string   `json:"storage_class"`
+	SSHEnabled          bool     `json:"ssh_enabled"`
+	EnvironmentSA       string   `json:"environment_sa"`
+	OrgAllowlist        []string `json:"org_allowlist"`
 }
 
-// CreateWorkspaceProviderRes defines the response from creating a new workspace provider entity.
-type CreateWorkspaceProviderRes struct {
-	ID            string                  `json:"id" table:"ID"`
-	Name          string                  `json:"name" table:"Name"`
-	Status        WorkspaceProviderStatus `json:"status" table:"Status"`
-	EnvproxyToken string                  `json:"envproxy_token" table:"Envproxy Token"`
+// WorkspaceProviderKubernetes defines a kubernetes workspace provider.
+type WorkspaceProviderKubernetes struct {
+	WorkspaceProviderGeneric
+	Config WorkspaceProviderKubeConfig `json:"config"`
+}
+
+// WorkspaceProviderGeneric defines the generic parameters of a workspace provider.
+type WorkspaceProviderGeneric struct {
+	ID                string                      `json:"id"`
+	Name              string                      `json:"name"`
+	Status            WorkspaceProviderStatus     `json:"status"`
+	BuiltIn           bool                        `json:"built_in"`
+	OrgAllowlist      []string                    `json:"org_allowlist"`
+	EnvproxyAccessURL string                      `json:"envproxy_access_url"`
+	DevurlHost        string                      `json:"devurl_host"`
+	ErrorMessage      string                      `json:"error_message"`
+	CordonReason      string                      `json:"cordon_reason"`
+	EnableNetV2       bool                        `json:"enable_netv2"`
+}
+
+// WorkspaceProviderKubeConfig defines the kubernetes parameters of a workspace provider.
+type WorkspaceProviderKubeConfig struct {
+	ClusterCA           string `json:"cluster_ca" diff:"cluster_ca"`
+	ClusterAddress      string `json:"cluster_address" diff:"cluster_address"`
+	SAToken             string `json:"sa_token" diff:"sa_token,private"`
+	DefaultNamespace    string `json:"default_namespace" diff:"default_namespace"`
+	StorageClass        string `json:"storage_class" diff:"storage_class"`
+	ClusterDomainSuffix string `json:"cluster_domain_suffix" diff:"cluster_domain_suffix"`
+	SSHEnabled          bool   `json:"ssh_enabled" diff:"ssh_enabled"`
+	EnvironmentSA       string `json:"environment_sa" diff:"environment_sa"`
 }
 
 // CreateWorkspaceProvider creates a new WorkspaceProvider entity.
-func (c *DefaultClient) CreateWorkspaceProvider(ctx context.Context, req CreateWorkspaceProviderReq) (*CreateWorkspaceProviderRes, error) {
-	var res CreateWorkspaceProviderRes
-	err := c.requestBody(ctx, http.MethodPost, "/api/private/resource-pools", req, &res)
+func (c *DefaultClient) CreateWorkspaceProvider(ctx context.Context, req WorkspaceProviderKubernetesCreateRequest) (*WorkspaceProviderKubernetes, error) {
+	var res WorkspaceProviderKubernetes
+	err := c.requestBody(ctx, http.MethodPost, "/api/private/workspace-providers", req, &res)
 	if err != nil {
 		return nil, err
 	}

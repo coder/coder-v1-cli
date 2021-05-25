@@ -1,11 +1,10 @@
 package cmd
 
 import (
-	"fmt"
-	"net/url"
-
 	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/coder-cli/internal/x/xcobra"
+	"cdr.dev/coder-cli/internal/x/xkube"
+	"fmt"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -25,6 +24,7 @@ func providersCmd() *cobra.Command {
 
 	cmd.AddCommand(
 		createProviderCmd(),
+		installProviderCmd(),
 		listProviderCmd(),
 		deleteProviderCmd(),
 		cordonProviderCmd(),
@@ -36,100 +36,98 @@ func providersCmd() *cobra.Command {
 
 func createProviderCmd() *cobra.Command {
 	var (
-		hostname       string
-		clusterAddress string
+		fromContext bool
+		clusterCA string
+		clusterAddr string
+		SAToken string
+		namespace string
+		storageClass string
+		sshEnabled bool
+		environmentSA string
+		orgAllowlist []string
 	)
 	cmd := &cobra.Command{
-		Use:   "create [name] --hostname=[hostname] --cluster-address=[clusterAddress]",
+		Use:   "create [name]",
 		Args:  xcobra.ExactArgs(1),
 		Short: "create a new workspace provider.",
 		Long:  "Create a new Coder workspace provider.",
-		Example: `# create a new workspace provider in a pending state
+		Example: `# create a new workspace provider
 
-coder providers create my-provider --hostname=https://provider.example.com --cluster-address=https://255.255.255.255`,
+coder providers create my-provider`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
+			var (
+				ctx = cmd.Context()
+				name = args[0]
+				err error
+				req = &coder.WorkspaceProviderKubernetesCreateRequest{
+					Name: name,
+					ClusterCA: clusterCA,
+					ClusterAddress: clusterAddr,
+					SAToken: SAToken,
+					DefaultNamespace: namespace,
+					StorageClass: storageClass,
+					SSHEnabled: sshEnabled,
+					EnvironmentSA: environmentSA,
+					OrgAllowlist: orgAllowlist,
+				}
+			)
+
+			if fromContext {
+				req, err = xkube.ApplyKubeConfigFromContext(ctx, req)
+				if err != nil {
+					return xerrors.Errorf("reading kube config from context: %w", err)
+				}
+			}
 
 			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
 			}
 
-			version, err := client.APIVersion(ctx)
+			_, err = client.CreateWorkspaceProvider(ctx, *req)
 			if err != nil {
-				return xerrors.Errorf("get application version: %w", err)
+				return err
 			}
-
-			cemanagerURL := client.BaseURL()
-			ingressHost, err := url.Parse(hostname)
-			if err != nil {
-				return xerrors.Errorf("parse hostname: %w", err)
-			}
-
-			if cemanagerURL.Scheme != ingressHost.Scheme {
-				return xerrors.Errorf("Coder access url and hostname must have matching protocols: coder access url: %s, workspace provider hostname: %s", cemanagerURL.String(), ingressHost.String())
-			}
-
-			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
-			createReq := &coder.CreateWorkspaceProviderReq{
-				Name:           args[0],
-				Type:           coder.WorkspaceProviderKubernetes,
-				Hostname:       hostname,
-				ClusterAddress: clusterAddress,
-			}
-
-			wp, err := client.CreateWorkspaceProvider(ctx, *createReq)
-			if err != nil {
-				return xerrors.Errorf("create workspace provider: %w", err)
-			}
-
-			var sslNote string
-			if ingressHost.Scheme == "https" {
-				sslNote = `
-NOTE: Since the hostname provided is using https you must ensure the deployment
-has a valid SSL certificate. See https://coder.com/docs/guides/ssl-certificates
-for more information.`
-			}
-
-			clog.LogSuccess(fmt.Sprintf(`
-Created workspace provider "%s"
-`, createReq.Name))
-			_ = tablewriter.WriteTable(cmd.OutOrStdout(), 1, func(i int) interface{} {
-				return *wp
-			})
-			_, _ = fmt.Fprint(cmd.OutOrStdout(), `
-Now that the workspace provider is provisioned, it must be deployed into the cluster. To learn more,
-visit https://coder.com/docs/workspace-providers/deployment
-
-When connected to the cluster you wish to deploy onto, use the following helm command:
-
-helm upgrade coder-workspace-provider coder/workspace-provider \
-    --version=`+version+` \
-    --atomic \
-    --install \
-    --force \
-    --set envproxy.token=`+wp.EnvproxyToken+` \
-    --set envproxy.accessURL=`+ingressHost.String()+` \
-    --set ingress.host=`+ingressHost.Hostname()+` \
-    --set envproxy.clusterAddress=`+clusterAddress+` \
-    --set cemanager.accessURL=`+cemanagerURL.String()+`
-`+sslNote+`
-
-WARNING: The 'envproxy.token' is a secret value that authenticates the workspace provider, 
-make sure not to share this token or make it public. 
-
-Other values can be set on the helm chart to further customize the deployment, see 
-https://github.com/cdr/enterprise-helm/blob/workspace-providers-envproxy-only/README.md
-`)
 
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVar(&hostname, "hostname", "", "workspace provider hostname")
-	cmd.Flags().StringVar(&clusterAddress, "cluster-address", "", "kubernetes cluster apiserver endpoint")
-	_ = cmd.MarkFlagRequired("hostname")
-	_ = cmd.MarkFlagRequired("cluster-address")
+	cmd.Flags().BoolVar(&fromContext, "from-context", false, "use current kube context to retrieve cluster-cert, cluster-address, sa-token, and namespace if not set explicitly")
+	cmd.Flags().StringVar(&clusterCA, "cluster-cert", "", "kubernetes cluster certificate")
+	cmd.Flags().StringVar(&clusterAddr, "cluster-address", "", "kubernetes cluster address")
+	cmd.Flags().StringVar(&SAToken, "sa-token", "", "kubernetes service account token")
+	cmd.Flags().StringVar(&namespace, "namespace", "", "kubernetes namespace")
+	cmd.Flags().StringVar(&storageClass, "storage-class", "", "storage class name to use for workspaces")
+	cmd.Flags().BoolVar(&sshEnabled, "ssh-enabled", false, "enable ssh")
+	cmd.Flags().StringVar(&environmentSA, "workspace-sa", "coder-", "kubernetes service account name to use for workspaces")
+	cmd.Flags().StringArrayVar(&orgAllowlist, "org-allowlist", nil, "list organization IDs to allowlist")
+	return cmd
+}
+
+func installProviderCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "install",
+		Short: "Install kubernetes resources for a new workspace provider.",
+		Long:  "Install kubernetes resources for a new workspace provider.",
+		Example: `# create a new workspace provider
+
+coder providers install`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var (
+				ctx = cmd.Context()
+				err error
+			)
+
+			err = xkube.CreateWorkspaceProviderResources(ctx)
+			if err != nil {
+				return xerrors.Errorf("creating kubernetes resources: %w", err)
+			}
+
+			return nil
+		},
+	}
+
 	return cmd
 }
 

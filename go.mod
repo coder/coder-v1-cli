@@ -23,8 +23,9 @@ require (
 	github.com/spf13/cobra v1.1.3
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/sys v0.0.0-20210420072515-93ed5bcd2bfe
-	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
-	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
+	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d
+	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
+	k8s.io/client-go v0.21.1
 	nhooyr.io/websocket v1.8.7
 )

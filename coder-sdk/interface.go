@@ -218,7 +218,7 @@ type Client interface {
 	WorkspaceProviders(ctx context.Context) (*WorkspaceProviders, error)
 
 	// CreateWorkspaceProvider creates a new WorkspaceProvider entity.
-	CreateWorkspaceProvider(ctx context.Context, req CreateWorkspaceProviderReq) (*CreateWorkspaceProviderRes, error)
+	CreateWorkspaceProvider(ctx context.Context, req WorkspaceProviderKubernetesCreateRequest) (*WorkspaceProviderKubernetes, error)
 
 	// DeleteWorkspaceProviderByID deletes a workspace provider entity from the Coder control plane.
 	DeleteWorkspaceProviderByID(ctx context.Context, id string) error
