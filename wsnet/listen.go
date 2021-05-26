@@ -81,9 +81,7 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 	conn, resp, err := websocket.Dial(ctx, l.broker, nil)
 	if err != nil {
 		if resp != nil {
-			return nil, &coder.HTTPError{
-				Response: resp,
-			}
+			return nil, coder.NewHTTPError(resp)
 		}
 		return nil, err
 	}

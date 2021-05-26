@@ -26,7 +26,7 @@ func (c *DefaultClient) dialWebsocket(ctx context.Context, path string, options 
 	conn, resp, err := websocket.Dial(ctx, url.String(), &websocket.DialOptions{HTTPHeader: headers})
 	if err != nil {
 		if resp != nil {
-			return nil, bodyError(resp)
+			return nil, NewHTTPError(resp)
 		}
 		return nil, err
 	}

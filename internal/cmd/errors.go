@@ -61,7 +61,7 @@ func handleAPIError(origError error) error {
 			return origError
 		}
 
-		return clog.Error(fmt.Sprintf("Precondition Error : Status Code=%d", httpError.StatusCode),
+		return clog.Error(fmt.Sprintf("Precondition Error : Status Code=%d", httpError.StatusCode()),
 			p.Message,
 			clog.BlankLine,
 			clog.Tipf(p.Solution))

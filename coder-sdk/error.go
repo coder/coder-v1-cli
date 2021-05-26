@@ -1,8 +1,10 @@
 package coder
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"golang.org/x/xerrors"
@@ -29,11 +31,31 @@ type APIErrorMsg struct {
 	Details json.RawMessage `json:"details"`
 }
 
+// NewHTTPError reads the response body and stores metadata
+// about the response in order to be unpacked into
+// an *APIError.
+func NewHTTPError(resp *http.Response) *HTTPError {
+	var buf bytes.Buffer
+	_, err := io.CopyN(&buf, resp.Body, 1<<20)
+	if err != nil {
+		return &HTTPError{
+			cachedErr: err,
+		}
+	}
+	return &HTTPError{
+		url:        resp.Request.URL.String(),
+		statusCode: resp.StatusCode,
+		body:       buf.Bytes(),
+	}
+}
+
 // HTTPError represents an error from the Coder API.
 type HTTPError struct {
-	*http.Response
-	cached    *APIError
-	cachedErr error
+	url        string
+	statusCode int
+	body       []byte
+	cached     *APIError
+	cachedErr  error
 }
 
 // Payload decode the response body into the standard error structure. The `details`
@@ -46,7 +68,7 @@ func (e *HTTPError) Payload() (*APIError, error) {
 
 	// Try to decode the payload as an error, if it fails or if there is no error message,
 	// return the response URL with the status.
-	if err := json.NewDecoder(e.Response.Body).Decode(&msg); err != nil {
+	if err := json.Unmarshal(e.body, &msg); err != nil {
 		e.cachedErr = err
 		return nil, err
 	}
@@ -55,16 +77,16 @@ func (e *HTTPError) Payload() (*APIError, error) {
 	return &msg, nil
 }
 
+func (e *HTTPError) StatusCode() int {
+	return e.statusCode
+}
+
 func (e *HTTPError) Error() string {
 	apiErr, err := e.Payload()
 	if err != nil || apiErr.Err.Msg == "" {
-		return fmt.Sprintf("%s: %d %s", e.Request.URL, e.StatusCode, e.Status)
+		return fmt.Sprintf("%s: %d %s", e.url, e.statusCode, http.StatusText(e.statusCode))
 	}
 
 	// If the payload was a in the expected error format with a message, include it.
 	return apiErr.Err.Msg
-}
-
-func bodyError(resp *http.Response) error {
-	return &HTTPError{Response: resp}
 }

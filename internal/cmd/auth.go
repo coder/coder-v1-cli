@@ -66,7 +66,7 @@ func newClient(ctx context.Context, checkVersion bool) (coder.Client, error) {
 	if err != nil {
 		var he *coder.HTTPError
 		if xerrors.As(err, &he) {
-			if he.StatusCode == http.StatusUnauthorized {
+			if he.StatusCode() == http.StatusUnauthorized {
 				return nil, xerrors.Errorf("not authenticated: try running \"coder login`\"")
 			}
 		}
