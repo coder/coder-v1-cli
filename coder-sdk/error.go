@@ -36,7 +36,7 @@ type APIErrorMsg struct {
 // an *APIError.
 func NewHTTPError(resp *http.Response) *HTTPError {
 	var buf bytes.Buffer
-	_, err := io.CopyN(&buf, resp.Body, 1<<20)
+	_, err := io.Copy(&buf, resp.Body)
 	if err != nil {
 		return &HTTPError{
 			cachedErr: err,
