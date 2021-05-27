@@ -67,17 +67,18 @@ func (c *DefaultClient) WorkspaceProviders(ctx context.Context) (*WorkspaceProvi
 	}
 	return &providers, nil
 }
+
 // WorkspaceProviderKubernetesCreateRequest defines the request parameters for creating a new kubernetes workspace provider.
 type WorkspaceProviderKubernetesCreateRequest struct {
-	Name                string   `json:"name"`
-	ClusterCA           string   `json:"cluster_ca"`
-	ClusterAddress      string   `json:"cluster_address"`
-	SAToken             string   `json:"sa_token"`
-	DefaultNamespace    string   `json:"default_namespace"`
-	StorageClass        string   `json:"storage_class"`
-	SSHEnabled          bool     `json:"ssh_enabled"`
-	EnvironmentSA       string   `json:"environment_sa"`
-	OrgAllowlist        []string `json:"org_allowlist"`
+	Name             string   `json:"name"`
+	ClusterCA        string   `json:"cluster_ca"`
+	ClusterAddress   string   `json:"cluster_address"`
+	SAToken          string   `json:"sa_token"`
+	DefaultNamespace string   `json:"default_namespace"`
+	StorageClass     string   `json:"storage_class"`
+	SSHEnabled       bool     `json:"ssh_enabled"`
+	EnvironmentSA    string   `json:"environment_sa"`
+	OrgAllowlist     []string `json:"org_allowlist"`
 }
 
 // WorkspaceProviderKubernetes defines a kubernetes workspace provider.
@@ -88,16 +89,16 @@ type WorkspaceProviderKubernetes struct {
 
 // WorkspaceProviderGeneric defines the generic parameters of a workspace provider.
 type WorkspaceProviderGeneric struct {
-	ID                string                      `json:"id"`
-	Name              string                      `json:"name"`
-	Status            WorkspaceProviderStatus     `json:"status"`
-	BuiltIn           bool                        `json:"built_in"`
-	OrgAllowlist      []string                    `json:"org_allowlist"`
-	EnvproxyAccessURL string                      `json:"envproxy_access_url"`
-	DevurlHost        string                      `json:"devurl_host"`
-	ErrorMessage      string                      `json:"error_message"`
-	CordonReason      string                      `json:"cordon_reason"`
-	EnableNetV2       bool                        `json:"enable_netv2"`
+	ID                string                  `json:"id"`
+	Name              string                  `json:"name"`
+	Status            WorkspaceProviderStatus `json:"status"`
+	BuiltIn           bool                    `json:"built_in"`
+	OrgAllowlist      []string                `json:"org_allowlist"`
+	EnvproxyAccessURL string                  `json:"envproxy_access_url"`
+	DevurlHost        string                  `json:"devurl_host"`
+	ErrorMessage      string                  `json:"error_message"`
+	CordonReason      string                  `json:"cordon_reason"`
+	EnableNetV2       bool                    `json:"enable_netv2"`
 }
 
 // WorkspaceProviderKubeConfig defines the kubernetes parameters of a workspace provider.

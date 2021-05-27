@@ -1,10 +1,11 @@
 package cmd
 
 import (
+	"fmt"
+
 	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/internal/x/xkube"
-	"fmt"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -36,15 +37,15 @@ func providersCmd() *cobra.Command {
 
 func createProviderCmd() *cobra.Command {
 	var (
-		fromContext bool
-		clusterCA string
-		clusterAddr string
-		SAToken string
-		namespace string
-		storageClass string
-		sshEnabled bool
+		fromContext   bool
+		clusterCA     string
+		clusterAddr   string
+		SAToken       string
+		namespace     string
+		storageClass  string
+		sshEnabled    bool
 		environmentSA string
-		orgAllowlist []string
+		orgAllowlist  []string
 	)
 	cmd := &cobra.Command{
 		Use:   "create [name]",
@@ -56,26 +57,42 @@ func createProviderCmd() *cobra.Command {
 coder providers create my-provider`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var (
-				ctx = cmd.Context()
+				ctx  = cmd.Context()
 				name = args[0]
-				err error
-				req = &coder.WorkspaceProviderKubernetesCreateRequest{
-					Name: name,
-					ClusterCA: clusterCA,
-					ClusterAddress: clusterAddr,
-					SAToken: SAToken,
+				err  error
+				req  = &coder.WorkspaceProviderKubernetesCreateRequest{
+					Name:             name,
+					ClusterCA:        clusterCA,
+					ClusterAddress:   clusterAddr,
+					SAToken:          SAToken,
 					DefaultNamespace: namespace,
-					StorageClass: storageClass,
-					SSHEnabled: sshEnabled,
-					EnvironmentSA: environmentSA,
-					OrgAllowlist: orgAllowlist,
+					StorageClass:     storageClass,
+					SSHEnabled:       sshEnabled,
+					EnvironmentSA:    environmentSA,
+					OrgAllowlist:     orgAllowlist,
 				}
 			)
 
 			if fromContext {
-				req, err = xkube.ApplyKubeConfigFromContext(ctx, req)
+				context, err := xkube.CurrentKubeContext()
 				if err != nil {
 					return xerrors.Errorf("reading kube config from context: %w", err)
+				}
+				if req.DefaultNamespace == "" {
+					req.DefaultNamespace = context.Namespace
+				}
+				if req.ClusterAddress == "" {
+					req.ClusterAddress = context.ClusterAddress
+				}
+				sa, err := xkube.CoderServiceAccountFromContext(ctx)
+				if err != nil {
+					return xerrors.Errorf("reading coder kubernetes service account: %w", err)
+				}
+				if req.SAToken == "" {
+					req.SAToken = sa.SAToken
+				}
+				if req.ClusterCA == "" {
+					req.ClusterCA = sa.ClusterCA
 				}
 			}
 
@@ -100,12 +117,15 @@ coder providers create my-provider`,
 	cmd.Flags().StringVar(&namespace, "namespace", "", "kubernetes namespace")
 	cmd.Flags().StringVar(&storageClass, "storage-class", "", "storage class name to use for workspaces")
 	cmd.Flags().BoolVar(&sshEnabled, "ssh-enabled", false, "enable ssh")
-	cmd.Flags().StringVar(&environmentSA, "workspace-sa", "coder-", "kubernetes service account name to use for workspaces")
+	cmd.Flags().StringVar(&environmentSA, "workspace-sa", "", "kubernetes service account name to use for workspaces")
 	cmd.Flags().StringArrayVar(&orgAllowlist, "org-allowlist", nil, "list organization IDs to allowlist")
 	return cmd
 }
 
 func installProviderCmd() *cobra.Command {
+	var (
+		skipPrompt bool
+	)
 	cmd := &cobra.Command{
 		Use:   "install",
 		Short: "Install kubernetes resources for a new workspace provider.",
@@ -119,15 +139,64 @@ coder providers install`,
 				err error
 			)
 
-			err = xkube.CreateWorkspaceProviderResources(ctx)
+			kctx, err := xkube.CurrentKubeContext()
 			if err != nil {
-				return xerrors.Errorf("creating kubernetes resources: %w", err)
+				return xerrors.Errorf("reading kubernetes context: %w", err)
 			}
+			fmt.Printf(`
+Current Kubernetes context details:
+
+Context Name: %s
+Namespace:    %s
+
+The following kubernetes resources will be created or updated:
+`, kctx.ContextName, kctx.Namespace)
+			fmt.Printf(`
+-- ServiceAccount
+Name: %s
+Namespace: %s
+`, xkube.ResourceName, kctx.Namespace)
+			fmt.Printf(`
+-- ServiceAccount
+Name: %s
+Namespace: %s
+`, xkube.WorkspaceSA, kctx.Namespace)
+			fmt.Printf(`
+-- Role
+Name: %s
+Namespace: %s
+Rules: 
+%s`, xkube.ResourceName, kctx.Namespace, xkube.PrettyRules())
+			fmt.Printf(`
+-- RoleBinding
+Role:
+  Kind:  Role
+  Name:  %s
+Subjects:
+  - Kind: ServiceAccount
+    Name: %s
+    Namespace: %s
+
+`, xkube.ResourceName, xkube.ResourceName, kctx.Namespace)
+
+			if !skipPrompt {
+				fmt.Println("Press the Enter Key to continue")
+				_, _ = fmt.Scanln()
+			}
+
+			fmt.Println("Installing kubernetes resources...")
+			err = xkube.InstallWorkspaceProviderResources(ctx, kctx.Clientset, kctx.Namespace)
+			if err != nil {
+				return xerrors.Errorf("installing kubernetes resources: %w", err)
+			}
+
+			fmt.Println("Successfully installed kubernetes resources")
 
 			return nil
 		},
 	}
 
+	cmd.Flags().BoolVar(&skipPrompt, "y", false, "skip confirmation prompt")
 	return cmd
 }
 
