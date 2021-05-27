@@ -10,6 +10,7 @@ require (
 	github.com/google/go-cmp v0.5.5
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864
+	github.com/kevinburke/ssh_config v1.1.0 // indirect
 	github.com/kirsle/configdir v0.0.0-20170128060238-e45d2f54772f
 	github.com/klauspost/compress v1.10.8 // indirect
 	github.com/manifoldco/promptui v0.8.0

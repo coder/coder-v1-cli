@@ -3,13 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
-	"os/user"
-	"path/filepath"
-	"sort"
-	"strings"
 
 	"cdr.dev/coder-cli/pkg/clog"
 
@@ -18,6 +13,7 @@ import (
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/coderutil"
+	"cdr.dev/coder-cli/internal/ssh"
 )
 
 const sshStartToken = "# ------------START-CODER-ENTERPRISE-----------"
@@ -44,7 +40,7 @@ func configSSHCmd() *cobra.Command {
 		Long:  "Inject the proper OpenSSH configuration into your local SSH config file.",
 		RunE:  configSSH(&configpath, &remove, &next),
 	}
-	cmd.Flags().StringVar(&configpath, "filepath", filepath.Join("~", ".ssh", "config"), "override the default path of your ssh config file")
+	cmd.Flags().StringVar(&configpath, "filepath", ssh.DefaultConfigPath, "override the default path of your ssh config file")
 	cmd.Flags().BoolVar(&remove, "remove", false, "remove the auto-generated Coder ssh config")
 	cmd.Flags().BoolVar(&next, "next", false, "(alpha) uses coder tunnel to proxy ssh connection")
 
@@ -54,130 +50,90 @@ func configSSHCmd() *cobra.Command {
 func configSSH(configpath *string, remove *bool, next *bool) func(cmd *cobra.Command, _ []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
-		usr, err := user.Current()
-		if err != nil {
-			return xerrors.Errorf("get user home directory: %w", err)
-		}
-
-		privateKeyFilepath := filepath.Join(usr.HomeDir, ".ssh", "coder_enterprise")
-
-		if strings.HasPrefix(*configpath, "~") {
-			*configpath = strings.Replace(*configpath, "~", usr.HomeDir, 1)
-		}
-
-		currentConfig, err := readStr(*configpath)
-		if os.IsNotExist(err) {
-			// SSH configs are not always already there.
-			currentConfig = ""
-		} else if err != nil {
-			return xerrors.Errorf("read ssh config file %q: %w", *configpath, err)
-		}
-
-		currentConfig, didRemoveConfig := removeOldConfig(currentConfig)
-		if *remove {
-			if !didRemoveConfig {
-				return xerrors.Errorf("the Coder ssh configuration section could not be safely deleted or does not exist")
-			}
-
-			err = writeStr(*configpath, currentConfig)
-			if err != nil {
-				return xerrors.Errorf("write to ssh config file %q: %s", *configpath, err)
-			}
-			_ = os.Remove(privateKeyFilepath)
-
-			return nil
-		}
 
 		client, err := newClient(ctx, true)
 		if err != nil {
 			return err
 		}
 
-		user, err := client.Me(ctx)
-		if err != nil {
-			return xerrors.Errorf("fetch username: %w", err)
-		}
-
-		workspaces, err := getWorkspaces(ctx, client, coder.Me)
-		if err != nil {
-			return err
-		}
-		if len(workspaces) < 1 {
-			return xerrors.New("no workspaces found")
-		}
-
-		workspacesWithProviders, err := coderutil.WorkspacesWithProvider(ctx, client, workspaces)
-		if err != nil {
-			return xerrors.Errorf("resolve workspace workspace providers: %w", err)
-		}
-
-		if !sshAvailable(workspacesWithProviders) {
-			return xerrors.New("SSH is disabled or not available for any workspaces in your Coder deployment.")
-		}
-
+		// Check to see if the P2P is enabled for the deployment.
 		wconf, err := client.SiteConfigWorkspaces(ctx)
 		if err != nil {
 			return xerrors.Errorf("getting site workspace config: %w", err)
 		}
-		p2p := false
-		if wconf.EnableP2P {
-			if *next {
-				p2p = true
-			} else {
-				fmt.Println("Note: NetworkingV2 is enabled on the coder deployment, use --next to enable it for ssh")
+
+		if wconf.EnableP2P && !*next {
+			// Nudge the user to use P2P if it's enabled on the platform and they have not provided the '--next' flag.
+			fmt.Println("Note: NetworkingV2 is enabled on the coder deployment, use --next to enable it for ssh")
+		}
+		if !wconf.EnableP2P && *next {
+			// Fail out if P2P is disabled and the user has specified the '--next' flag.
+			return xerrors.New("NetworkingV2 feature is not enabled, cannot use --next flag")
+		}
+
+		config, err := ssh.ReadConfig(ctx, *configpath)
+		if err != nil {
+			return xerrors.Errorf("read config: %w", err)
+		}
+
+		pkeyPath, err := ssh.DefaultPrivateKeyPath()
+		if err != nil {
+			return xerrors.Errorf("default private key path: %w", err)
+		}
+
+		// Since we're (re)configuring, we can unconditionally remove the old coder config.
+		removed := config.Remove()
+
+		if *remove {
+			if !removed {
+				return xerrors.Errorf("the Coder ssh configuration section could not be safely deleted or does not exist")
 			}
-		} else {
-			if *next {
-				return xerrors.New("NetworkingV2 feature is not enabled, cannot use --next flag")
+
+			err = config.Write()
+			if err != nil {
+				return xerrors.Errorf("write to ssh config file %q: %s", *configpath, err)
 			}
+			_ = os.Remove(pkeyPath)
+
+			return nil
 		}
 
-		binPath, err := os.Executable()
+		wss, err := getWorkspaces(ctx, client, coder.Me)
 		if err != nil {
-			return xerrors.Errorf("Failed to get executable path: %w", err)
+			return xerrors.Errorf("get workspaces: %w", err)
 		}
 
-		newConfig := makeNewConfigs(binPath, user.Username, workspacesWithProviders, privateKeyFilepath, p2p)
+		err = addWorkspaceConfig(ctx, client, config, *next, wss...)
+		if err != nil {
+			return xerrors.Errorf("add workspaces config: %w", err)
+		}
 
-		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
+		err = config.Write()
 		if err != nil {
-			return xerrors.Errorf("make configuration directory: %w", err)
+			return xerrors.Errorf("write ssh config: %w", err)
 		}
-		err = writeStr(*configpath, currentConfig+newConfig)
+
+		user, err := client.Me(ctx)
 		if err != nil {
-			return xerrors.Errorf("write new configurations to ssh config file %q: %w", *configpath, err)
+			return xerrors.Errorf("get coder user: %w", err)
 		}
-		err = writeSSHKey(ctx, client, privateKeyFilepath)
+
+		err = writeSSHKey(ctx, client)
 		if err != nil {
 			if !xerrors.Is(err, os.ErrPermission) {
 				return xerrors.Errorf("write ssh key: %w", err)
 			}
-			fmt.Printf("Your private ssh key already exists at \"%s\"\nYou may need to remove the existing private key file and re-run this command\n\n", privateKeyFilepath)
+			fmt.Printf("Your private ssh key already exists at \"%s\"\nYou may need to remove the existing private key file and re-run this command\n\n", pkeyPath)
 		} else {
-			fmt.Printf("Your private ssh key was written to \"%s\"\n", privateKeyFilepath)
+			fmt.Printf("Your private ssh key was written to \"%s\"\n", pkeyPath)
 		}
 
-		writeSSHUXState(ctx, client, user.ID, workspaces)
+		writeSSHUXState(ctx, client, user.ID, wss)
 		fmt.Printf("An auto-generated ssh config was written to \"%s\"\n", *configpath)
 		fmt.Println("You should now be able to ssh into your workspace")
-		fmt.Printf("For example, try running\n\n\t$ ssh coder.%s\n\n", workspaces[0].Name)
+		fmt.Printf("For example, try running\n\n\t$ ssh coder.%s\n\n", wss[0].Name)
 		return nil
 	}
-}
-
-// removeOldConfig removes the old ssh configuration from the user's sshconfig.
-// Returns true if the config was modified.
-func removeOldConfig(config string) (string, bool) {
-	startIndex := strings.Index(config, sshStartToken)
-	endIndex := strings.Index(config, sshEndToken)
-
-	if startIndex == -1 || endIndex == -1 {
-		return config, false
-	}
-	if startIndex == 0 {
-		return config[endIndex+len(sshEndToken)+1:], true
-	}
-	return config[:startIndex-1] + config[endIndex+len(sshEndToken)+1:], true
 }
 
 // sshAvailable returns true if SSH is available for at least one workspace.
@@ -190,75 +146,12 @@ func sshAvailable(workspaces []coderutil.WorkspaceWithWorkspaceProvider) bool {
 	return false
 }
 
-func writeSSHKey(ctx context.Context, client coder.Client, privateKeyPath string) error {
+func writeSSHKey(ctx context.Context, client coder.Client) error {
 	key, err := client.SSHKey(ctx)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(privateKeyPath, []byte(key.PrivateKey), 0600)
-}
-
-func makeNewConfigs(binPath, userName string, workspaces []coderutil.WorkspaceWithWorkspaceProvider, privateKeyFilepath string, p2p bool) string {
-	newConfig := fmt.Sprintf("\n%s\n%s\n\n", sshStartToken, sshStartMessage)
-
-	sort.Slice(workspaces, func(i, j int) bool { return workspaces[i].Workspace.Name < workspaces[j].Workspace.Name })
-
-	for _, workspace := range workspaces {
-		if !workspace.WorkspaceProvider.SSHEnabled {
-			clog.LogWarn(fmt.Sprintf("SSH is not enabled for workspace provider %q", workspace.WorkspaceProvider.Name),
-				clog.BlankLine,
-				clog.Tipf("ask an infrastructure administrator to enable SSH for this workspace provider"),
-			)
-			continue
-		}
-		u, err := url.Parse(workspace.WorkspaceProvider.EnvproxyAccessURL)
-		if err != nil {
-			clog.LogWarn("invalid access url", clog.Causef("malformed url: %q", workspace.WorkspaceProvider.EnvproxyAccessURL))
-			continue
-		}
-
-		useTunnel := workspace.WorkspaceProvider.BuiltIn && p2p
-		newConfig += makeSSHConfig(binPath, u.Host, userName, workspace.Workspace.Name, privateKeyFilepath, useTunnel)
-	}
-	newConfig += fmt.Sprintf("\n%s\n", sshEndToken)
-
-	return newConfig
-}
-
-func makeSSHConfig(binPath, host, userName, workspaceName, privateKeyFilepath string, tunnel bool) string {
-	if tunnel {
-		return fmt.Sprintf(
-			`Host coder.%s
-   HostName coder.%s
-   ProxyCommand %s tunnel %s 12213 stdio
-   StrictHostKeyChecking no
-   ConnectTimeout=0
-   IdentitiesOnly yes
-   IdentityFile="%s"
-`, workspaceName, workspaceName, binPath, workspaceName, privateKeyFilepath)
-	}
-
-	return fmt.Sprintf(
-		`Host coder.%s
-   HostName %s
-   User %s-%s
-   StrictHostKeyChecking no
-   ConnectTimeout=0
-   IdentitiesOnly yes
-   IdentityFile="%s"
-`, workspaceName, host, userName, workspaceName, privateKeyFilepath)
-}
-
-func writeStr(filename, data string) error {
-	return ioutil.WriteFile(filename, []byte(data), 0777)
-}
-
-func readStr(filename string) (string, error) {
-	contents, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return "", err
-	}
-	return string(contents), nil
+	return ssh.WriteSSHKey([]byte(key.PrivateKey))
 }
 
 func writeSSHUXState(ctx context.Context, client coder.Client, userID string, workspaces []coder.Workspace) {
@@ -274,4 +167,61 @@ func writeSSHUXState(ctx context.Context, client coder.Client, userID string, wo
 	if err != nil {
 		clog.LogWarn("The Coder web client may not recognize that you've configured SSH.")
 	}
+}
+
+func mustParseURL(u string) *url.URL {
+	uri, err := url.Parse(u)
+	if err != nil {
+		panic(err)
+	}
+	return uri
+}
+
+func addWorkspaceConfig(ctx context.Context, client coder.Client, config *ssh.Config, isP2P bool, workspaces ...coder.Workspace) error {
+	user, err := client.Me(ctx)
+	if err != nil {
+		return xerrors.Errorf("fetch username: %w", err)
+	}
+
+	// Get the path to the 'coder' binary.
+	binPath, err := os.Executable()
+	if err != nil {
+		return xerrors.Errorf("Failed to get executable path: %w", err)
+	}
+
+	wsps, err := coderutil.WorkspacesWithProvider(ctx, client, workspaces)
+	if err != nil {
+		return xerrors.Errorf("workspace with provider: %w", err)
+	}
+
+	// If SSH is disabled bail out early.
+	if !sshAvailable(wsps) {
+		return xerrors.New("SSH is disabled or not available for any workspaces in your Coder deployment.")
+	}
+
+	pkeyPath, err := ssh.DefaultPrivateKeyPath()
+	if err != nil {
+		return xerrors.Errorf("get private key path: %w", err)
+	}
+
+	for _, ws := range wsps {
+		if !ws.WorkspaceProvider.SSHEnabled {
+			clog.LogWarn(fmt.Sprintf("SSH is not enabled for workspace provider %q, skipping workspace %q", ws.WorkspaceProvider.Name, ws.Workspace.Name),
+				clog.BlankLine,
+				clog.Tipf("ask an infrastructure administrator to enable SSH for this workspace provider"),
+			)
+			continue
+		}
+
+		config.AddHost(ssh.Host{
+			Host:           mustParseURL(ws.WorkspaceProvider.EnvproxyAccessURL).Host,
+			Username:       user.Username,
+			Workspace:      ws.Workspace.Name,
+			PrivateKeyPath: pkeyPath,
+			CoderBinPath:   binPath,
+			Tunnel:         isP2P,
+		})
+	}
+
+	return nil
 }
