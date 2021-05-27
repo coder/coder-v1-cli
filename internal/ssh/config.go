@@ -147,6 +147,7 @@ func (c *Config) writeConfig() {
 	// to avoid cases where the user may delete the newline preceding the token.
 	coder := fmt.Sprintf("\n%s%s", configStartToken, configComment)
 
+	// Sort the hosts so that we write everything in alphabetical order.
 	sort.Slice(c.coder.Hosts, func(i, j int) bool {
 		return c.coder.Hosts[i].Patterns[0].String() < c.coder.Hosts[j].Patterns[0].String()
 	})
