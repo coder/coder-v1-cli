@@ -24,9 +24,7 @@ func DialWebsocket(ctx context.Context, broker string, iceServers []webrtc.ICESe
 			defer func() {
 				_ = resp.Body.Close()
 			}()
-			return nil, &coder.HTTPError{
-				Response: resp,
-			}
+			return nil, coder.NewHTTPError(resp)
 		}
 		return nil, fmt.Errorf("dial websocket: %w", err)
 	}

@@ -21,7 +21,7 @@ func (c *DefaultClient) PushActivity(ctx context.Context, source, workspaceID st
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return bodyError(resp)
+		return NewHTTPError(resp)
 	}
 	return nil
 }
