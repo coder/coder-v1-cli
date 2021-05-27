@@ -89,7 +89,7 @@ func configSSH(configpath *string, remove *bool, next *bool) func(cmd *cobra.Com
 				return xerrors.Errorf("the Coder ssh configuration section could not be safely deleted or does not exist")
 			}
 
-			err = config.Write()
+			err = config.Save()
 			if err != nil {
 				return xerrors.Errorf("write to ssh config file %q: %s", *configpath, err)
 			}
@@ -108,7 +108,7 @@ func configSSH(configpath *string, remove *bool, next *bool) func(cmd *cobra.Com
 			return xerrors.Errorf("add workspaces config: %w", err)
 		}
 
-		err = config.Write()
+		err = config.Save()
 		if err != nil {
 			return xerrors.Errorf("write ssh config: %w", err)
 		}

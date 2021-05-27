@@ -69,7 +69,7 @@ func shell(configpath *string) func(cmd *cobra.Command, args []string) error {
 				return xerrors.Errorf("add workspace config: %w", err)
 			}
 
-			err = config.Write()
+			err = config.Save()
 			if err != nil {
 				return xerrors.Errorf("write to config: %w", err)
 			}
