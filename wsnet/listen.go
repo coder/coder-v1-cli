@@ -17,12 +17,9 @@ import (
 	"cdr.dev/coder-cli/coder-sdk"
 )
 
-var connectionRetryInterval = time.Second
+const OpNotPermittedByPolicy = "port_not_permitted"
 
-var localNet = &net.IPNet{
-	IP:   net.IPv4(127, 0, 0, 0),
-	Mask: net.CIDRMask(8, 32),
-}
+var connectionRetryInterval = time.Second
 
 // Listen connects to the broker proxies connections to the local net.
 // Close will end all RTC connections.
@@ -289,6 +286,10 @@ func (l *listener) handle(msg BrokerMessage) func(dc *webrtc.DataChannel) {
 			network, addr, err := msg.getAddress(dc.Protocol())
 			if err != nil {
 				init.Err = err.Error()
+				var policyErr notPermittedByPolicyErr
+				if errors.As(err, &policyErr) {
+					init.Op = OpNotPermittedByPolicy
+				}
 				sendInitMessage()
 				return
 			}
