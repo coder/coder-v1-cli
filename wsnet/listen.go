@@ -6,10 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/bits"
 	"net"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -131,7 +128,7 @@ func (l *listener) negotiate(conn net.Conn) {
 		// Sends the error provided then closes the connection.
 		// If RTC isn't connected, we'll close it.
 		closeError = func(err error) {
-			d, _ := json.Marshal(&ProtoMessage{
+			d, _ := json.Marshal(&BrokerMessage{
 				Error: err.Error(),
 			})
 			_, _ = conn.Write(d)
@@ -146,7 +143,7 @@ func (l *listener) negotiate(conn net.Conn) {
 	)
 
 	for {
-		var msg ProtoMessage
+		var msg BrokerMessage
 		err = decoder.Decode(&msg)
 		if err != nil {
 			closeError(err)
@@ -215,7 +212,7 @@ func (l *listener) negotiate(conn net.Conn) {
 			}
 			flushCandidates()
 
-			data, err := json.Marshal(&ProtoMessage{
+			data, err := json.Marshal(&BrokerMessage{
 				Answer: rtc.LocalDescription(),
 			})
 			if err != nil {
@@ -240,7 +237,7 @@ func (l *listener) negotiate(conn net.Conn) {
 	}
 }
 
-func (l *listener) handle(msg ProtoMessage) func(dc *webrtc.DataChannel) {
+func (l *listener) handle(msg BrokerMessage) func(dc *webrtc.DataChannel) {
 	return func(dc *webrtc.DataChannel) {
 		if dc.Protocol() == controlChannel {
 			// The control channel handles pings.
@@ -289,7 +286,7 @@ func (l *listener) handle(msg ProtoMessage) func(dc *webrtc.DataChannel) {
 				}
 			}
 
-			network, addr, err := getAddress(msg, dc.Protocol())
+			network, addr, err := msg.getAddress(dc.Protocol())
 			if err != nil {
 				init.Err = err.Error()
 				sendInitMessage()
@@ -335,59 +332,4 @@ func (l *listener) Close() error {
 // return that resolved Addr, but until we need it we won't.
 func (l *listener) Addr() net.Addr {
 	return nil
-}
-
-// normalizeHost converts all representations of "localhost" to "localhost".
-func normalizeHost(addr string) string {
-	ip := net.ParseIP(addr)
-	if ip == nil {
-		return addr
-	}
-
-	if localNet.Contains(ip) {
-		return "localhost"
-	}
-	return addr
-}
-
-// getAddress parses the data channel's protocol into an address suitable for
-// net.Dial. It also verifies that the ProtoMessage permits connecting to said
-// address.
-func getAddress(msg ProtoMessage, protocol string) (netwk, addr string, err error) {
-	parts := strings.SplitN(protocol, ":", 3)
-	if len(parts) != 3 {
-		return "", "", fmt.Errorf("invalid dial address: %v", protocol)
-	}
-
-	var (
-		network  = parts[0]
-		host     = normalizeHost(parts[1])
-		port     = parts[2]
-		fullAddr = net.JoinHostPort(host, port)
-	)
-	if len(msg.Policies) == 0 {
-		return network, fullAddr, nil
-	}
-
-	portParsed, err := strconv.Atoi(port)
-	if err != nil || portParsed < 0 || bits.Len(uint(portParsed)) > 16 {
-		return "", "", fmt.Errorf("invalid dial address %q port: %v", protocol, port)
-	}
-	portParsedU16 := uint16(portParsed)
-
-	for _, p := range msg.Policies {
-		if p.Network != "" && p.Network != network {
-			continue
-		}
-		if p.Host != "" && normalizeHost(p.Host) != host {
-			continue
-		}
-		if p.Port != 0 && p.Port != portParsedU16 {
-			continue
-		}
-
-		return network, fullAddr, nil
-	}
-
-	return "", "", fmt.Errorf("connections are not permitted to %q", err)
 }

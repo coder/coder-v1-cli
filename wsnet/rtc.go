@@ -186,7 +186,7 @@ func proxyICECandidates(conn *webrtc.PeerConnection, w io.Writer) func() {
 		queue   = []*webrtc.ICECandidate{}
 		flushed = false
 		write   = func(i *webrtc.ICECandidate) {
-			b, _ := json.Marshal(&ProtoMessage{
+			b, _ := json.Marshal(&BrokerMessage{
 				Candidate: i.ToJSON().Candidate,
 			})
 			_, _ = w.Write(b)
