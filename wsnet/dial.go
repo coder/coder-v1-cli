@@ -67,7 +67,7 @@ func Dial(conn net.Conn, iceServers []webrtc.ICEServer) (*Dialer, error) {
 		return nil, fmt.Errorf("set local offer: %w", err)
 	}
 
-	offerMessage, err := json.Marshal(&protoMessage{
+	offerMessage, err := json.Marshal(&ProtoMessage{
 		Offer:   &offer,
 		Servers: iceServers,
 	})
@@ -124,7 +124,7 @@ func (d *Dialer) negotiate() (err error) {
 	}()
 
 	for {
-		var msg protoMessage
+		var msg ProtoMessage
 		err = decoder.Decode(&msg)
 		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrClosedPipe) {
 			break
