@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strings"
 	"sync"
 	"time"
 
@@ -18,7 +17,25 @@ import (
 	"cdr.dev/coder-cli/coder-sdk"
 )
 
+// Codes for DialChannelResponse.
+const (
+	CodeDialErr       = "dial_error"
+	CodePermissionErr = "permission_error"
+	CodeBadAddressErr = "bad_address_error"
+)
+
 var connectionRetryInterval = time.Second
+
+// DialChannelResponse is used to notify a dial channel of a
+// listening state. Modeled after net.OpError, and marshalled
+// to that if Net is not "".
+type DialChannelResponse struct {
+	Code string
+	Err  string
+	// Fields are set if the code is CodeDialErr.
+	Net string
+	Op  string
+}
 
 // Listen connects to the broker proxies connections to the local net.
 // Close will end all RTC connections.
@@ -124,7 +141,7 @@ func (l *listener) negotiate(conn net.Conn) {
 		// Sends the error provided then closes the connection.
 		// If RTC isn't connected, we'll close it.
 		closeError = func(err error) {
-			d, _ := json.Marshal(&protoMessage{
+			d, _ := json.Marshal(&BrokerMessage{
 				Error: err.Error(),
 			})
 			_, _ = conn.Write(d)
@@ -139,7 +156,7 @@ func (l *listener) negotiate(conn net.Conn) {
 	)
 
 	for {
-		var msg protoMessage
+		var msg BrokerMessage
 		err = decoder.Decode(&msg)
 		if err != nil {
 			closeError(err)
@@ -190,7 +207,7 @@ func (l *listener) negotiate(conn net.Conn) {
 			l.connClosersMut.Lock()
 			l.connClosers = append(l.connClosers, rtc)
 			l.connClosersMut.Unlock()
-			rtc.OnDataChannel(l.handle)
+			rtc.OnDataChannel(l.handle(msg))
 			err = rtc.SetRemoteDescription(*msg.Offer)
 			if err != nil {
 				closeError(fmt.Errorf("apply offer: %w", err))
@@ -208,7 +225,7 @@ func (l *listener) negotiate(conn net.Conn) {
 			}
 			flushCandidates()
 
-			data, err := json.Marshal(&protoMessage{
+			data, err := json.Marshal(&BrokerMessage{
 				Answer: rtc.LocalDescription(),
 			})
 			if err != nil {
@@ -233,70 +250,89 @@ func (l *listener) negotiate(conn net.Conn) {
 	}
 }
 
-func (l *listener) handle(dc *webrtc.DataChannel) {
-	if dc.Protocol() == controlChannel {
-		// The control channel handles pings.
+func (l *listener) handle(msg BrokerMessage) func(dc *webrtc.DataChannel) {
+	return func(dc *webrtc.DataChannel) {
+		if dc.Protocol() == controlChannel {
+			// The control channel handles pings.
+			dc.OnOpen(func() {
+				rw, err := dc.Detach()
+				if err != nil {
+					return
+				}
+				// We'll read and write back a single byte for ping/pongin'.
+				d := make([]byte, 1)
+				for {
+					_, err = rw.Read(d)
+					if errors.Is(err, io.EOF) {
+						return
+					}
+					if err != nil {
+						continue
+					}
+					_, _ = rw.Write(d)
+				}
+			})
+			return
+		}
+
 		dc.OnOpen(func() {
 			rw, err := dc.Detach()
 			if err != nil {
 				return
 			}
-			// We'll read and write back a single byte for ping/pongin'.
-			d := make([]byte, 1)
-			for {
-				_, err = rw.Read(d)
-				if errors.Is(err, io.EOF) {
+
+			var init DialChannelResponse
+			sendInitMessage := func() {
+				initData, err := json.Marshal(&init)
+				if err != nil {
+					rw.Close()
 					return
 				}
+				_, err = rw.Write(initData)
 				if err != nil {
-					continue
+					return
 				}
-				_, _ = rw.Write(d)
+				if init.Err != "" {
+					// If an error occurred, we're safe to close the connection.
+					dc.Close()
+					return
+				}
 			}
+
+			network, addr, err := msg.getAddress(dc.Protocol())
+			if err != nil {
+				init.Code = CodeBadAddressErr
+				init.Err = err.Error()
+				var policyErr notPermittedByPolicyErr
+				if errors.As(err, &policyErr) {
+					init.Code = CodePermissionErr
+				}
+				sendInitMessage()
+				return
+			}
+
+			conn, err := net.Dial(network, addr)
+			if err != nil {
+				init.Code = CodeDialErr
+				init.Err = err.Error()
+				if op, ok := err.(*net.OpError); ok {
+					init.Net = op.Net
+					init.Op = op.Op
+				}
+			}
+			sendInitMessage()
+			if init.Err != "" {
+				return
+			}
+			defer conn.Close()
+			defer dc.Close()
+
+			go func() {
+				_, _ = io.Copy(rw, conn)
+			}()
+			_, _ = io.Copy(conn, rw)
 		})
-		return
 	}
-
-	dc.OnOpen(func() {
-		rw, err := dc.Detach()
-		if err != nil {
-			return
-		}
-		parts := strings.SplitN(dc.Protocol(), ":", 2)
-		network := parts[0]
-		addr := parts[1]
-
-		var init dialChannelMessage
-		conn, err := net.Dial(network, addr)
-		if err != nil {
-			init.Err = err.Error()
-			if op, ok := err.(*net.OpError); ok {
-				init.Net = op.Net
-				init.Op = op.Op
-			}
-		}
-		initData, err := json.Marshal(&init)
-		if err != nil {
-			rw.Close()
-			return
-		}
-		_, err = rw.Write(initData)
-		if err != nil {
-			return
-		}
-		if init.Err != "" {
-			// If an error occurred, we're safe to close the connection.
-			dc.Close()
-			return
-		}
-		defer conn.Close()
-		defer dc.Close()
-
-		go func() {
-			_, _ = io.Copy(rw, conn)
-		}()
-		_, _ = io.Copy(conn, rw)
-	})
 }
 
 // Close closes the broker socket and all created RTC connections.
