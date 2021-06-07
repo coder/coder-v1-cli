@@ -235,7 +235,6 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 				Net: res.Net,
 				Err: err,
 			}
-			return
 		}
 		errCh <- err
 	}()
