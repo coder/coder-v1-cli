@@ -17,16 +17,14 @@ import (
 	"cdr.dev/coder-cli/coder-sdk"
 )
 
-const OpNotPermittedByPolicy = "port_not_permitted"
-
-var connectionRetryInterval = time.Second
-
 // Codes for DialChannelResponse.
 const (
 	CodeDialErr       = "dial_error"
 	CodePermissionErr = "permission_error"
 	CodeBadAddressErr = "bad_address_error"
 )
+
+var connectionRetryInterval = time.Second
 
 // DialChannelResponse is used to notify a dial channel of a
 // listening state. Modeled after net.OpError, and marshalled
