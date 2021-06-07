@@ -218,21 +218,21 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 
 	errCh := make(chan error)
 	go func() {
-		var init dialChannelMessage
-		err = json.NewDecoder(rw).Decode(&init)
+		var res DialChannelResponse
+		err = json.NewDecoder(rw).Decode(&res)
 		if err != nil {
-			errCh <- fmt.Errorf("read init: %w", err)
+			errCh <- fmt.Errorf("read dial response: %w", err)
 			return
 		}
-		if init.Err == "" {
+		if res.Err == "" {
 			close(errCh)
 			return
 		}
-		err := errors.New(init.Err)
-		if init.Net != "" {
-			errCh <- &net.OpError{
-				Op:  init.Op,
-				Net: init.Net,
+		err := errors.New(res.Err)
+		if res.Code == CodeDialErr {
+			err = &net.OpError{
+				Op:  res.Op,
+				Net: res.Net,
 				Err: err,
 			}
 			return

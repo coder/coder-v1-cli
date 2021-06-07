@@ -21,6 +21,24 @@ const OpNotPermittedByPolicy = "port_not_permitted"
 
 var connectionRetryInterval = time.Second
 
+// Codes for DialChannelResponse.
+const (
+	CodeDialErr       = "dial_error"
+	CodePermissionErr = "permission_error"
+	CodeBadAddressErr = "bad_address_error"
+)
+
+// DialChannelResponse is used to notify a dial channel of a
+// listening state. Modeled after net.OpError, and marshalled
+// to that if Net is not "".
+type DialChannelResponse struct {
+	Code string
+	Err  string
+	// Fields are set if the code is CodeDialErr.
+	Net string
+	Op  string
+}
+
 // Listen connects to the broker proxies connections to the local net.
 // Close will end all RTC connections.
 func Listen(ctx context.Context, broker string) (io.Closer, error) {
@@ -265,7 +283,7 @@ func (l *listener) handle(msg BrokerMessage) func(dc *webrtc.DataChannel) {
 				return
 			}
 
-			var init dialChannelMessage
+			var init DialChannelResponse
 			sendInitMessage := func() {
 				initData, err := json.Marshal(&init)
 				if err != nil {
@@ -285,10 +303,11 @@ func (l *listener) handle(msg BrokerMessage) func(dc *webrtc.DataChannel) {
 
 			network, addr, err := msg.getAddress(dc.Protocol())
 			if err != nil {
+				init.Code = CodeBadAddressErr
 				init.Err = err.Error()
 				var policyErr notPermittedByPolicyErr
 				if errors.As(err, &policyErr) {
-					init.Op = OpNotPermittedByPolicy
+					init.Code = CodePermissionErr
 				}
 				sendInitMessage()
 				return
@@ -296,6 +315,7 @@ func (l *listener) handle(msg BrokerMessage) func(dc *webrtc.DataChannel) {
 
 			conn, err := net.Dial(network, addr)
 			if err != nil {
+				init.Code = CodeDialErr
 				init.Err = err.Error()
 				if op, ok := err.(*net.OpError); ok {
 					init.Net = op.Net

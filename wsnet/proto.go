@@ -107,15 +107,6 @@ func (msg BrokerMessage) getAddress(protocol string) (netwk, addr string, err er
 	return "", "", fmt.Errorf("connections are not permitted to %q by policy", protocol)
 }
 
-// dialChannelMessage is used to notify a dial channel of a
-// listening state. Modeled after net.OpError, and marshalled
-// to that if Net is not "".
-type dialChannelMessage struct {
-	Err string
-	Net string
-	Op  string
-}
-
 // canonicalizeHost converts all representations of "localhost" to "localhost".
 func canonicalizeHost(addr string) string {
 	addr = strings.TrimPrefix(addr, "[")
