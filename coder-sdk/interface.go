@@ -238,4 +238,19 @@ type Client interface {
 
 	// RenameWorkspaceProvider changes an existing providers name field.
 	RenameWorkspaceProvider(ctx context.Context, id string, name string) error
+
+	// GenerateSelfSignedCertificate generates a self-signed certificate for Coder
+	GenerateSelfSignedCertificate(ctx context.Context, req SelfSignedCertificateRequest) (*TLSCertificateResponse, error)
+
+	// UploadCustomCertificate uploads TLS certificate and key files for use by Coder
+	UploadCustomCertificate(ctx context.Context, req UploadCertificateRequest) (*TLSCertificateResponse, error)
+
+	// GenerateLetsEncryptCert requests a certificate from Let's Encrypt to be used by Coder
+	GenerateLetsEncryptCert(ctx context.Context, req GenerateLetsEncryptCertRequest) (*TLSCertificateResponse, error)
+
+	// GetLetsEncryptProviders returns a list of supported Let's Encrypt DNS providers along with required credentials
+	GetLetsEncryptProviders(ctx context.Context) (*LetsEncryptProviders, error)
+
+	// DisableTLS deletes TLS certificate and key files from Coder, effectively disabling TLS
+	DisableTLS(ctx context.Context, forceDelete bool) (*DisableTLSResponse, error)
 }
