@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cdr/grip"
+	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
+
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/coder-cli/pkg/tablewriter"
-	"github.com/cdr/grip"
-	"github.com/spf13/cobra"
-	"golang.org/x/xerrors"
 )
 
 type ErrMissingRequiredParameter struct {
