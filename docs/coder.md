@@ -18,6 +18,7 @@ coder provides a CLI for working with an existing Coder installation
 * [coder logout](coder_logout.md)	 - Remove local authentication credentials if any exist
 * [coder ssh](coder_ssh.md)	 - Enter a shell of execute a command over SSH into a Coder workspace
 * [coder sync](coder_sync.md)	 - Establish a one way directory sync to a Coder workspace
+* [coder tls](coder_tls.md)	 - Manage Coder TLS configuration
 * [coder tokens](coder_tokens.md)	 - manage Coder API tokens for the active user
 * [coder urls](coder_urls.md)	 - Interact with workspace DevURLs
 * [coder users](coder_users.md)	 - Interact with Coder user accounts
