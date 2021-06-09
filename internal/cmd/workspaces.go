@@ -809,7 +809,9 @@ func setPolicyTemplate() *cobra.Command {
 
 			for _, mc := range resp.MergeConflicts {
 				workspace, err := client.WorkspaceByID(ctx, mc.WorkspaceID)
-				if err == nil {
+				if err != nil {
+					fmt.Printf("Workspace %q:\n", mc.WorkspaceID)
+				} else {
 					fmt.Printf("Workspace %q in organization %q:\n", workspace.Name, workspace.OrganizationID)
 				}
 
