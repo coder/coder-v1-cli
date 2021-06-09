@@ -125,8 +125,8 @@ func tlsCustom() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&certFilepath, "cert", "c", "", "Full path to a PEM encoded certificate file")
-	cmd.Flags().StringVarP(&keyFilepath, "key", "k", "", "Full path to a PEM encoded private key file")
+	cmd.Flags().StringVarP(&certFilepath, "cert", "", "", "Full path to a PEM encoded certificate file")
+	cmd.Flags().StringVarP(&keyFilepath, "key", "", "", "Full path to a PEM encoded private key file")
 	return cmd
 }
 
@@ -204,11 +204,11 @@ tls acme --email me@example.com --domains a.example.com --domains b.example.com 
 		},
 	}
 
-	cmd.Flags().BoolVarP(&showProviderInfo, "info", "i", false, "Show supported DNS providers and required credentials for each")
-	cmd.Flags().BoolVarP(&agreeTOS, "agree-tos", "a", false, "Agree to ACME Terms of Service")
+	cmd.Flags().BoolVarP(&showProviderInfo, "info", "", false, "Show supported DNS providers and required credentials for each")
+	cmd.Flags().BoolVarP(&agreeTOS, "agree-tos", "", false, "Agree to ACME Terms of Service")
 	cmd.Flags().StringVarP(&email, "email", "e", "", "Email to use for ACME account")
-	cmd.Flags().StringArrayVarP(&domains, "domains", "d", []string{}, "Domains to request certificates for")
-	cmd.Flags().StringVarP(&dnsProvider, "provider", "p", "", "DNS provider hosting your domains")
+	cmd.Flags().StringArrayVarP(&domains, "domains", "", []string{}, "Domains to request certificates for")
+	cmd.Flags().StringVarP(&dnsProvider, "provider", "", "", "DNS provider hosting your domains")
 	cmd.Flags().StringToStringVarP(&credentials, "credentials", "c", map[string]string{}, "DNS provider credentials")
 	return cmd
 }
