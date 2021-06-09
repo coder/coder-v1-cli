@@ -2,9 +2,11 @@ package coder
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"cdr.dev/wsep"
@@ -366,12 +368,14 @@ func (c *DefaultClient) WorkspacesByWorkspaceProvider(ctx context.Context, wpID 
 }
 
 const (
+	// SkipTemplateOrg allows skipping checks on organizations.
 	SkipTemplateOrg = "SKIP_ORG"
 )
 
 type TemplateScope string
 
 const (
+	// TemplateScopeSite is the scope for a site wide policy template.
 	TemplateScopeSite = "site"
 )
 
@@ -393,6 +397,44 @@ type WorkspaceTemplateMergeConflict struct {
 	CurrentTemplateIsLatest bool      `json:"current_template_is_latest"`
 	Message                 string    `json:"message"`
 }
+
+func (mc WorkspaceTemplateMergeConflict) String() string {
+	var sb strings.Builder
+
+	if mc.Message != "" {
+		sb.WriteString(mc.Message)
+	}
+
+	currentConflicts := len(mc.CurrentTemplateWarnings) != 0 || mc.CurrentTemplateError != nil
+	updateConflicts := len(mc.LatestTemplateWarnings) != 0 || mc.LatestTemplateError != nil
+
+	if !currentConflicts && !updateConflicts {
+		sb.WriteString("No conflicts\n")
+		return sb.String()
+	}
+
+	if currentConflicts {
+		if len(mc.CurrentTemplateWarnings) != 0 {
+			sb.WriteString(fmt.Sprintf("Warnings: \n%s\n", strings.Join(mc.CurrentTemplateWarnings, "\n")))
+		}
+		if mc.CurrentTemplateError != nil {
+			sb.WriteString(fmt.Sprintf("Errors: \n%s\n", strings.Join(mc.CurrentTemplateError.Msgs, "\n")))
+		}
+	}
+
+	if !mc.CurrentTemplateIsLatest && updateConflicts {
+		sb.WriteString("If workspace is updated to the latest template:\n")
+		if len(mc.LatestTemplateWarnings) != 0 {
+			sb.WriteString(fmt.Sprintf("Warnings: \n%s\n", strings.Join(mc.LatestTemplateWarnings, "\n")))
+		}
+		if mc.LatestTemplateError != nil {
+			sb.WriteString(fmt.Sprintf("Errors: \n%s\n", strings.Join(mc.LatestTemplateError.Msgs, "\n")))
+		}
+	}
+
+	return sb.String()
+}
+
 type TplError struct {
 	// Msgs are the human facing strings to present to the user. Since there can be multiple
 	// problems with a template, there might be multiple strings

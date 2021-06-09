@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strings"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/coderutil"
@@ -815,34 +814,7 @@ func setPolicyTemplate() *cobra.Command {
 					fmt.Printf("Workspace %q in organization %q:\n", workspace.Name, workspace.OrganizationID)
 				}
 
-				if mc.Message != "" {
-					fmt.Println(mc.Message)
-				}
-
-				currentConflicts := len(mc.CurrentTemplateWarnings) != 0 || mc.CurrentTemplateError != nil
-				updateConflicts := len(mc.LatestTemplateWarnings) != 0 || mc.LatestTemplateError != nil
-
-				if !currentConflicts && !updateConflicts {
-					fmt.Println("No conflicts")
-					return nil
-				}
-
-				if len(mc.CurrentTemplateWarnings) != 0 {
-					fmt.Printf("Warnings: \n%s\n", strings.Join(mc.CurrentTemplateWarnings, "\n"))
-				}
-				if mc.CurrentTemplateError != nil {
-					fmt.Printf("Errors: \n%s\n", strings.Join(mc.CurrentTemplateError.Msgs, "\n"))
-				}
-
-				if !mc.CurrentTemplateIsLatest && updateConflicts {
-					fmt.Println("If workspace is updated to the latest template:")
-					if len(mc.LatestTemplateWarnings) != 0 {
-						fmt.Printf("Latest Template Warnings: \n%s\n", strings.Join(mc.LatestTemplateWarnings, "\n"))
-					}
-					if mc.LatestTemplateError != nil {
-						fmt.Printf("Latest Template Errors: \n%s\n", strings.Join(mc.LatestTemplateError.Msgs, "\n"))
-					}
-				}
+				fmt.Println(mc.String())
 			}
 			return nil
 		},
