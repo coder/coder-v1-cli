@@ -15,9 +15,9 @@ tls custom --cert /path/to/cert.pem --key /path/to/key.pem
 ### Options
 
 ```
-  -c, --cert string   Full path to a PEM encoded certificate file
+      --cert string   Full path to a PEM encoded certificate file
   -h, --help          help for custom
-  -k, --key string    Full path to a PEM encoded private key file
+      --key string    Full path to a PEM encoded private key file
 ```
 
 ### Options inherited from parent commands

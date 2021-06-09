@@ -17,13 +17,13 @@ tls acme --email me@example.com --domains a.example.com --domains b.example.com 
 ### Options
 
 ```
-  -a, --agree-tos                    Agree to ACME Terms of Service
+      --agree-tos                    Agree to ACME Terms of Service
   -c, --credentials stringToString   DNS provider credentials (default [])
-  -d, --domains stringArray          Domains to request certificates for
+      --domains stringArray          Domains to request certificates for
   -e, --email string                 Email to use for ACME account
   -h, --help                         help for acme
-  -i, --info                         Show supported DNS providers and required credentials for each
-  -p, --provider string              DNS provider hosting your domains
+      --info                         Show supported DNS providers and required credentials for each
+      --provider string              DNS provider hosting your domains
 ```
 
 ### Options inherited from parent commands
