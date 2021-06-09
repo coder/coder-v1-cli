@@ -364,3 +364,59 @@ func (c *DefaultClient) WorkspacesByWorkspaceProvider(ctx context.Context, wpID 
 	}
 	return workspaces, nil
 }
+
+const (
+	SkipTemplateOrg = "SKIP_ORG"
+)
+
+type TemplateScope string
+
+const (
+	TemplateScopeSite = "site"
+)
+
+type SetPolicyTemplateRequest struct {
+	TemplateID string `json:"template_id"`
+	Type       string `json:"type"` // site, org
+}
+
+type SetPolicyTemplateResponse struct {
+	MergeConflicts []*WorkspaceTemplateMergeConflict `json:"merge_conflicts"`
+}
+
+type WorkspaceTemplateMergeConflict struct {
+	WorkspaceID             string    `json:"workspace_id"`
+	CurrentTemplateWarnings []string  `json:"current_template_warnings"`
+	CurrentTemplateError    *TplError `json:"current_template_errors"`
+	LatestTemplateWarnings  []string  `json:"latest_template_warnings"`
+	LatestTemplateError     *TplError `json:"latest_template_errors"`
+	CurrentTemplateIsLatest bool      `json:"current_template_is_latest"`
+	Message                 string    `json:"message"`
+}
+type TplError struct {
+	// Msgs are the human facing strings to present to the user. Since there can be multiple
+	// problems with a template, there might be multiple strings
+	Msgs []string `json:"messages"`
+}
+
+func (c *DefaultClient) SetPolicyTemplate(ctx context.Context, templateID string, templateScope TemplateScope, dryRun bool) (*SetPolicyTemplateResponse, error) {
+	var (
+		resp  SetPolicyTemplateResponse
+		query = url.Values{}
+	)
+
+	req := SetPolicyTemplateRequest{
+		TemplateID: templateID,
+		Type:       string(templateScope),
+	}
+
+	if dryRun {
+		query.Set("dry-run", "true")
+	}
+
+	if err := c.requestBody(ctx, http.MethodPost, "/api/private/workspaces/template/policy", req, &resp, withQueryParams(query)); err != nil {
+		return nil, err
+	}
+
+	return &resp, nil
+}

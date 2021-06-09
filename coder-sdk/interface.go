@@ -238,4 +238,7 @@ type Client interface {
 
 	// RenameWorkspaceProvider changes an existing providers name field.
 	RenameWorkspaceProvider(ctx context.Context, id string, name string) error
+
+	// SetPolicyTemplate sets the workspace policy template
+	SetPolicyTemplate(ctx context.Context, templateID string, templateScope TemplateScope, dryRun bool) (*SetPolicyTemplateResponse, error)
 }

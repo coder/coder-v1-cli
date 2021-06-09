@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/coderutil"
@@ -47,6 +48,7 @@ func workspacesCmd() *cobra.Command {
 		workspaceFromConfigCmd(true),
 		workspaceFromConfigCmd(false),
 		editWorkspaceCmd(),
+		setPolicyTemplate(),
 	)
 	return cmd
 }
@@ -751,4 +753,102 @@ func buildUpdateReq(ctx context.Context, client coder.Client, conf updateConf) (
 		updateReq.ImageTag = &conf.imageTag
 	}
 	return &updateReq, nil
+}
+
+func setPolicyTemplate() *cobra.Command {
+	var (
+		ref      string
+		repo     string
+		filepath string
+		dryRun   bool
+	)
+
+	cmd := &cobra.Command{
+		Use:   "policy-template",
+		Short: "Set workspace policy template",
+		Long:  "Set workspace policy template",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			client, err := newClient(ctx, true)
+			if err != nil {
+				return err
+			}
+
+			if filepath == "" && ref == "" && repo == "" {
+				return clog.Error("Must specify a configuration source",
+					"A template source is either sourced from a local file (-f) or from a git repository (--repo-url and --ref)",
+				)
+			}
+
+			var rd io.Reader
+			if filepath != "" {
+				b, err := ioutil.ReadFile(filepath)
+				if err != nil {
+					return xerrors.Errorf("read local file: %w", err)
+				}
+				rd = bytes.NewReader(b)
+			}
+
+			req := coder.ParseTemplateRequest{
+				RepoURL:  repo,
+				Ref:      ref,
+				Local:    rd,
+				OrgID:    coder.SkipTemplateOrg,
+				Filepath: ".coder/coder.yaml",
+			}
+
+			version, err := client.ParseTemplate(ctx, req)
+			if err != nil {
+				return handleAPIError(err)
+			}
+
+			resp, err := client.SetPolicyTemplate(ctx, version.TemplateID, coder.TemplateScopeSite, dryRun)
+			if err != nil {
+				return handleAPIError(err)
+			}
+
+			for _, mc := range resp.MergeConflicts {
+				workspace, err := client.WorkspaceByID(ctx, mc.WorkspaceID)
+				if err == nil {
+					fmt.Printf("Workspace %q in organization %q:\n", workspace.Name, workspace.OrganizationID)
+				}
+
+				if mc.Message != "" {
+					fmt.Println(mc.Message)
+				}
+
+				currentConflicts := len(mc.CurrentTemplateWarnings) != 0 || mc.CurrentTemplateError != nil
+				updateConflicts := len(mc.LatestTemplateWarnings) != 0 || mc.LatestTemplateError != nil
+
+				if !currentConflicts && !updateConflicts {
+					fmt.Println("No conflicts")
+					return nil
+				}
+
+				if len(mc.CurrentTemplateWarnings) != 0 {
+					fmt.Printf("Warnings: \n%s\n", strings.Join(mc.CurrentTemplateWarnings, "\n"))
+				}
+				if mc.CurrentTemplateError != nil {
+					fmt.Printf("Errors: \n%s\n", strings.Join(mc.CurrentTemplateError.Msgs, "\n"))
+				}
+
+				if !mc.CurrentTemplateIsLatest && updateConflicts {
+					fmt.Println("If workspace is updated to the latest template:")
+					if len(mc.LatestTemplateWarnings) != 0 {
+						fmt.Printf("Latest Template Warnings: \n%s\n", strings.Join(mc.LatestTemplateWarnings, "\n"))
+					}
+					if mc.LatestTemplateError != nil {
+						fmt.Printf("Latest Template Errors: \n%s\n", strings.Join(mc.LatestTemplateError.Msgs, "\n"))
+					}
+				}
+			}
+			return nil
+		},
+	}
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "", false, "skip setting policy template, but view errors/warnings about how this policy template would impact existing workspaces")
+	cmd.Flags().StringVarP(&filepath, "filepath", "f", "", "full path to local policy template file.")
+	cmd.Flags().StringVarP(&ref, "ref", "", "master", "git reference to pull template from. May be a branch, tag, or commit hash.")
+	cmd.Flags().StringVarP(&repo, "repo-url", "r", "", "URL of the git repository to pull the config from. Config file must live in '.coder/coder.yaml'.")
+
+	return cmd
 }
