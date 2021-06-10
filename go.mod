@@ -3,7 +3,7 @@ module cdr.dev/coder-cli
 go 1.14
 
 require (
-	cdr.dev/slog v1.4.0
+	cdr.dev/slog v1.4.1
 	cdr.dev/wsep v0.0.0-20200728013649-82316a09813f
 	github.com/briandowns/spinner v1.13.0
 	github.com/fatih/color v1.12.0
@@ -21,8 +21,8 @@ require (
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 	github.com/rjeczalik/notify v0.9.2
 	github.com/spf13/cobra v1.1.3
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20210420072515-93ed5bcd2bfe
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sys v0.0.0-20210514084401-e8d321eab015
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
