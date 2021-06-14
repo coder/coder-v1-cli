@@ -206,7 +206,7 @@ tls acme --email me@example.com --domains a.example.com --domains b.example.com 
 
 	cmd.Flags().BoolVar(&showProviderInfo, "info", false, "Show supported DNS providers and required credentials for each")
 	cmd.Flags().BoolVar(&agreeTOS, "agree-tos", false, "Agree to ACME Terms of Service")
-	cmd.Flags().StringVar(&email, "email", "e", "Email to use for ACME account")
+	cmd.Flags().StringVar(&email, "email", "", "Email to use for ACME account")
 	cmd.Flags().StringArrayVar(&domains, "domains", []string{}, "Domains to request certificates for")
 	cmd.Flags().StringVar(&dnsProvider, "provider", "", "DNS provider hosting your domains")
 	cmd.Flags().StringToStringVar(&credentials, "credentials", map[string]string{}, "DNS provider credentials")
