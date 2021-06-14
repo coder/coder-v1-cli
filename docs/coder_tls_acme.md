@@ -18,9 +18,9 @@ tls acme --email me@example.com --domains a.example.com --domains b.example.com 
 
 ```
       --agree-tos                    Agree to ACME Terms of Service
-  -c, --credentials stringToString   DNS provider credentials (default [])
+      --credentials stringToString   DNS provider credentials (default [])
       --domains stringArray          Domains to request certificates for
-  -e, --email string                 Email to use for ACME account
+      --email string                 Email to use for ACME account (default "e")
   -h, --help                         help for acme
       --info                         Show supported DNS providers and required credentials for each
       --provider string              DNS provider hosting your domains
