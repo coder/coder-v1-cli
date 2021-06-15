@@ -165,14 +165,14 @@ func TestDial(t *testing.T) {
 
 func BenchmarkThroughput(b *testing.B) {
 	sizes := []int64{
-		// 4,
-		// 16,
+		4,
+		16,
 		128,
-		// 256,
-		// 1024,
-		// 4096,
-		// 16384,
-		// 32768,
+		256,
+		1024,
+		4096,
+		16384,
+		32768,
 	}
 
 	listener, err := net.Listen("tcp", "0.0.0.0:0")

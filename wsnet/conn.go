@@ -91,8 +91,13 @@ func (c *conn) Write(b []byte) (n int, err error) {
 	if c.dc.BufferedAmount()+uint64(len(b)) >= maxBufferedAmount {
 		<-c.sendMore
 	}
-	// Uncomment this line for it to work.
-	// time.Sleep(time.Microsecond)
+	// TODO (@kyle): There's an obvious race-condition here.
+	// This is an edge-case, as most-frequently data won't
+	// be pooled so synchronously, but is definitely possible.
+	//
+	// See: https://github.com/pion/sctp/issues/181
+	time.Sleep(time.Microsecond)
+
 	return c.rw.Write(b)
 }
 
