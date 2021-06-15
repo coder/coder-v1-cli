@@ -4,13 +4,22 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/pion/datachannel"
+	"github.com/pion/webrtc/v3"
 )
 
 const (
 	httpScheme = "http"
+
+	bufferedAmountLowThreshold uint64 = 512 * 1024  // 512 KB
+	maxBufferedAmount          uint64 = 1024 * 1024 // 1 MB
+	// For some reason messages larger just don't work...
+	// This shouldn't be a huge deal for real-world usage.
+	// See: https://github.com/pion/datachannel/issues/59
+	maxMessageLength = 32 * 1024 // 32 KB
 )
 
 // TURNEndpoint returns the TURN address for a Coder baseURL.
@@ -43,7 +52,30 @@ func ConnectEndpoint(baseURL *url.URL, workspace, token string) string {
 
 type conn struct {
 	addr *net.UnixAddr
+	dc   *webrtc.DataChannel
 	rw   datachannel.ReadWriteCloser
+
+	sendMore    chan struct{}
+	closedMutex sync.RWMutex
+	closed      bool
+
+	writeMutex sync.Mutex
+}
+
+func (c *conn) init() {
+	c.sendMore = make(chan struct{}, 1)
+	c.dc.SetBufferedAmountLowThreshold(bufferedAmountLowThreshold)
+	c.dc.OnBufferedAmountLow(func() {
+		c.closedMutex.RLock()
+		defer c.closedMutex.RUnlock()
+		if c.closed {
+			return
+		}
+		select {
+		case c.sendMore <- struct{}{}:
+		default:
+		}
+	})
 }
 
 func (c *conn) Read(b []byte) (n int, err error) {
@@ -51,11 +83,32 @@ func (c *conn) Read(b []byte) (n int, err error) {
 }
 
 func (c *conn) Write(b []byte) (n int, err error) {
+	c.writeMutex.Lock()
+	defer c.writeMutex.Unlock()
+	if len(b) > maxMessageLength {
+		return 0, fmt.Errorf("outbound packet larger than maximum message size: %d", maxMessageLength)
+	}
+	if c.dc.BufferedAmount()+uint64(len(b)) >= maxBufferedAmount {
+		<-c.sendMore
+	}
+	// TODO (@kyle): There's an obvious race-condition here.
+	// This is an edge-case, as most-frequently data won't
+	// be pooled so synchronously, but is definitely possible.
+	//
+	// See: https://github.com/pion/sctp/issues/181
+	time.Sleep(time.Microsecond)
+
 	return c.rw.Write(b)
 }
 
 func (c *conn) Close() error {
-	return c.rw.Close()
+	c.closedMutex.Lock()
+	defer c.closedMutex.Unlock()
+	if !c.closed {
+		c.closed = true
+		close(c.sendMore)
+	}
+	return c.dc.Close()
 }
 
 func (c *conn) LocalAddr() net.Addr {

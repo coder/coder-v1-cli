@@ -20,13 +20,14 @@ import (
 	"cdr.dev/slog/sloggers/slogtest/assert"
 	"github.com/hashicorp/yamux"
 	"github.com/pion/ice/v2"
+	"github.com/pion/logging"
 	"github.com/pion/turn/v2"
 	"nhooyr.io/websocket"
 )
 
 // createDumbBroker proxies sockets between /listen and /connect
 // to emulate an authenticated WebSocket pair.
-func createDumbBroker(t *testing.T) (connectAddr string, listenAddr string) {
+func createDumbBroker(t testing.TB) (connectAddr string, listenAddr string) {
 	listener, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
 		t.Error(err)
@@ -128,6 +129,8 @@ func createTURNServer(t *testing.T, server ice.SchemeType, pass string) string {
 		}}
 	}
 
+	lf := logging.NewDefaultLoggerFactory()
+	lf.DefaultLogLevel = logging.LogLevelDisabled
 	srv, err := turn.NewServer(turn.ServerConfig{
 		PacketConnConfigs: pcListeners,
 		ListenerConfigs:   listeners,
@@ -135,6 +138,7 @@ func createTURNServer(t *testing.T, server ice.SchemeType, pass string) string {
 		AuthHandler: func(username, realm string, srcAddr net.Addr) (key []byte, ok bool) {
 			return turn.GenerateAuthKey(username, realm, pass), true
 		},
+		LoggerFactory: lf,
 	})
 	if err != nil {
 		t.Error(err)

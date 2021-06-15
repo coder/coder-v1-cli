@@ -3,9 +3,11 @@ package wsnet
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"errors"
 	"io"
 	"net"
+	"strconv"
 	"testing"
 
 	"github.com/pion/webrtc/v3"
@@ -159,4 +161,71 @@ func TestDial(t *testing.T) {
 			return
 		}
 	})
+}
+
+func BenchmarkThroughput(b *testing.B) {
+	sizes := []int64{
+		4,
+		16,
+		128,
+		256,
+		1024,
+		4096,
+		16384,
+		32768,
+	}
+
+	listener, err := net.Listen("tcp", "0.0.0.0:0")
+	if err != nil {
+		b.Error(err)
+		return
+	}
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				b.Error(err)
+				return
+			}
+			go func() {
+				_, _ = io.Copy(io.Discard, conn)
+			}()
+		}
+	}()
+	connectAddr, listenAddr := createDumbBroker(b)
+	_, err = Listen(context.Background(), listenAddr)
+	if err != nil {
+		b.Error(err)
+		return
+	}
+
+	dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+	if err != nil {
+		b.Error(err)
+		return
+	}
+	for _, size := range sizes {
+		size := size
+		bytes := make([]byte, size)
+		_, _ = rand.Read(bytes)
+		b.Run("Rand"+strconv.Itoa(int(size)), func(b *testing.B) {
+			b.SetBytes(size)
+			b.ReportAllocs()
+
+			conn, err := dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+			if err != nil {
+				b.Error(err)
+				return
+			}
+			defer conn.Close()
+
+			for i := 0; i < b.N; i++ {
+				_, err := conn.Write(bytes)
+				if err != nil {
+					b.Error(err)
+					break
+				}
+			}
+		})
+	}
 }

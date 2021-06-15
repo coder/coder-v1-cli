@@ -249,11 +249,14 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 		return nil, ctx.Err()
 	}
 
-	return &conn{
+	c := &conn{
 		addr: &net.UnixAddr{
 			Name: address,
 			Net:  network,
 		},
+		dc: dc,
 		rw: rw,
-	}, nil
+	}
+	c.init()
+	return c, nil
 }
