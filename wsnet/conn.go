@@ -56,20 +56,25 @@ type conn struct {
 	rw   datachannel.ReadWriteCloser
 
 	sendMore    chan struct{}
-	closedMutex sync.Mutex
+	closedMutex sync.RWMutex
 	closed      bool
+
+	writeMutex sync.Mutex
 }
 
 func (c *conn) init() {
-	c.sendMore = make(chan struct{})
+	c.sendMore = make(chan struct{}, 1)
 	c.dc.SetBufferedAmountLowThreshold(bufferedAmountLowThreshold)
 	c.dc.OnBufferedAmountLow(func() {
-		c.closedMutex.Lock()
-		defer c.closedMutex.Unlock()
+		c.closedMutex.RLock()
+		defer c.closedMutex.RUnlock()
 		if c.closed {
 			return
 		}
-		c.sendMore <- struct{}{}
+		select {
+		case c.sendMore <- struct{}{}:
+		default:
+		}
 	})
 }
 
@@ -78,12 +83,16 @@ func (c *conn) Read(b []byte) (n int, err error) {
 }
 
 func (c *conn) Write(b []byte) (n int, err error) {
+	c.writeMutex.Lock()
+	defer c.writeMutex.Unlock()
 	if len(b) > maxMessageLength {
 		return 0, fmt.Errorf("outbound packet larger than maximum message size: %d", maxMessageLength)
 	}
 	if c.dc.BufferedAmount()+uint64(len(b)) >= maxBufferedAmount {
 		<-c.sendMore
 	}
+	// Uncomment this line for it to work.
+	// time.Sleep(time.Microsecond)
 	return c.rw.Write(b)
 }
 

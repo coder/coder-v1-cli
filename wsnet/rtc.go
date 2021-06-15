@@ -161,7 +161,7 @@ func newPeerConnection(servers []webrtc.ICEServer) (*webrtc.PeerConnection, erro
 	se.DetachDataChannels()
 	se.SetICETimeouts(time.Second*5, time.Second*5, time.Second*2)
 	lf := logging.NewDefaultLoggerFactory()
-	lf.DefaultLogLevel = logging.LogLevelDebug
+	lf.DefaultLogLevel = logging.LogLevelDisabled
 	se.LoggerFactory = lf
 
 	// If one server is provided and we know it's TURN, we can set the

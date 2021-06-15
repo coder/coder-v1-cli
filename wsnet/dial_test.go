@@ -167,11 +167,12 @@ func BenchmarkThroughput(b *testing.B) {
 	sizes := []int64{
 		// 4,
 		// 16,
+		128,
 		// 256,
 		// 1024,
 		// 4096,
 		// 16384,
-		32768,
+		// 32768,
 	}
 
 	listener, err := net.Listen("tcp", "0.0.0.0:0")
