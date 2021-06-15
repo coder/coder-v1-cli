@@ -81,7 +81,7 @@ jobs:
           CODER_EMAIL: ${{ secrets.CODER_EMAIL }}
           CODER_PASSWORD: ${{ secrets.CODER_PASSWORD }}
         with:
-          args: sh -c 'go test -bench=. cdr.dev/coder-cli/wsnet | tee output.txt'
+          args: sh -c "go test -bench=. cdr.dev/coder-cli/wsnet | tee output.txt"
 
       - name: Store benchmark result
         uses: rhysd/github-action-benchmark@v1
