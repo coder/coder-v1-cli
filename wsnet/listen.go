@@ -311,7 +311,7 @@ func (l *listener) handle(msg BrokerMessage) func(dc *webrtc.DataChannel) {
 				return
 			}
 
-			conn, err := net.Dial(network, addr)
+			nc, err := net.Dial(network, addr)
 			if err != nil {
 				init.Code = CodeDialErr
 				init.Err = err.Error()
@@ -324,14 +324,21 @@ func (l *listener) handle(msg BrokerMessage) func(dc *webrtc.DataChannel) {
 			if init.Err != "" {
 				return
 			}
-			defer conn.Close()
-			defer dc.Close()
-			defer rw.Close()
+			// Must wrap the data channel inside this connection
+			// for buffering from the dialed endpoint to the client.
+			co := &conn{
+				addr: nil,
+				dc:   dc,
+				rw:   rw,
+			}
+			co.init()
+			defer co.Close()
+			defer nc.Close()
 
 			go func() {
-				_, _ = io.Copy(rw, conn)
+				_, _ = io.Copy(co, nc)
 			}()
-			_, _ = io.Copy(conn, rw)
+			_, _ = io.Copy(nc, co)
 		})
 	}
 }
