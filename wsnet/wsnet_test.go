@@ -26,7 +26,7 @@ import (
 
 // createDumbBroker proxies sockets between /listen and /connect
 // to emulate an authenticated WebSocket pair.
-func createDumbBroker(t *testing.T) (connectAddr string, listenAddr string) {
+func createDumbBroker(t testing.TB) (connectAddr string, listenAddr string) {
 	listener, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
 		t.Error(err)

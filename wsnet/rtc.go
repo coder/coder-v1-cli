@@ -14,6 +14,7 @@ import (
 
 	"github.com/pion/dtls/v2"
 	"github.com/pion/ice/v2"
+	"github.com/pion/logging"
 	"github.com/pion/turn/v2"
 	"github.com/pion/webrtc/v3"
 )
@@ -159,6 +160,9 @@ func newPeerConnection(servers []webrtc.ICEServer) (*webrtc.PeerConnection, erro
 	se.SetSrflxAcceptanceMinWait(0)
 	se.DetachDataChannels()
 	se.SetICETimeouts(time.Second*5, time.Second*5, time.Second*2)
+	lf := logging.NewDefaultLoggerFactory()
+	lf.DefaultLogLevel = logging.LogLevelDebug
+	se.LoggerFactory = lf
 
 	// If one server is provided and we know it's TURN, we can set the
 	// relay acceptable so the connection starts immediately.

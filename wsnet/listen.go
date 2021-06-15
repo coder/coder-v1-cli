@@ -331,6 +331,31 @@ func (l *listener) handle(msg BrokerMessage) func(dc *webrtc.DataChannel) {
 				_, _ = io.Copy(rw, conn)
 			}()
 			_, _ = io.Copy(conn, rw)
+
+			// bufs := make(chan []byte, 32)
+			// go func() {
+			// 	defer close(bufs)
+
+			// 	for {
+			// 		buf := <-bufs
+			// 		_, _ = conn.Write(buf)
+			// 	}
+			// }()
+
+			// buf := make([]byte, maxMessageLength)
+			// for {
+			// 	nr, err := rw.Read(buf)
+			// 	if nr > 0 {
+			// 		select {
+			// 		case bufs <- buf[0:nr]:
+			// 		default:
+			// 		}
+
+			// 	}
+			// 	if err != nil {
+			// 		break
+			// 	}
+			// }
 		})
 	}
 }
