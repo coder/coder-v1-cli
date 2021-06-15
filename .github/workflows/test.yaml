@@ -54,6 +54,45 @@ jobs:
         with:
           args: make -j test/coverage
 
+  bench:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - uses: actions/cache@v2
+        with:
+          path: ./cache
+          key: ${{ runner.os }}-go-bench
+          restore-keys: |
+            ${{ runner.os }}-go-bench-
+
+      - name: bench
+        uses: ./ci/image
+        env:
+          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CODER_URL: ${{ secrets.CODER_URL }}
+          CODER_EMAIL: ${{ secrets.CODER_EMAIL }}
+          CODER_PASSWORD: ${{ secrets.CODER_PASSWORD }}
+        with:
+          args: sh -c 'go test -bench=. cdr.dev/coder-cli/wsnet | tee output.txt'
+
+      - name: Store benchmark result
+        uses: rhysd/github-action-benchmark@v1
+        with:
+          tool: 'go'
+          output-file-path: output.txt
+          external-data-json-path: ./cache/benchmark-data.json
+          fail-on-alert: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          comment-on-alert: true
+
   gendocs:
     runs-on: ubuntu-20.04
     steps:
