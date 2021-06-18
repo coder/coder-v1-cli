@@ -40,6 +40,7 @@ func Make() *cobra.Command {
 		genDocsCmd(app),
 		agentCmd(),
 		tunnelCmd(),
+		openCmd(),
 	)
 	app.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "show verbose output")
 	return app

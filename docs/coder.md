@@ -16,6 +16,7 @@ coder provides a CLI for working with an existing Coder installation
 * [coder images](coder_images.md)	 - Manage Coder images
 * [coder login](coder_login.md)	 - Authenticate this client for future operations
 * [coder logout](coder_logout.md)	 - Remove local authentication credentials if any exist
+* [coder open](coder_open.md)	 - Open Coder workspace IDE
 * [coder ssh](coder_ssh.md)	 - Enter a shell of execute a command over SSH into a Coder workspace
 * [coder sync](coder_sync.md)	 - Establish a one way directory sync to a Coder workspace
 * [coder tokens](coder_tokens.md)	 - manage Coder API tokens for the active user
