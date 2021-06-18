@@ -760,6 +760,7 @@ func setPolicyTemplate() *cobra.Command {
 		repo     string
 		filepath string
 		dryRun   bool
+		scope    string
 	)
 
 	cmd := &cobra.Command{
@@ -771,6 +772,10 @@ func setPolicyTemplate() *cobra.Command {
 			client, err := newClient(ctx, true)
 			if err != nil {
 				return err
+			}
+
+			if scope != coder.TemplateScopeSite {
+				return clog.Error("Invalid 'scope' value", "Valid scope values: site")
 			}
 
 			if filepath == "" {
@@ -797,7 +802,7 @@ func setPolicyTemplate() *cobra.Command {
 				return handleAPIError(err)
 			}
 
-			resp, err := client.SetPolicyTemplate(ctx, version.TemplateID, coder.TemplateScopeSite, dryRun)
+			resp, err := client.SetPolicyTemplate(ctx, version.TemplateID, coder.TemplateScope(scope), dryRun)
 			if err != nil {
 				return handleAPIError(err)
 			}
@@ -817,6 +822,6 @@ func setPolicyTemplate() *cobra.Command {
 	}
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "", false, "skip setting policy template, but view errors/warnings about how this policy template would impact existing workspaces")
 	cmd.Flags().StringVarP(&filepath, "filepath", "f", "", "full path to local policy template file.")
-
+	cmd.Flags().StringVar(&scope, "scope", "site", "scope of impact for the policy template. Supported values: site")
 	return cmd
 }
