@@ -3,10 +3,11 @@ package cmd
 import (
 	"fmt"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 func openCmd() *cobra.Command {
