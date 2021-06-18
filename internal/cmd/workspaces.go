@@ -756,11 +756,12 @@ func buildUpdateReq(ctx context.Context, client coder.Client, conf updateConf) (
 
 func setPolicyTemplate() *cobra.Command {
 	var (
-		ref      string
-		repo     string
-		filepath string
-		dryRun   bool
-		scope    string
+		ref             string
+		repo            string
+		filepath        string
+		dryRun          bool
+		defaultTemplate bool
+		scope           string
 	)
 
 	cmd := &cobra.Command{
@@ -778,31 +779,35 @@ func setPolicyTemplate() *cobra.Command {
 				return clog.Error("Invalid 'scope' value", "Valid scope values: site")
 			}
 
-			if filepath == "" {
-				return clog.Error("Missing required parameter --filepath or -f", "")
+			if filepath == "" && !defaultTemplate {
+				return clog.Error("Missing required parameter --filepath or --default", "Must specify a template to set")
 			}
 
-			var rd io.Reader
-			b, err := ioutil.ReadFile(filepath)
-			if err != nil {
-				return xerrors.Errorf("read local file: %w", err)
-			}
-			rd = bytes.NewReader(b)
+			templateID := ""
+			if filepath != "" {
+				var rd io.Reader
+				b, err := ioutil.ReadFile(filepath)
+				if err != nil {
+					return xerrors.Errorf("read local file: %w", err)
+				}
+				rd = bytes.NewReader(b)
 
-			req := coder.ParseTemplateRequest{
-				RepoURL:  repo,
-				Ref:      ref,
-				Local:    rd,
-				OrgID:    coder.SkipTemplateOrg,
-				Filepath: ".coder/coder.yaml",
+				req := coder.ParseTemplateRequest{
+					RepoURL:  repo,
+					Ref:      ref,
+					Local:    rd,
+					OrgID:    coder.SkipTemplateOrg,
+					Filepath: ".coder/coder.yaml",
+				}
+
+				version, err := client.ParseTemplate(ctx, req)
+				if err != nil {
+					return handleAPIError(err)
+				}
+				templateID = version.TemplateID
 			}
 
-			version, err := client.ParseTemplate(ctx, req)
-			if err != nil {
-				return handleAPIError(err)
-			}
-
-			resp, err := client.SetPolicyTemplate(ctx, version.TemplateID, coder.TemplateScope(scope), dryRun)
+			resp, err := client.SetPolicyTemplate(ctx, templateID, coder.TemplateScope(scope), dryRun)
 			if err != nil {
 				return handleAPIError(err)
 			}
@@ -823,5 +828,6 @@ func setPolicyTemplate() *cobra.Command {
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "", false, "skip setting policy template, but view errors/warnings about how this policy template would impact existing workspaces")
 	cmd.Flags().StringVarP(&filepath, "filepath", "f", "", "full path to local policy template file.")
 	cmd.Flags().StringVar(&scope, "scope", "site", "scope of impact for the policy template. Supported values: site")
+	cmd.Flags().BoolVar(&defaultTemplate, "default", false, "Restore policy template to default configuration")
 	return cmd
 }

@@ -13,6 +13,7 @@ coder workspaces policy-template [flags]
 ### Options
 
 ```
+      --default           Restore policy template to default value
       --dry-run           skip setting policy template, but view errors/warnings about how this policy template would impact existing workspaces
   -f, --filepath string   full path to local policy template file.
   -h, --help              help for policy-template
