@@ -767,7 +767,7 @@ func setPolicyTemplate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "policy-template",
 		Short: "Set workspace policy template",
-		Long:  "Set workspace policy template",
+		Long:  "Set workspace policy template or restore to default configuration. This feature is for site admins only.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			client, err := newClient(ctx, true)

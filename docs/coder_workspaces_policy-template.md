@@ -4,7 +4,7 @@ Set workspace policy template
 
 ### Synopsis
 
-Set workspace policy template
+Set workspace policy template or restore to default configuration. This feature is for site admins only.
 
 ```
 coder workspaces policy-template [flags]
