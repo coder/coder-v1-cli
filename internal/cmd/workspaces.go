@@ -822,6 +822,10 @@ func setPolicyTemplate() *cobra.Command {
 
 				fmt.Println(mc.String())
 			}
+
+			fmt.Println("Summary:")
+			fmt.Println(coder.WorkspaceTemplateMergeConflicts(resp.MergeConflicts).Summary())
+
 			return nil
 		},
 	}

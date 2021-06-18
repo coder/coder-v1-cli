@@ -409,7 +409,7 @@ func (mc WorkspaceTemplateMergeConflict) String() string {
 	updateConflicts := len(mc.LatestTemplateWarnings) != 0 || mc.LatestTemplateError != nil
 
 	if !currentConflicts && !updateConflicts {
-		sb.WriteString("No conflicts\n")
+		sb.WriteString("No workspace conflicts\n")
 		return sb.String()
 	}
 
@@ -430,6 +430,53 @@ func (mc WorkspaceTemplateMergeConflict) String() string {
 		if mc.LatestTemplateError != nil {
 			sb.WriteString(fmt.Sprintf("Errors: \n%s\n", strings.Join(mc.LatestTemplateError.Msgs, "\n")))
 		}
+	}
+
+	return sb.String()
+}
+
+type WorkspaceTemplateMergeConflicts []*WorkspaceTemplateMergeConflict
+
+func (mcs WorkspaceTemplateMergeConflicts) Summary() string {
+	var (
+		sb              strings.Builder
+		currentWarnings int
+		updateWarnings  int
+		currentErrors   int
+		updateErrors    int
+	)
+
+	for _, mc := range mcs {
+		if len(mc.CurrentTemplateWarnings) != 0 {
+			currentWarnings++
+		}
+		if len(mc.LatestTemplateWarnings) != 0 {
+			updateWarnings++
+		}
+		if mc.CurrentTemplateError != nil {
+			currentErrors++
+		}
+		if mc.LatestTemplateError != nil {
+			updateErrors++
+		}
+	}
+
+	if currentErrors == 0 && updateErrors == 0 && currentWarnings == 0 && updateWarnings == 0 {
+		sb.WriteString("No workspace conflicts\n")
+		return sb.String()
+	}
+
+	if currentErrors != 0 {
+		sb.WriteString(fmt.Sprintf("%d workspaces will not be able to be rebuilt\n", currentErrors))
+	}
+	if updateErrors != 0 {
+		sb.WriteString(fmt.Sprintf("%d workspaces will not be able to be rebuilt if updated to the latest version\n", updateErrors))
+	}
+	if currentWarnings != 0 {
+		sb.WriteString(fmt.Sprintf("%d workspaces will be impacted\n", currentWarnings))
+	}
+	if updateWarnings != 0 {
+		sb.WriteString(fmt.Sprintf("%d workspaces will be impacted if updated to the latest version\n", updateWarnings))
 	}
 
 	return sb.String()
