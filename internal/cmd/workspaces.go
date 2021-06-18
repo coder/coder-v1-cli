@@ -773,20 +773,16 @@ func setPolicyTemplate() *cobra.Command {
 				return err
 			}
 
-			if filepath == "" && ref == "" && repo == "" {
-				return clog.Error("Must specify a configuration source",
-					"A template source is either sourced from a local file (-f) or from a git repository (--repo-url and --ref)",
-				)
+			if filepath == "" {
+				return clog.Error("Missing required parameter --filepath or -f", "")
 			}
 
 			var rd io.Reader
-			if filepath != "" {
-				b, err := ioutil.ReadFile(filepath)
-				if err != nil {
-					return xerrors.Errorf("read local file: %w", err)
-				}
-				rd = bytes.NewReader(b)
+			b, err := ioutil.ReadFile(filepath)
+			if err != nil {
+				return xerrors.Errorf("read local file: %w", err)
 			}
+			rd = bytes.NewReader(b)
 
 			req := coder.ParseTemplateRequest{
 				RepoURL:  repo,
@@ -821,8 +817,6 @@ func setPolicyTemplate() *cobra.Command {
 	}
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "", false, "skip setting policy template, but view errors/warnings about how this policy template would impact existing workspaces")
 	cmd.Flags().StringVarP(&filepath, "filepath", "f", "", "full path to local policy template file.")
-	cmd.Flags().StringVarP(&ref, "ref", "", "master", "git reference to pull template from. May be a branch, tag, or commit hash.")
-	cmd.Flags().StringVarP(&repo, "repo-url", "r", "", "URL of the git repository to pull the config from. Config file must live in '.coder/coder.yaml'.")
 
 	return cmd
 }
