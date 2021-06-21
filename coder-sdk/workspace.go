@@ -2,9 +2,11 @@ package coder
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"cdr.dev/wsep"
@@ -363,4 +365,147 @@ func (c *DefaultClient) WorkspacesByWorkspaceProvider(ctx context.Context, wpID 
 		return nil, err
 	}
 	return workspaces, nil
+}
+
+const (
+	// SkipTemplateOrg allows skipping checks on organizations.
+	SkipTemplateOrg = "SKIP_ORG"
+)
+
+type TemplateScope string
+
+const (
+	// TemplateScopeSite is the scope for a site wide policy template.
+	TemplateScopeSite = "site"
+)
+
+type SetPolicyTemplateRequest struct {
+	TemplateID string `json:"template_id"`
+	Type       string `json:"type"` // site, org
+}
+
+type SetPolicyTemplateResponse struct {
+	MergeConflicts []*WorkspaceTemplateMergeConflict `json:"merge_conflicts"`
+}
+
+type WorkspaceTemplateMergeConflict struct {
+	WorkspaceID             string    `json:"workspace_id"`
+	CurrentTemplateWarnings []string  `json:"current_template_warnings"`
+	CurrentTemplateError    *TplError `json:"current_template_errors"`
+	LatestTemplateWarnings  []string  `json:"latest_template_warnings"`
+	LatestTemplateError     *TplError `json:"latest_template_errors"`
+	CurrentTemplateIsLatest bool      `json:"current_template_is_latest"`
+	Message                 string    `json:"message"`
+}
+
+func (mc WorkspaceTemplateMergeConflict) String() string {
+	var sb strings.Builder
+
+	if mc.Message != "" {
+		sb.WriteString(mc.Message)
+	}
+
+	currentConflicts := len(mc.CurrentTemplateWarnings) != 0 || mc.CurrentTemplateError != nil
+	updateConflicts := len(mc.LatestTemplateWarnings) != 0 || mc.LatestTemplateError != nil
+
+	if !currentConflicts && !updateConflicts {
+		sb.WriteString("No workspace conflicts\n")
+		return sb.String()
+	}
+
+	if currentConflicts {
+		if len(mc.CurrentTemplateWarnings) != 0 {
+			fmt.Fprintf(&sb, "Warnings: \n%s\n", strings.Join(mc.CurrentTemplateWarnings, "\n"))
+		}
+		if mc.CurrentTemplateError != nil {
+			fmt.Fprintf(&sb, "Errors: \n%s\n", strings.Join(mc.CurrentTemplateError.Msgs, "\n"))
+		}
+	}
+
+	if !mc.CurrentTemplateIsLatest && updateConflicts {
+		sb.WriteString("If workspace is updated to the latest template:\n")
+		if len(mc.LatestTemplateWarnings) != 0 {
+			fmt.Fprintf(&sb, "Warnings: \n%s\n", strings.Join(mc.LatestTemplateWarnings, "\n"))
+		}
+		if mc.LatestTemplateError != nil {
+			fmt.Fprintf(&sb, "Errors: \n%s\n", strings.Join(mc.LatestTemplateError.Msgs, "\n"))
+		}
+	}
+
+	return sb.String()
+}
+
+type WorkspaceTemplateMergeConflicts []*WorkspaceTemplateMergeConflict
+
+func (mcs WorkspaceTemplateMergeConflicts) Summary() string {
+	var (
+		sb              strings.Builder
+		currentWarnings int
+		updateWarnings  int
+		currentErrors   int
+		updateErrors    int
+	)
+
+	for _, mc := range mcs {
+		if len(mc.CurrentTemplateWarnings) != 0 {
+			currentWarnings++
+		}
+		if len(mc.LatestTemplateWarnings) != 0 {
+			updateWarnings++
+		}
+		if mc.CurrentTemplateError != nil {
+			currentErrors++
+		}
+		if mc.LatestTemplateError != nil {
+			updateErrors++
+		}
+	}
+
+	if currentErrors == 0 && updateErrors == 0 && currentWarnings == 0 && updateWarnings == 0 {
+		sb.WriteString("No workspace conflicts\n")
+		return sb.String()
+	}
+
+	if currentErrors != 0 {
+		fmt.Fprintf(&sb, "%d workspaces will not be able to be rebuilt\n", currentErrors)
+	}
+	if updateErrors != 0 {
+		fmt.Fprintf(&sb, "%d workspaces will not be able to be rebuilt if updated to the latest version\n", updateErrors)
+	}
+	if currentWarnings != 0 {
+		fmt.Fprintf(&sb, "%d workspaces will be impacted\n", currentWarnings)
+	}
+	if updateWarnings != 0 {
+		fmt.Fprintf(&sb, "%d workspaces will be impacted if updated to the latest version\n", updateWarnings)
+	}
+
+	return sb.String()
+}
+
+type TplError struct {
+	// Msgs are the human facing strings to present to the user. Since there can be multiple
+	// problems with a template, there might be multiple strings
+	Msgs []string `json:"messages"`
+}
+
+func (c *DefaultClient) SetPolicyTemplate(ctx context.Context, templateID string, templateScope TemplateScope, dryRun bool) (*SetPolicyTemplateResponse, error) {
+	var (
+		resp  SetPolicyTemplateResponse
+		query = url.Values{}
+	)
+
+	req := SetPolicyTemplateRequest{
+		TemplateID: templateID,
+		Type:       string(templateScope),
+	}
+
+	if dryRun {
+		query.Set("dry-run", "true")
+	}
+
+	if err := c.requestBody(ctx, http.MethodPost, "/api/private/workspaces/template/policy", req, &resp, withQueryParams(query)); err != nil {
+		return nil, err
+	}
+
+	return &resp, nil
 }

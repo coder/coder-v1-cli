@@ -47,6 +47,7 @@ func workspacesCmd() *cobra.Command {
 		workspaceFromConfigCmd(true),
 		workspaceFromConfigCmd(false),
 		editWorkspaceCmd(),
+		setPolicyTemplate(),
 	)
 	return cmd
 }
@@ -751,4 +752,86 @@ func buildUpdateReq(ctx context.Context, client coder.Client, conf updateConf) (
 		updateReq.ImageTag = &conf.imageTag
 	}
 	return &updateReq, nil
+}
+
+func setPolicyTemplate() *cobra.Command {
+	var (
+		ref             string
+		repo            string
+		filepath        string
+		dryRun          bool
+		defaultTemplate bool
+		scope           string
+	)
+
+	cmd := &cobra.Command{
+		Use:   "policy-template",
+		Short: "Set workspace policy template",
+		Long:  "Set workspace policy template or restore to default configuration. This feature is for site admins only.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			client, err := newClient(ctx, true)
+			if err != nil {
+				return err
+			}
+
+			if scope != coder.TemplateScopeSite {
+				return clog.Error("Invalid 'scope' value", "Valid scope values: site")
+			}
+
+			if filepath == "" && !defaultTemplate {
+				return clog.Error("Missing required parameter --filepath or --default", "Must specify a template to set")
+			}
+
+			templateID := ""
+			if filepath != "" {
+				var rd io.Reader
+				b, err := ioutil.ReadFile(filepath)
+				if err != nil {
+					return xerrors.Errorf("read local file: %w", err)
+				}
+				rd = bytes.NewReader(b)
+
+				req := coder.ParseTemplateRequest{
+					RepoURL:  repo,
+					Ref:      ref,
+					Local:    rd,
+					OrgID:    coder.SkipTemplateOrg,
+					Filepath: ".coder/coder.yaml",
+				}
+
+				version, err := client.ParseTemplate(ctx, req)
+				if err != nil {
+					return handleAPIError(err)
+				}
+				templateID = version.TemplateID
+			}
+
+			resp, err := client.SetPolicyTemplate(ctx, templateID, coder.TemplateScope(scope), dryRun)
+			if err != nil {
+				return handleAPIError(err)
+			}
+
+			for _, mc := range resp.MergeConflicts {
+				workspace, err := client.WorkspaceByID(ctx, mc.WorkspaceID)
+				if err != nil {
+					fmt.Printf("Workspace %q:\n", mc.WorkspaceID)
+				} else {
+					fmt.Printf("Workspace %q in organization %q:\n", workspace.Name, workspace.OrganizationID)
+				}
+
+				fmt.Println(mc.String())
+			}
+
+			fmt.Println("Summary:")
+			fmt.Println(coder.WorkspaceTemplateMergeConflicts(resp.MergeConflicts).Summary())
+
+			return nil
+		},
+	}
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "", false, "skip setting policy template, but view errors/warnings about how this policy template would impact existing workspaces")
+	cmd.Flags().StringVarP(&filepath, "filepath", "f", "", "full path to local policy template file.")
+	cmd.Flags().StringVar(&scope, "scope", "site", "scope of impact for the policy template. Supported values: site")
+	cmd.Flags().BoolVar(&defaultTemplate, "default", false, "Restore policy template to default configuration")
+	return cmd
 }
