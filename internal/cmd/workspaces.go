@@ -758,7 +758,6 @@ func buildUpdateReq(ctx context.Context, client coder.Client, conf updateConf) (
 func openWorkspaceCmd() *cobra.Command {
 	var (
 		workspaceName string
-		user          string
 	)
 
 	cmd := &cobra.Command{
@@ -778,7 +777,7 @@ func openWorkspaceCmd() *cobra.Command {
 				return xerrors.Errorf("Missing required parameter: --name")
 			}
 
-			workspaces, err := getWorkspaces(ctx, client, user)
+			workspaces, err := getWorkspaces(ctx, client, coder.Me)
 			if err != nil {
 				return err
 			}
@@ -808,7 +807,6 @@ func openWorkspaceCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	cmd.Flags().StringVar(&workspaceName, "name", "", "Name of workspace to open")
 
 	return cmd

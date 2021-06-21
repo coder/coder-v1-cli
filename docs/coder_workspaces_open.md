@@ -21,7 +21,6 @@ coder workspace open --name dev
 ```
   -h, --help          help for open
       --name string   Name of workspace to open
-      --user string   Specify the user whose resources to target (default "me")
 ```
 
 ### Options inherited from parent commands
