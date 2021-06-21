@@ -783,9 +783,9 @@ func openWorkspaceCmd() *cobra.Command {
 			}
 
 			var workspace *coder.Workspace
-			for _, w := range workspaces {
+			for i, w := range workspaces {
 				if w.Name == workspaceName {
-					workspace = &w
+					workspace = &workspaces[i]
 					break
 				}
 			}
