@@ -467,16 +467,16 @@ func (mcs WorkspaceTemplateMergeConflicts) Summary() string {
 	}
 
 	if currentErrors != 0 {
-		sb.WriteString(fmt.Sprintf("%d workspaces will not be able to be rebuilt\n", currentErrors))
+		fmt.Fprintf(&sb, "%d workspaces will not be able to be rebuilt\n", currentErrors)
 	}
 	if updateErrors != 0 {
-		sb.WriteString(fmt.Sprintf("%d workspaces will not be able to be rebuilt if updated to the latest version\n", updateErrors))
+		fmt.Fprintf(&sb, "%d workspaces will not be able to be rebuilt if updated to the latest version\n", updateErrors)
 	}
 	if currentWarnings != 0 {
-		sb.WriteString(fmt.Sprintf("%d workspaces will be impacted\n", currentWarnings))
+		fmt.Fprintf(&sb, "%d workspaces will be impacted\n", currentWarnings)
 	}
 	if updateWarnings != 0 {
-		sb.WriteString(fmt.Sprintf("%d workspaces will be impacted if updated to the latest version\n", updateWarnings))
+		fmt.Fprintf(&sb, "%d workspaces will be impacted if updated to the latest version\n", updateWarnings)
 	}
 
 	return sb.String()
