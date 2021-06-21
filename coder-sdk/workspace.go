@@ -415,20 +415,20 @@ func (mc WorkspaceTemplateMergeConflict) String() string {
 
 	if currentConflicts {
 		if len(mc.CurrentTemplateWarnings) != 0 {
-			sb.WriteString(fmt.Sprintf("Warnings: \n%s\n", strings.Join(mc.CurrentTemplateWarnings, "\n")))
+			fmt.Fprintf(&sb, "Warnings: \n%s\n", strings.Join(mc.CurrentTemplateWarnings, "\n"))
 		}
 		if mc.CurrentTemplateError != nil {
-			sb.WriteString(fmt.Sprintf("Errors: \n%s\n", strings.Join(mc.CurrentTemplateError.Msgs, "\n")))
+			fmt.Fprintf(&sb, "Errors: \n%s\n", strings.Join(mc.CurrentTemplateError.Msgs, "\n"))
 		}
 	}
 
 	if !mc.CurrentTemplateIsLatest && updateConflicts {
 		sb.WriteString("If workspace is updated to the latest template:\n")
 		if len(mc.LatestTemplateWarnings) != 0 {
-			sb.WriteString(fmt.Sprintf("Warnings: \n%s\n", strings.Join(mc.LatestTemplateWarnings, "\n")))
+			fmt.Fprintf(&sb, "Warnings: \n%s\n", strings.Join(mc.LatestTemplateWarnings, "\n"))
 		}
 		if mc.LatestTemplateError != nil {
-			sb.WriteString(fmt.Sprintf("Errors: \n%s\n", strings.Join(mc.LatestTemplateError.Msgs, "\n")))
+			fmt.Fprintf(&sb, "Errors: \n%s\n", strings.Join(mc.LatestTemplateError.Msgs, "\n"))
 		}
 	}
 
