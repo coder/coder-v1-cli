@@ -26,6 +26,7 @@ Perform operations on the Coder workspaces owned by the active user.
 * [coder workspaces edit](coder_workspaces_edit.md)	 - edit an existing workspace and initiate a rebuild.
 * [coder workspaces edit-from-config](coder_workspaces_edit-from-config.md)	 - change the template a workspace is tracking
 * [coder workspaces ls](coder_workspaces_ls.md)	 - list all workspaces owned by the active user
+* [coder workspaces open](coder_workspaces_open.md)	 - Open Coder workspace IDE
 * [coder workspaces rebuild](coder_workspaces_rebuild.md)	 - rebuild a Coder workspace
 * [coder workspaces rm](coder_workspaces_rm.md)	 - remove Coder workspaces by name
 * [coder workspaces stop](coder_workspaces_stop.md)	 - stop Coder workspaces by name
