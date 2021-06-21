@@ -782,20 +782,31 @@ func openWorkspaceCmd() *cobra.Command {
 				return err
 			}
 
-			workspaceID := ""
+			var workspace *coder.Workspace
 			for _, w := range workspaces {
 				if w.Name == workspaceName {
-					workspaceID = w.ID
+					workspace = &w
+					break
 				}
 			}
-			if workspaceID == "" {
+			if workspace == nil {
 				return xerrors.Errorf("Workspace %q not found", workspaceName)
+			}
+
+			if workspace.LatestStat.ContainerStatus != coder.WorkspaceOn && workspace.LatestStat.ContainerStatus != coder.WorkspaceCreating {
+				clog.LogInfo(fmt.Sprintf("Building workspace %q...", workspace.Name))
+				if err = client.RebuildWorkspace(ctx, workspace.ID); err != nil {
+					return err
+				}
+				if err = trailBuildLogs(ctx, client, workspace.ID); err != nil {
+					return err
+				}
 			}
 
 			u := client.BaseURL()
 			u.Path += "/app/code"
 			q := u.Query()
-			q.Set("workspaceId", workspaceID)
+			q.Set("workspaceId", workspace.ID)
 			u.RawQuery = q.Encode()
 
 			if err := browser.OpenURL(u.String()); err != nil {
