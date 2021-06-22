@@ -35,23 +35,21 @@ func configSSHCmd() *cobra.Command {
 	var (
 		configpath string
 		remove     = false
-		next       = false
 	)
 
 	cmd := &cobra.Command{
 		Use:   "config-ssh",
 		Short: "Configure SSH to access Coder workspaces",
 		Long:  "Inject the proper OpenSSH configuration into your local SSH config file.",
-		RunE:  configSSH(&configpath, &remove, &next),
+		RunE:  configSSH(&configpath, &remove),
 	}
 	cmd.Flags().StringVar(&configpath, "filepath", filepath.Join("~", ".ssh", "config"), "override the default path of your ssh config file")
 	cmd.Flags().BoolVar(&remove, "remove", false, "remove the auto-generated Coder ssh config")
-	cmd.Flags().BoolVar(&next, "next", false, "(alpha) uses coder tunnel to proxy ssh connection")
 
 	return cmd
 }
 
-func configSSH(configpath *string, remove *bool, next *bool) func(cmd *cobra.Command, _ []string) error {
+func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
 		usr, err := user.Current()
@@ -115,29 +113,12 @@ func configSSH(configpath *string, remove *bool, next *bool) func(cmd *cobra.Com
 			return xerrors.New("SSH is disabled or not available for any workspaces in your Coder deployment.")
 		}
 
-		wconf, err := client.SiteConfigWorkspaces(ctx)
-		if err != nil {
-			return xerrors.Errorf("getting site workspace config: %w", err)
-		}
-		p2p := false
-		if wconf.EnableP2P {
-			if *next {
-				p2p = true
-			} else {
-				fmt.Println("Note: NetworkingV2 is enabled on the coder deployment, use --next to enable it for ssh")
-			}
-		} else {
-			if *next {
-				return xerrors.New("NetworkingV2 feature is not enabled, cannot use --next flag")
-			}
-		}
-
 		binPath, err := os.Executable()
 		if err != nil {
 			return xerrors.Errorf("Failed to get executable path: %w", err)
 		}
 
-		newConfig := makeNewConfigs(binPath, user.Username, workspacesWithProviders, privateKeyFilepath, p2p)
+		newConfig := makeNewConfigs(binPath, user.Username, workspacesWithProviders, privateKeyFilepath)
 
 		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
 		if err != nil {
@@ -198,7 +179,7 @@ func writeSSHKey(ctx context.Context, client coder.Client, privateKeyPath string
 	return ioutil.WriteFile(privateKeyPath, []byte(key.PrivateKey), 0600)
 }
 
-func makeNewConfigs(binPath, userName string, workspaces []coderutil.WorkspaceWithWorkspaceProvider, privateKeyFilepath string, p2p bool) string {
+func makeNewConfigs(binPath, userName string, workspaces []coderutil.WorkspaceWithWorkspaceProvider, privateKeyFilepath string) string {
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", sshStartToken, sshStartMessage)
 
 	sort.Slice(workspaces, func(i, j int) bool { return workspaces[i].Workspace.Name < workspaces[j].Workspace.Name })
@@ -217,7 +198,7 @@ func makeNewConfigs(binPath, userName string, workspaces []coderutil.WorkspaceWi
 			continue
 		}
 
-		useTunnel := workspace.WorkspaceProvider.BuiltIn && p2p
+		useTunnel := workspace.WorkspaceProvider.SSHEnabled && workspace.WorkspaceProvider.EnableNetV2
 		newConfig += makeSSHConfig(binPath, u.Host, userName, workspace.Workspace.Name, privateKeyFilepath, useTunnel)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", sshEndToken)
