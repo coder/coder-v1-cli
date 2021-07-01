@@ -176,6 +176,9 @@ func (d *Dialer) Close() error {
 
 // Ping sends a ping through the control channel.
 func (d *Dialer) Ping(ctx context.Context) error {
+	if d.ctrl.ReadyState() == webrtc.DataChannelStateClosed || d.ctrl.ReadyState() == webrtc.DataChannelStateClosing {
+		return webrtc.ErrConnectionClosed
+	}
 	// Since we control the client and server we could open this
 	// data channel with `Negotiated` true to reduce traffic being
 	// sent when the RTC connection is opened.

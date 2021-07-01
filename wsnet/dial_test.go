@@ -161,6 +161,29 @@ func TestDial(t *testing.T) {
 			return
 		}
 	})
+
+	t.Run("Disconnect", func(t *testing.T) {
+		connectAddr, listenAddr := createDumbBroker(t)
+		_, err := Listen(context.Background(), listenAddr)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = dialer.Close()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = dialer.Ping(context.Background())
+		if err != webrtc.ErrConnectionClosed {
+			t.Error(err)
+		}
+	})
 }
 
 func BenchmarkThroughput(b *testing.B) {
