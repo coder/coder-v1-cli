@@ -19,7 +19,7 @@ require (
 	github.com/pion/ice/v2 v2.1.8
 	github.com/pion/logging v0.2.2
 	github.com/pion/turn/v2 v2.0.5
-	github.com/pion/webrtc/v3 v3.0.29
+	github.com/pion/webrtc/v3 v3.0.30
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 	github.com/rjeczalik/notify v0.9.2
 	github.com/spf13/cobra v1.2.1
