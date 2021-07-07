@@ -86,7 +86,7 @@ func createDumbBroker(t testing.TB) (connectAddr string, listenAddr string) {
 }
 
 // createTURNServer allocates a TURN server and returns the address.
-func createTURNServer(t *testing.T, server ice.SchemeType, pass string) string {
+func createTURNServer(t *testing.T, server ice.SchemeType, pass string) (string, func()) {
 	var (
 		listeners   []turn.ListenerConfig
 		pcListeners []turn.PacketConnConfig
@@ -143,7 +143,7 @@ func createTURNServer(t *testing.T, server ice.SchemeType, pass string) string {
 	if err != nil {
 		t.Error(err)
 	}
-	t.Cleanup(func() {
+	closeFunc := func() {
 		for _, l := range listeners {
 			l.Listener.Close()
 		}
@@ -151,9 +151,10 @@ func createTURNServer(t *testing.T, server ice.SchemeType, pass string) string {
 			l.PacketConn.Close()
 		}
 		srv.Close()
-	})
+	}
+	t.Cleanup(closeFunc)
 
-	return listenAddr.String()
+	return listenAddr.String(), closeFunc
 }
 
 func generateTLSConfig(t testing.TB) *tls.Config {

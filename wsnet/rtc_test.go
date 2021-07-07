@@ -16,7 +16,7 @@ func TestDialICE(t *testing.T) {
 	t.Run("TURN with TLS", func(t *testing.T) {
 		t.Parallel()
 
-		addr := createTURNServer(t, ice.SchemeTypeTURNS, "test")
+		addr, _ := createTURNServer(t, ice.SchemeTypeTURNS, "test")
 		err := DialICE(webrtc.ICEServer{
 			URLs:           []string{fmt.Sprintf("turns:%s", addr)},
 			Username:       "example",
@@ -34,7 +34,7 @@ func TestDialICE(t *testing.T) {
 	t.Run("Protocol mismatch", func(t *testing.T) {
 		t.Parallel()
 
-		addr := createTURNServer(t, ice.SchemeTypeTURNS, "test")
+		addr, _ := createTURNServer(t, ice.SchemeTypeTURNS, "test")
 		err := DialICE(webrtc.ICEServer{
 			URLs:           []string{fmt.Sprintf("turn:%s", addr)},
 			Username:       "example",
@@ -52,7 +52,7 @@ func TestDialICE(t *testing.T) {
 	t.Run("Invalid auth", func(t *testing.T) {
 		t.Parallel()
 
-		addr := createTURNServer(t, ice.SchemeTypeTURNS, "test")
+		addr, _ := createTURNServer(t, ice.SchemeTypeTURNS, "test")
 		err := DialICE(webrtc.ICEServer{
 			URLs:           []string{fmt.Sprintf("turns:%s", addr)},
 			Username:       "example",

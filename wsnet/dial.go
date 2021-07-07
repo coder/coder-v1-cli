@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/pion/datachannel"
@@ -81,9 +82,10 @@ func Dial(conn net.Conn, iceServers []webrtc.ICEServer) (*Dialer, error) {
 	flushCandidates()
 
 	dialer := &Dialer{
-		conn: conn,
-		ctrl: ctrl,
-		rtc:  rtc,
+		conn:        conn,
+		ctrl:        ctrl,
+		rtc:         rtc,
+		connClosers: make([]io.Closer, 0),
 	}
 
 	return dialer, dialer.negotiate()
@@ -97,6 +99,9 @@ type Dialer struct {
 	ctrl   *webrtc.DataChannel
 	ctrlrw datachannel.ReadWriteCloser
 	rtc    *webrtc.PeerConnection
+
+	connClosers    []io.Closer
+	connClosersMut sync.Mutex
 }
 
 func (d *Dialer) negotiate() (err error) {
@@ -117,6 +122,19 @@ func (d *Dialer) negotiate() (err error) {
 			errCh <- err
 			return
 		}
+		d.rtc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
+			if pcs == webrtc.PeerConnectionStateConnected {
+				return
+			}
+
+			// Close connections opened while the RTC was alive.
+			d.connClosersMut.Lock()
+			defer d.connClosersMut.Unlock()
+			for _, connCloser := range d.connClosers {
+				_ = connCloser.Close()
+			}
+			d.connClosers = make([]io.Closer, 0)
+		})
 		go func() {
 			// Closing this connection took 30ms+.
 			_ = d.conn.Close()
@@ -251,6 +269,10 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
+
+	d.connClosersMut.Lock()
+	defer d.connClosersMut.Unlock()
+	d.connClosers = append(d.connClosers, rw)
 
 	c := &conn{
 		addr: &net.UnixAddr{

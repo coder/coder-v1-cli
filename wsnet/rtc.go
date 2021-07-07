@@ -164,6 +164,8 @@ func newPeerConnection(servers []webrtc.ICEServer) (*webrtc.PeerConnection, erro
 	lf.DefaultLogLevel = logging.LogLevelDisabled
 	se.LoggerFactory = lf
 
+	transportPolicy := webrtc.ICETransportPolicyAll
+
 	// If one server is provided and we know it's TURN, we can set the
 	// relay acceptable so the connection starts immediately.
 	if len(servers) == 1 {
@@ -174,12 +176,18 @@ func newPeerConnection(servers []webrtc.ICEServer) (*webrtc.PeerConnection, erro
 				se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeTCP4, webrtc.NetworkTypeTCP6})
 				se.SetRelayAcceptanceMinWait(0)
 			}
+			if err == nil && (url.Scheme == ice.SchemeTypeTURN || url.Scheme == ice.SchemeTypeTURNS) {
+				// Local peers will connect if they discover they live on the same host.
+				// For testing purposes, it's simpler if they cannot peer on the same host.
+				transportPolicy = webrtc.ICETransportPolicyRelay
+			}
 		}
 	}
 	api := webrtc.NewAPI(webrtc.WithSettingEngine(se))
 
 	return api.NewPeerConnection(webrtc.Configuration{
-		ICEServers: servers,
+		ICEServers:         servers,
+		ICETransportPolicy: transportPolicy,
 	})
 }
 
