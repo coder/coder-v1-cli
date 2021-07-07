@@ -332,10 +332,10 @@ func (l *listener) handle(msg BrokerMessage) func(dc *webrtc.DataChannel) {
 				rw:   rw,
 			}
 			co.init()
-			defer co.Close()
 			defer nc.Close()
-
+			defer co.Close()
 			go func() {
+				defer dc.Close()
 				_, _ = io.Copy(co, nc)
 			}()
 			_, _ = io.Copy(nc, co)
