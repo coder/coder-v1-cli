@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -208,7 +209,7 @@ func makeNewConfigs(binPath, userName string, workspaces []coderutil.WorkspaceWi
 
 func makeSSHConfig(binPath, host, userName, workspaceName, privateKeyFilepath string, tunnel bool) string {
 	if tunnel {
-		return fmt.Sprintf(
+		host := fmt.Sprintf(
 			`Host coder.%s
    HostName coder.%s
    ProxyCommand %s tunnel %s 12213 stdio
@@ -217,6 +218,15 @@ func makeSSHConfig(binPath, host, userName, workspaceName, privateKeyFilepath st
    IdentitiesOnly yes
    IdentityFile="%s"
 `, workspaceName, workspaceName, binPath, workspaceName, privateKeyFilepath)
+
+		if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
+			host += `   ControlMaster auto
+   ControlPath ~/.ssh/.connection-%r@%h:%p
+   ControlPersist 600
+`
+		}
+
+		return host
 	}
 
 	return fmt.Sprintf(
