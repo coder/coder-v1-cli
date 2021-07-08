@@ -116,9 +116,11 @@ func (d *Dialer) negotiate() (err error) {
 
 	go func() {
 		defer close(errCh)
+		defer func() {
+			_ = d.conn.Close()
+		}()
 		err := waitForConnectionOpen(context.Background(), d.rtc)
 		if err != nil {
-			_ = d.conn.Close()
 			errCh <- err
 			return
 		}
@@ -135,10 +137,6 @@ func (d *Dialer) negotiate() (err error) {
 			}
 			d.connClosers = make([]io.Closer, 0)
 		})
-		go func() {
-			// Closing this connection took 30ms+.
-			_ = d.conn.Close()
-		}()
 	}()
 
 	for {
@@ -228,6 +226,10 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 	if err != nil {
 		return nil, fmt.Errorf("create data channel: %w", err)
 	}
+	d.connClosersMut.Lock()
+	d.connClosers = append(d.connClosers, dc)
+	d.connClosersMut.Unlock()
+
 	err = waitForDataChannelOpen(ctx, dc)
 	if err != nil {
 		return nil, fmt.Errorf("wait for open: %w", err)
@@ -269,10 +271,6 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
-
-	d.connClosersMut.Lock()
-	defer d.connClosersMut.Unlock()
-	d.connClosers = append(d.connClosers, rw)
 
 	c := &conn{
 		addr: &net.UnixAddr{
