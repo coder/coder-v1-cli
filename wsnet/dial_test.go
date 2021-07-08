@@ -46,7 +46,7 @@ func ExampleDial_basic() {
 	// You now have access to the proxied remote port in `conn`.
 }
 
-// nolint:gocognit,nestif
+// nolint:gocognit
 func TestDial(t *testing.T) {
 	t.Run("Ping", func(t *testing.T) {
 		connectAddr, listenAddr := createDumbBroker(t)
@@ -204,12 +204,11 @@ func TestDial(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		pass := "test"
-		turnAddr, closeTurn := createTURNServer(t, ice.SchemeTypeTURN, pass)
+		turnAddr, closeTurn := createTURNServer(t, ice.SchemeTypeTURN)
 		dialer, err := DialWebsocket(context.Background(), connectAddr, []webrtc.ICEServer{{
 			URLs:           []string{fmt.Sprintf("turn:%s", turnAddr)},
 			Username:       "example",
-			Credential:     pass,
+			Credential:     testPass,
 			CredentialType: webrtc.ICECredentialTypePassword,
 		}})
 		if err != nil {

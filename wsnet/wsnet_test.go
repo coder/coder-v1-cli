@@ -25,6 +25,11 @@ import (
 	"nhooyr.io/websocket"
 )
 
+const (
+	// Password used connecting to the test TURN server.
+	testPass = "test"
+)
+
 // createDumbBroker proxies sockets between /listen and /connect
 // to emulate an authenticated WebSocket pair.
 func createDumbBroker(t testing.TB) (connectAddr string, listenAddr string) {
@@ -86,7 +91,7 @@ func createDumbBroker(t testing.TB) (connectAddr string, listenAddr string) {
 }
 
 // createTURNServer allocates a TURN server and returns the address.
-func createTURNServer(t *testing.T, server ice.SchemeType, pass string) (string, func()) {
+func createTURNServer(t *testing.T, server ice.SchemeType) (string, func()) {
 	var (
 		listeners   []turn.ListenerConfig
 		pcListeners []turn.PacketConnConfig
@@ -136,7 +141,7 @@ func createTURNServer(t *testing.T, server ice.SchemeType, pass string) (string,
 		ListenerConfigs:   listeners,
 		Realm:             "coder",
 		AuthHandler: func(username, realm string, srcAddr net.Addr) (key []byte, ok bool) {
-			return turn.GenerateAuthKey(username, realm, pass), true
+			return turn.GenerateAuthKey(username, realm, testPass), true
 		},
 		LoggerFactory: lf,
 	})
