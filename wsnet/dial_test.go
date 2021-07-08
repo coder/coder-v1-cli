@@ -5,11 +5,13 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"strconv"
 	"testing"
 
+	"github.com/pion/ice/v2"
 	"github.com/pion/webrtc/v3"
 )
 
@@ -44,6 +46,7 @@ func ExampleDial_basic() {
 	// You now have access to the proxied remote port in `conn`.
 }
 
+// nolint:gocognit
 func TestDial(t *testing.T) {
 	t.Run("Ping", func(t *testing.T) {
 		connectAddr, listenAddr := createDumbBroker(t)
@@ -182,6 +185,48 @@ func TestDial(t *testing.T) {
 		err = dialer.Ping(context.Background())
 		if err != webrtc.ErrConnectionClosed {
 			t.Error(err)
+		}
+	})
+
+	t.Run("Disconnect DialContext", func(t *testing.T) {
+		tcpListener, err := net.Listen("tcp", "0.0.0.0:0")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		go func() {
+			_, _ = tcpListener.Accept()
+		}()
+
+		connectAddr, listenAddr := createDumbBroker(t)
+		_, err = Listen(context.Background(), listenAddr)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		turnAddr, closeTurn := createTURNServer(t, ice.SchemeTypeTURN)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, []webrtc.ICEServer{{
+			URLs:           []string{fmt.Sprintf("turn:%s", turnAddr)},
+			Username:       "example",
+			Credential:     testPass,
+			CredentialType: webrtc.ICECredentialTypePassword,
+		}})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		conn, err := dialer.DialContext(context.Background(), "tcp", tcpListener.Addr().String())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		// Close the TURN server before reading...
+		// WebRTC connections take a few seconds to timeout.
+		closeTurn()
+		_, err = conn.Read(make([]byte, 16))
+		if err != io.EOF {
+			t.Error(err)
+			return
 		}
 	})
 }
