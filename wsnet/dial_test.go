@@ -10,6 +10,7 @@ import (
 	"net"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/pion/ice/v2"
 	"github.com/pion/webrtc/v3"
@@ -46,7 +47,7 @@ func ExampleDial_basic() {
 	// You now have access to the proxied remote port in `conn`.
 }
 
-// nolint:gocognit
+// nolint:gocognit,gocyclo
 func TestDial(t *testing.T) {
 	t.Run("Ping", func(t *testing.T) {
 		connectAddr, listenAddr := createDumbBroker(t)
@@ -227,6 +228,28 @@ func TestDial(t *testing.T) {
 		if err != io.EOF {
 			t.Error(err)
 			return
+		}
+	})
+
+	t.Run("Closed", func(t *testing.T) {
+		connectAddr, listenAddr := createDumbBroker(t)
+		_, err := Listen(context.Background(), listenAddr)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		go func() {
+			_ = dialer.Close()
+		}()
+		select {
+		case <-dialer.Closed():
+		case <-time.NewTimer(time.Second).C:
+			t.Error("didn't close in time")
 		}
 	})
 }

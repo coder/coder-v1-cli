@@ -85,6 +85,7 @@ func Dial(conn net.Conn, iceServers []webrtc.ICEServer) (*Dialer, error) {
 		conn:        conn,
 		ctrl:        ctrl,
 		rtc:         rtc,
+		closedChan:  make(chan struct{}),
 		connClosers: make([]io.Closer, 0),
 	}
 
@@ -100,6 +101,7 @@ type Dialer struct {
 	ctrlrw datachannel.ReadWriteCloser
 	rtc    *webrtc.PeerConnection
 
+	closedChan     chan struct{}
 	connClosers    []io.Closer
 	connClosersMut sync.Mutex
 }
@@ -136,6 +138,13 @@ func (d *Dialer) negotiate() (err error) {
 				_ = connCloser.Close()
 			}
 			d.connClosers = make([]io.Closer, 0)
+
+			select {
+			case <-d.closedChan:
+				return
+			default:
+			}
+			close(d.closedChan)
 		})
 	}()
 
@@ -182,6 +191,12 @@ func (d *Dialer) negotiate() (err error) {
 		return fmt.Errorf("unhandled message: %+v", msg)
 	}
 	return <-errCh
+}
+
+// Closed returns a channel that closes when
+// the connection is closed.
+func (d *Dialer) Closed() <-chan struct{} {
+	return d.closedChan
 }
 
 // Close closes the RTC connection.
