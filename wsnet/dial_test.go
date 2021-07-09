@@ -229,6 +229,24 @@ func TestDial(t *testing.T) {
 			return
 		}
 	})
+
+	t.Run("Closed", func(t *testing.T) {
+		connectAddr, listenAddr := createDumbBroker(t)
+		_, err := Listen(context.Background(), listenAddr)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		go func() {
+			_ = dialer.Close()
+		}()
+		<-dialer.Closed()
+	})
 }
 
 func BenchmarkThroughput(b *testing.B) {
