@@ -46,7 +46,7 @@ func ExampleDial_basic() {
 	// You now have access to the proxied remote port in `conn`.
 }
 
-// nolint:gocognit
+// nolint:gocognit,gocyclo
 func TestDial(t *testing.T) {
 	t.Run("Ping", func(t *testing.T) {
 		connectAddr, listenAddr := createDumbBroker(t)
