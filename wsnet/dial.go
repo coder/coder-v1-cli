@@ -85,7 +85,6 @@ func Dial(conn net.Conn, iceServers []webrtc.ICEServer) (*Dialer, error) {
 		conn:        conn,
 		ctrl:        ctrl,
 		rtc:         rtc,
-		closed:      false,
 		closedChan:  make(chan struct{}),
 		connClosers: make([]io.Closer, 0),
 	}
@@ -102,7 +101,6 @@ type Dialer struct {
 	ctrlrw datachannel.ReadWriteCloser
 	rtc    *webrtc.PeerConnection
 
-	closed         bool
 	closedChan     chan struct{}
 	connClosers    []io.Closer
 	connClosersMut sync.Mutex
@@ -140,10 +138,13 @@ func (d *Dialer) negotiate() (err error) {
 				_ = connCloser.Close()
 			}
 			d.connClosers = make([]io.Closer, 0)
-			if !d.closed {
-				d.closed = true
-				close(d.closedChan)
+
+			select {
+			case <-d.closedChan:
+				return
+			default:
 			}
+			close(d.closedChan)
 		})
 	}()
 

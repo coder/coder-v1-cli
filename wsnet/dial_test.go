@@ -10,6 +10,7 @@ import (
 	"net"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/pion/ice/v2"
 	"github.com/pion/webrtc/v3"
@@ -245,7 +246,11 @@ func TestDial(t *testing.T) {
 		go func() {
 			_ = dialer.Close()
 		}()
-		<-dialer.Closed()
+		select {
+		case <-dialer.Closed():
+		case <-time.NewTimer(time.Second).C:
+			t.Error("didn't close in time")
+		}
 	})
 }
 
