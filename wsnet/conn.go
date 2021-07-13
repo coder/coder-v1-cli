@@ -89,6 +89,8 @@ func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
 		}
 		return nil, fmt.Errorf("dial: %w", err)
 	}
+	_ = resp.Body.Close()
+
 	return websocket.NetConn(ctx, conn, websocket.MessageBinary), nil
 }
 
