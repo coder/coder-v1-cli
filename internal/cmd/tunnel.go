@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -104,30 +103,13 @@ type tunnneler struct {
 }
 
 func (c *tunnneler) start(ctx context.Context) error {
-	username, password, err := wsnet.TURNCredentials(c.token)
-	if err != nil {
-		return xerrors.Errorf("failed to parse credentials from token")
-	}
-	server := webrtc.ICEServer{
-		URLs:           []string{wsnet.TURNEndpoint(c.brokerAddr)},
-		Username:       username,
-		Credential:     password,
-		CredentialType: webrtc.ICECredentialTypePassword,
-	}
-
-	err = wsnet.DialICE(server, nil)
-	if errors.Is(err, wsnet.ErrInvalidCredentials) {
-		return xerrors.Errorf("failed to authenticate your user for this workspace")
-	}
-	if errors.Is(err, wsnet.ErrMismatchedProtocol) {
-		return xerrors.Errorf("your TURN server is configured incorrectly. check TLS settings")
-	}
-	if err != nil {
-		return xerrors.Errorf("dial ice: %w", err)
-	}
-
 	c.log.Debug(ctx, "Connecting to workspace...")
-	wd, err := wsnet.DialWebsocket(ctx, wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token), []webrtc.ICEServer{server})
+	wd, err := wsnet.DialWebsocket(
+		ctx,
+		wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token),
+		[]webrtc.ICEServer{wsnet.TURNWebSocketICECandidate()},
+		wsnet.TURNWebSocketDialer(c.brokerAddr, c.token),
+	)
 	if err != nil {
 		return xerrors.Errorf("creating workspace dialer: %w", err)
 	}

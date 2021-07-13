@@ -73,7 +73,11 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 				}
 			}
 
-			listener, err := wsnet.Listen(context.Background(), wsnet.ListenEndpoint(u, token))
+			listener, err := wsnet.Listen(
+				context.Background(),
+				wsnet.ListenEndpoint(u, token),
+				wsnet.TURNWebSocketDialer(u, token),
+			)
 			if err != nil {
 				return xerrors.Errorf("listen: %w", err)
 			}

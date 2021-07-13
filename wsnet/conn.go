@@ -27,16 +27,6 @@ const (
 	maxMessageLength = 32 * 1024 // 32 KB
 )
 
-// TURNEndpoint returns the TURN address for a Coder baseURL.
-func TURNEndpoint(baseURL *url.URL) string {
-	turnScheme := "turns"
-	if baseURL.Scheme == httpScheme {
-		turnScheme = "turn"
-	}
-
-	return fmt.Sprintf("%s:%s:5349?transport=tcp", turnScheme, baseURL.Hostname())
-}
-
 // ListenEndpoint returns the Coder endpoint to listen for workspace connections.
 func ListenEndpoint(baseURL *url.URL, token string) string {
 	wsScheme := "wss"
@@ -55,8 +45,16 @@ func ConnectEndpoint(baseURL *url.URL, workspace, token string) string {
 	return fmt.Sprintf("%s://%s%s%s%s%s", wsScheme, baseURL.Host, "/api/private/envagent/", workspace, "/connect?session_token=", token)
 }
 
-// TURNProxyDialer proxies all TURN traffic through a WebSocket for the workspace.
-func TURNProxyDialer(baseURL *url.URL, token string) proxy.Dialer {
+// TURNWebSocketICECandidate returns a valid relay ICEServer that can be used to
+// trigger a TURNWebSocketDialer.
+func TURNWebSocketICECandidate() webrtc.ICEServer {
+	return webrtc.ICEServer{
+		URLs: []string{"turn:127.0.0.1:3478?transport=tcp"},
+	}
+}
+
+// TURNWebSocketDialer proxies all TURN traffic through a WebSocket for the workspace.
+func TURNWebSocketDialer(baseURL *url.URL, token string) proxy.Dialer {
 	return &turnProxyDialer{
 		baseURL: baseURL,
 		token:   token,

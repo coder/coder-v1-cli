@@ -177,9 +177,9 @@ func newPeerConnection(servers []webrtc.ICEServer, dialer proxy.Dialer) (*webrtc
 	// relay acceptable so the connection starts immediately.
 	if len(servers) == 1 {
 		server := servers[0]
-		if server.Credential != nil && len(server.URLs) == 1 {
+		if len(server.URLs) == 1 {
 			url, err := ice.ParseURL(server.URLs[0])
-			if err == nil && url.Proto == ice.ProtoTypeTCP {
+			if err == nil && server.Credential != nil && url.Proto == ice.ProtoTypeTCP {
 				se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeTCP4, webrtc.NetworkTypeTCP6})
 				se.SetRelayAcceptanceMinWait(0)
 			}
