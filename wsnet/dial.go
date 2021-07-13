@@ -12,13 +12,14 @@ import (
 
 	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
+	"golang.org/x/net/proxy"
 	"nhooyr.io/websocket"
 
 	"cdr.dev/coder-cli/coder-sdk"
 )
 
 // DialWebsocket dials the broker with a WebSocket and negotiates a connection.
-func DialWebsocket(ctx context.Context, broker string, iceServers []webrtc.ICEServer) (*Dialer, error) {
+func DialWebsocket(ctx context.Context, broker string, iceServers []webrtc.ICEServer, tcpProxy proxy.Dialer) (*Dialer, error) {
 	conn, resp, err := websocket.Dial(ctx, broker, nil)
 	if err != nil {
 		if resp != nil {
@@ -35,16 +36,16 @@ func DialWebsocket(ctx context.Context, broker string, iceServers []webrtc.ICESe
 		// We should close the socket intentionally.
 		_ = conn.Close(websocket.StatusInternalError, "an error occurred")
 	}()
-	return Dial(nconn, iceServers)
+	return Dial(nconn, iceServers, tcpProxy)
 }
 
 // Dial negotiates a connection to a listener.
-func Dial(conn net.Conn, iceServers []webrtc.ICEServer) (*Dialer, error) {
+func Dial(conn net.Conn, iceServers []webrtc.ICEServer, tcpProxy proxy.Dialer) (*Dialer, error) {
 	if iceServers == nil {
 		iceServers = []webrtc.ICEServer{}
 	}
 
-	rtc, err := newPeerConnection(iceServers)
+	rtc, err := newPeerConnection(iceServers, tcpProxy)
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w", err)
 	}

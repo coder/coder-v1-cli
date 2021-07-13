@@ -35,7 +35,7 @@ func ExampleDial_basic() {
 		}
 	}
 
-	dialer, err := DialWebsocket(context.Background(), "wss://master.cdr.dev/agent/workspace/connect", servers)
+	dialer, err := DialWebsocket(context.Background(), "wss://master.cdr.dev/agent/workspace/connect", servers, nil)
 	if err != nil {
 		// Do something...
 	}
@@ -51,12 +51,12 @@ func ExampleDial_basic() {
 func TestDial(t *testing.T) {
 	t.Run("Ping", func(t *testing.T) {
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err := Listen(context.Background(), listenAddr)
+		_, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -69,12 +69,12 @@ func TestDial(t *testing.T) {
 
 	t.Run("OPError", func(t *testing.T) {
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err := Listen(context.Background(), listenAddr)
+		_, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -106,12 +106,12 @@ func TestDial(t *testing.T) {
 		}()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err = Listen(context.Background(), listenAddr)
+		_, err = Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -143,12 +143,12 @@ func TestDial(t *testing.T) {
 			_, _ = listener.Accept()
 		}()
 		connectAddr, listenAddr := createDumbBroker(t)
-		srv, err := Listen(context.Background(), listenAddr)
+		srv, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -168,12 +168,12 @@ func TestDial(t *testing.T) {
 
 	t.Run("Disconnect", func(t *testing.T) {
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err := Listen(context.Background(), listenAddr)
+		_, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -200,7 +200,7 @@ func TestDial(t *testing.T) {
 		}()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err = Listen(context.Background(), listenAddr)
+		_, err = Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -211,7 +211,7 @@ func TestDial(t *testing.T) {
 			Username:       "example",
 			Credential:     testPass,
 			CredentialType: webrtc.ICECredentialTypePassword,
-		}})
+		}}, nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -233,12 +233,12 @@ func TestDial(t *testing.T) {
 
 	t.Run("Closed", func(t *testing.T) {
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err := Listen(context.Background(), listenAddr)
+		_, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -284,13 +284,13 @@ func BenchmarkThroughput(b *testing.B) {
 		}
 	}()
 	connectAddr, listenAddr := createDumbBroker(b)
-	_, err = Listen(context.Background(), listenAddr)
+	_, err = Listen(context.Background(), listenAddr, nil)
 	if err != nil {
 		b.Error(err)
 		return
 	}
 
-	dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+	dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 	if err != nil {
 		b.Error(err)
 		return

@@ -1,14 +1,19 @@
 package wsnet
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
+	"cdr.dev/coder-cli/coder-sdk"
 	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
+	"golang.org/x/net/proxy"
+	"nhooyr.io/websocket"
 )
 
 const (
@@ -48,6 +53,45 @@ func ConnectEndpoint(baseURL *url.URL, workspace, token string) string {
 		wsScheme = "ws"
 	}
 	return fmt.Sprintf("%s://%s%s%s%s%s", wsScheme, baseURL.Host, "/api/private/envagent/", workspace, "/connect?session_token=", token)
+}
+
+// TURNProxyDialer proxies all TURN traffic through a WebSocket for the workspace.
+func TURNProxyDialer(baseURL *url.URL, token string) proxy.Dialer {
+	return &turnProxyDialer{
+		baseURL: baseURL,
+		token:   token,
+	}
+}
+
+type turnProxyDialer struct {
+	baseURL *url.URL
+	token   string
+}
+
+func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
+	headers := http.Header{}
+	headers.Set("Session-Token", t.token)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+	defer cancel()
+
+	// Copy the baseURL so we can adjust path.
+	url := *t.baseURL
+	url.Scheme = "wss"
+	if url.Scheme == httpScheme {
+		url.Scheme = "ws"
+	}
+	url.Path = "/api/private/turn"
+	conn, resp, err := websocket.Dial(ctx, url.String(), &websocket.DialOptions{
+		HTTPHeader: headers,
+	})
+	if err != nil {
+		if resp != nil {
+			return nil, coder.NewHTTPError(resp)
+		}
+		return nil, fmt.Errorf("dial: %w", err)
+	}
+	return websocket.NetConn(ctx, conn, websocket.MessageBinary), nil
 }
 
 type conn struct {
