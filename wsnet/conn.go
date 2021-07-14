@@ -64,6 +64,8 @@ func TURNProxyWebSocket(baseURL *url.URL, token string) proxy.Dialer {
 	}
 }
 
+// Proxies all TURN ICEServer traffic through this dialer.
+// References Coder APIs with a specific token.
 type turnProxyDialer struct {
 	baseURL *url.URL
 	token   string
@@ -118,6 +120,8 @@ func (t *turnProxyConn) Close() error {
 	return t.conn.Close()
 }
 
+// The LocalAddr specified here doesn't really matter,
+// it just has to be of type "TCPAddr".
 func (t *turnProxyConn) LocalAddr() net.Addr {
 	return &net.TCPAddr{
 		IP:   net.IPv4(127, 0, 0, 1),
@@ -141,6 +145,7 @@ func (t *turnProxyConn) SetWriteDeadline(time time.Time) error {
 	return t.conn.SetWriteDeadline(time)
 }
 
+// Properly buffers data for data channel connections.
 type dataChannelConn struct {
 	addr *net.UnixAddr
 	dc   *webrtc.DataChannel

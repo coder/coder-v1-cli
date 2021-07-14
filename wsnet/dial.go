@@ -59,6 +59,8 @@ func Dial(conn net.Conn, options *DialOptions) (*Dialer, error) {
 	if options.ICEServers == nil {
 		options.ICEServers = []webrtc.ICEServer{}
 	}
+	// If the TURNProxy is specified and ICEServers aren't,
+	// it's safe to assume we can inject the default proxy candidate.
 	if len(options.ICEServers) == 0 && options.TURNProxy != nil {
 		options.ICEServers = []webrtc.ICEServer{TURNProxyICECandidate()}
 	}
