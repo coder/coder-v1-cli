@@ -9,11 +9,12 @@ import (
 	"sync"
 	"time"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
 	"golang.org/x/net/proxy"
 	"nhooyr.io/websocket"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 const (
