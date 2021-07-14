@@ -46,10 +46,6 @@ func DialICE(server webrtc.ICEServer, options *DialICEOptions) error {
 	if options == nil {
 		options = &DialICEOptions{}
 	}
-	if server.Username == TURNWebSocketICECandidate().Username {
-		// Don't validate if the proxy candidate can dial.
-		return nil
-	}
 
 	for _, rawURL := range server.URLs {
 		err := dialICEURL(server, rawURL, options)

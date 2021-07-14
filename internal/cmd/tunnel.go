@@ -11,7 +11,6 @@ import (
 
 	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/sloghuman"
-	"github.com/pion/webrtc/v3"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
@@ -107,8 +106,9 @@ func (c *tunnneler) start(ctx context.Context) error {
 	wd, err := wsnet.DialWebsocket(
 		ctx,
 		wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token),
-		[]webrtc.ICEServer{wsnet.TURNWebSocketICECandidate()},
-		wsnet.TURNWebSocketDialer(c.brokerAddr, c.token),
+		&wsnet.DialOptions{
+			TURNProxy: wsnet.TURNProxyWebSocket(c.brokerAddr, c.token),
+		},
 	)
 	if err != nil {
 		return xerrors.Errorf("creating workspace dialer: %w", err)

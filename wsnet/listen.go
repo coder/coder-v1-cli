@@ -189,6 +189,11 @@ func (l *listener) negotiate(conn net.Conn) {
 				return
 			}
 			for _, server := range msg.Servers {
+				if server.Username == TURNProxyICECandidate().Username {
+					// This candidate is only used when proxying,
+					// so it will not validate.
+					continue
+				}
 				err = DialICE(server, nil)
 				if err != nil {
 					closeError(fmt.Errorf("dial server %+v: %w", server.URLs, err))
