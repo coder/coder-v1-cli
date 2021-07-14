@@ -49,7 +49,10 @@ func ConnectEndpoint(baseURL *url.URL, workspace, token string) string {
 // trigger a TURNWebSocketDialer.
 func TURNWebSocketICECandidate() webrtc.ICEServer {
 	return webrtc.ICEServer{
-		URLs: []string{"turn:127.0.0.1:3478?transport=tcp"},
+		URLs:           []string{"turn:127.0.0.1:3478?transport=tcp"},
+		Username:       "nop",
+		Credential:     "nop",
+		CredentialType: webrtc.ICECredentialTypePassword,
 	}
 }
 
