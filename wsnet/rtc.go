@@ -17,6 +17,7 @@ import (
 	"github.com/pion/logging"
 	"github.com/pion/turn/v2"
 	"github.com/pion/webrtc/v3"
+	"golang.org/x/net/proxy"
 )
 
 var (
@@ -154,7 +155,7 @@ func dialICEURL(server webrtc.ICEServer, rawURL string, options *DialICEOptions)
 }
 
 // Generalizes creating a new peer connection with consistent options.
-func newPeerConnection(servers []webrtc.ICEServer) (*webrtc.PeerConnection, error) {
+func newPeerConnection(servers []webrtc.ICEServer, dialer proxy.Dialer) (*webrtc.PeerConnection, error) {
 	se := webrtc.SettingEngine{}
 	se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
 	se.SetSrflxAcceptanceMinWait(0)
@@ -164,15 +165,21 @@ func newPeerConnection(servers []webrtc.ICEServer) (*webrtc.PeerConnection, erro
 	lf.DefaultLogLevel = logging.LogLevelDisabled
 	se.LoggerFactory = lf
 
+	// Enables tunneling of TURN traffic through an arbitrary proxy.
+	// We proxy TURN over a WebSocket to reduce deployment complexity.
+	if dialer != nil {
+		se.SetICEProxyDialer(dialer)
+	}
+
 	transportPolicy := webrtc.ICETransportPolicyAll
 
 	// If one server is provided and we know it's TURN, we can set the
 	// relay acceptable so the connection starts immediately.
 	if len(servers) == 1 {
 		server := servers[0]
-		if server.Credential != nil && len(server.URLs) == 1 {
+		if len(server.URLs) == 1 {
 			url, err := ice.ParseURL(server.URLs[0])
-			if err == nil && url.Proto == ice.ProtoTypeTCP {
+			if err == nil && server.Credential != nil && url.Proto == ice.ProtoTypeTCP {
 				se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeTCP4, webrtc.NetworkTypeTCP6})
 				se.SetRelayAcceptanceMinWait(0)
 			}

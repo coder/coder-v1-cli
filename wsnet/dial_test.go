@@ -35,7 +35,9 @@ func ExampleDial_basic() {
 		}
 	}
 
-	dialer, err := DialWebsocket(context.Background(), "wss://master.cdr.dev/agent/workspace/connect", servers)
+	dialer, err := DialWebsocket(context.Background(), "wss://master.cdr.dev/agent/workspace/connect", &DialOptions{
+		ICEServers: servers,
+	})
 	if err != nil {
 		// Do something...
 	}
@@ -53,7 +55,7 @@ func TestDial(t *testing.T) {
 		t.Parallel()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err := Listen(context.Background(), listenAddr)
+		_, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -73,18 +75,20 @@ func TestDial(t *testing.T) {
 		t.Parallel()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err := Listen(context.Background(), listenAddr)
+		_, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
 		}
 		turnAddr, closeTurn := createTURNServer(t, ice.SchemeTypeTURN)
-		dialer, err := DialWebsocket(context.Background(), connectAddr, []webrtc.ICEServer{{
-			URLs:           []string{fmt.Sprintf("turn:%s", turnAddr)},
-			Username:       "example",
-			Credential:     testPass,
-			CredentialType: webrtc.ICECredentialTypePassword,
-		}})
+		dialer, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			ICEServers: []webrtc.ICEServer{{
+				URLs:           []string{fmt.Sprintf("turn:%s", turnAddr)},
+				Username:       "example",
+				Credential:     testPass,
+				CredentialType: webrtc.ICECredentialTypePassword,
+			}},
+		})
 		if err != nil {
 			t.Error(err)
 			return
@@ -102,7 +106,7 @@ func TestDial(t *testing.T) {
 		t.Parallel()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err := Listen(context.Background(), listenAddr)
+		_, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -141,7 +145,7 @@ func TestDial(t *testing.T) {
 		}()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err = Listen(context.Background(), listenAddr)
+		_, err = Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -180,7 +184,7 @@ func TestDial(t *testing.T) {
 			_, _ = listener.Accept()
 		}()
 		connectAddr, listenAddr := createDumbBroker(t)
-		srv, err := Listen(context.Background(), listenAddr)
+		srv, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -207,7 +211,7 @@ func TestDial(t *testing.T) {
 		t.Parallel()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err := Listen(context.Background(), listenAddr)
+		_, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -241,18 +245,20 @@ func TestDial(t *testing.T) {
 		}()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err = Listen(context.Background(), listenAddr)
+		_, err = Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
 		}
 		turnAddr, closeTurn := createTURNServer(t, ice.SchemeTypeTURN)
-		dialer, err := DialWebsocket(context.Background(), connectAddr, []webrtc.ICEServer{{
-			URLs:           []string{fmt.Sprintf("turn:%s", turnAddr)},
-			Username:       "example",
-			Credential:     testPass,
-			CredentialType: webrtc.ICECredentialTypePassword,
-		}})
+		dialer, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			ICEServers: []webrtc.ICEServer{{
+				URLs:           []string{fmt.Sprintf("turn:%s", turnAddr)},
+				Username:       "example",
+				Credential:     testPass,
+				CredentialType: webrtc.ICECredentialTypePassword,
+			}},
+		})
 		if err != nil {
 			t.Error(err)
 			return
@@ -276,7 +282,7 @@ func TestDial(t *testing.T) {
 		t.Parallel()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err := Listen(context.Background(), listenAddr)
+		_, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -327,7 +333,7 @@ func BenchmarkThroughput(b *testing.B) {
 		}
 	}()
 	connectAddr, listenAddr := createDumbBroker(b)
-	_, err = Listen(context.Background(), listenAddr)
+	_, err = Listen(context.Background(), listenAddr, nil)
 	if err != nil {
 		b.Error(err)
 		return

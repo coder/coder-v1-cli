@@ -12,13 +12,26 @@ import (
 
 	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
+	"golang.org/x/net/proxy"
 	"nhooyr.io/websocket"
 
 	"cdr.dev/coder-cli/coder-sdk"
 )
 
+// DialOptions are configurable options for a wsnet connection.
+type DialOptions struct {
+	// ICEServers is an array of STUN or TURN servers to use for negotiation purposes.
+	// See: https://developer.mozilla.org/en-US/docs/Web/API/RTCConfiguration/iceServers
+	ICEServers []webrtc.ICEServer
+
+	// TURNProxy is a function used to proxy all TURN traffic.
+	// If specified without ICEServers, `TURNProxyICECandidate`
+	// will be used.
+	TURNProxy proxy.Dialer
+}
+
 // DialWebsocket dials the broker with a WebSocket and negotiates a connection.
-func DialWebsocket(ctx context.Context, broker string, iceServers []webrtc.ICEServer) (*Dialer, error) {
+func DialWebsocket(ctx context.Context, broker string, options *DialOptions) (*Dialer, error) {
 	conn, resp, err := websocket.Dial(ctx, broker, nil)
 	if err != nil {
 		if resp != nil {
@@ -35,16 +48,24 @@ func DialWebsocket(ctx context.Context, broker string, iceServers []webrtc.ICESe
 		// We should close the socket intentionally.
 		_ = conn.Close(websocket.StatusInternalError, "an error occurred")
 	}()
-	return Dial(nconn, iceServers)
+	return Dial(nconn, options)
 }
 
 // Dial negotiates a connection to a listener.
-func Dial(conn net.Conn, iceServers []webrtc.ICEServer) (*Dialer, error) {
-	if iceServers == nil {
-		iceServers = []webrtc.ICEServer{}
+func Dial(conn net.Conn, options *DialOptions) (*Dialer, error) {
+	if options == nil {
+		options = &DialOptions{}
+	}
+	if options.ICEServers == nil {
+		options.ICEServers = []webrtc.ICEServer{}
+	}
+	// If the TURNProxy is specified and ICEServers aren't,
+	// it's safe to assume we can inject the default proxy candidate.
+	if len(options.ICEServers) == 0 && options.TURNProxy != nil {
+		options.ICEServers = []webrtc.ICEServer{TURNProxyICECandidate()}
 	}
 
-	rtc, err := newPeerConnection(iceServers)
+	rtc, err := newPeerConnection(options.ICEServers, options.TURNProxy)
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w", err)
 	}
@@ -70,7 +91,7 @@ func Dial(conn net.Conn, iceServers []webrtc.ICEServer) (*Dialer, error) {
 
 	offerMessage, err := json.Marshal(&BrokerMessage{
 		Offer:   &offer,
-		Servers: iceServers,
+		Servers: options.ICEServers,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("marshal offer message: %w", err)
@@ -287,7 +308,7 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 		return nil, ctx.Err()
 	}
 
-	c := &conn{
+	c := &dataChannelConn{
 		addr: &net.UnixAddr{
 			Name: address,
 			Net:  network,

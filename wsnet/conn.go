@@ -1,14 +1,20 @@
 package wsnet
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
 	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
+	"golang.org/x/net/proxy"
+	"nhooyr.io/websocket"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 const (
@@ -21,16 +27,6 @@ const (
 	// See: https://github.com/pion/datachannel/issues/59
 	maxMessageLength = 32 * 1024 // 32 KB
 )
-
-// TURNEndpoint returns the TURN address for a Coder baseURL.
-func TURNEndpoint(baseURL *url.URL) string {
-	turnScheme := "turns"
-	if baseURL.Scheme == httpScheme {
-		turnScheme = "turn"
-	}
-
-	return fmt.Sprintf("%s:%s:5349?transport=tcp", turnScheme, baseURL.Hostname())
-}
 
 // ListenEndpoint returns the Coder endpoint to listen for workspace connections.
 func ListenEndpoint(baseURL *url.URL, token string) string {
@@ -50,7 +46,80 @@ func ConnectEndpoint(baseURL *url.URL, workspace, token string) string {
 	return fmt.Sprintf("%s://%s%s%s%s%s", wsScheme, baseURL.Host, "/api/private/envagent/", workspace, "/connect?session_token=", token)
 }
 
-type conn struct {
+// TURNWebSocketICECandidate returns a valid relay ICEServer that can be used to
+// trigger a TURNWebSocketDialer.
+func TURNProxyICECandidate() webrtc.ICEServer {
+	return webrtc.ICEServer{
+		URLs:           []string{"turn:127.0.0.1:3478?transport=tcp"},
+		Username:       "~magicalusername~",
+		Credential:     "~magicalpassword~",
+		CredentialType: webrtc.ICECredentialTypePassword,
+	}
+}
+
+// TURNWebSocketDialer proxies all TURN traffic through a WebSocket.
+func TURNProxyWebSocket(baseURL *url.URL, token string) proxy.Dialer {
+	return &turnProxyDialer{
+		baseURL: baseURL,
+		token:   token,
+	}
+}
+
+// Proxies all TURN ICEServer traffic through this dialer.
+// References Coder APIs with a specific token.
+type turnProxyDialer struct {
+	baseURL *url.URL
+	token   string
+}
+
+func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
+	headers := http.Header{}
+	headers.Set("Session-Token", t.token)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+	defer cancel()
+
+	// Copy the baseURL so we can adjust path.
+	url := *t.baseURL
+	url.Scheme = "wss"
+	if url.Scheme == httpScheme {
+		url.Scheme = "ws"
+	}
+	url.Path = "/api/private/turn"
+	conn, resp, err := websocket.Dial(ctx, url.String(), &websocket.DialOptions{
+		HTTPHeader: headers,
+	})
+	if err != nil {
+		if resp != nil {
+			defer resp.Body.Close()
+			return nil, coder.NewHTTPError(resp)
+		}
+		return nil, fmt.Errorf("dial: %w", err)
+	}
+
+	return &turnProxyConn{
+		websocket.NetConn(context.Background(), conn, websocket.MessageBinary),
+	}, nil
+}
+
+// turnProxyConn is a net.Conn wrapper that returns a TCPAddr for the
+// LocalAddr function. pion/ice unsafely checks the types. See:
+// https://github.com/pion/ice/blob/e78f26fb435987420546c70369ade5d713beca39/gather.go#L448
+type turnProxyConn struct {
+	net.Conn
+}
+
+// The LocalAddr specified here doesn't really matter,
+// it just has to be of type "TCPAddr".
+func (*turnProxyConn) LocalAddr() net.Addr {
+	return &net.TCPAddr{
+		IP:   net.IPv4(127, 0, 0, 1),
+		Port: 0,
+	}
+}
+
+// Properly buffers data for data channel connections.
+type dataChannelConn struct {
 	addr *net.UnixAddr
 	dc   *webrtc.DataChannel
 	rw   datachannel.ReadWriteCloser
@@ -62,7 +131,7 @@ type conn struct {
 	writeMutex sync.Mutex
 }
 
-func (c *conn) init() {
+func (c *dataChannelConn) init() {
 	c.sendMore = make(chan struct{}, 1)
 	c.dc.SetBufferedAmountLowThreshold(bufferedAmountLowThreshold)
 	c.dc.OnBufferedAmountLow(func() {
@@ -78,11 +147,11 @@ func (c *conn) init() {
 	})
 }
 
-func (c *conn) Read(b []byte) (n int, err error) {
+func (c *dataChannelConn) Read(b []byte) (n int, err error) {
 	return c.rw.Read(b)
 }
 
-func (c *conn) Write(b []byte) (n int, err error) {
+func (c *dataChannelConn) Write(b []byte) (n int, err error) {
 	c.writeMutex.Lock()
 	defer c.writeMutex.Unlock()
 	if len(b) > maxMessageLength {
@@ -101,7 +170,7 @@ func (c *conn) Write(b []byte) (n int, err error) {
 	return c.rw.Write(b)
 }
 
-func (c *conn) Close() error {
+func (c *dataChannelConn) Close() error {
 	c.closedMutex.Lock()
 	defer c.closedMutex.Unlock()
 	if !c.closed {
@@ -111,22 +180,22 @@ func (c *conn) Close() error {
 	return c.dc.Close()
 }
 
-func (c *conn) LocalAddr() net.Addr {
+func (c *dataChannelConn) LocalAddr() net.Addr {
 	return c.addr
 }
 
-func (c *conn) RemoteAddr() net.Addr {
+func (c *dataChannelConn) RemoteAddr() net.Addr {
 	return c.addr
 }
 
-func (c *conn) SetDeadline(t time.Time) error {
+func (c *dataChannelConn) SetDeadline(t time.Time) error {
 	return nil
 }
 
-func (c *conn) SetReadDeadline(t time.Time) error {
+func (c *dataChannelConn) SetReadDeadline(t time.Time) error {
 	return nil
 }
 
-func (c *conn) SetWriteDeadline(t time.Time) error {
+func (c *dataChannelConn) SetWriteDeadline(t time.Time) error {
 	return nil
 }
