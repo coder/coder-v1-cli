@@ -288,7 +288,7 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 		return nil, ctx.Err()
 	}
 
-	c := &conn{
+	c := &dataChannelConn{
 		addr: &net.UnixAddr{
 			Name: address,
 			Net:  network,

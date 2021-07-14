@@ -97,7 +97,7 @@ func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
 	return websocket.NetConn(ctx, conn, websocket.MessageBinary), nil
 }
 
-type conn struct {
+type dataChannelConn struct {
 	addr *net.UnixAddr
 	dc   *webrtc.DataChannel
 	rw   datachannel.ReadWriteCloser
@@ -109,7 +109,7 @@ type conn struct {
 	writeMutex sync.Mutex
 }
 
-func (c *conn) init() {
+func (c *dataChannelConn) init() {
 	c.sendMore = make(chan struct{}, 1)
 	c.dc.SetBufferedAmountLowThreshold(bufferedAmountLowThreshold)
 	c.dc.OnBufferedAmountLow(func() {
@@ -125,11 +125,11 @@ func (c *conn) init() {
 	})
 }
 
-func (c *conn) Read(b []byte) (n int, err error) {
+func (c *dataChannelConn) Read(b []byte) (n int, err error) {
 	return c.rw.Read(b)
 }
 
-func (c *conn) Write(b []byte) (n int, err error) {
+func (c *dataChannelConn) Write(b []byte) (n int, err error) {
 	c.writeMutex.Lock()
 	defer c.writeMutex.Unlock()
 	if len(b) > maxMessageLength {
@@ -148,7 +148,7 @@ func (c *conn) Write(b []byte) (n int, err error) {
 	return c.rw.Write(b)
 }
 
-func (c *conn) Close() error {
+func (c *dataChannelConn) Close() error {
 	c.closedMutex.Lock()
 	defer c.closedMutex.Unlock()
 	if !c.closed {
@@ -158,22 +158,22 @@ func (c *conn) Close() error {
 	return c.dc.Close()
 }
 
-func (c *conn) LocalAddr() net.Addr {
+func (c *dataChannelConn) LocalAddr() net.Addr {
 	return c.addr
 }
 
-func (c *conn) RemoteAddr() net.Addr {
+func (c *dataChannelConn) RemoteAddr() net.Addr {
 	return c.addr
 }
 
-func (c *conn) SetDeadline(t time.Time) error {
+func (c *dataChannelConn) SetDeadline(t time.Time) error {
 	return nil
 }
 
-func (c *conn) SetReadDeadline(t time.Time) error {
+func (c *dataChannelConn) SetReadDeadline(t time.Time) error {
 	return nil
 }
 
-func (c *conn) SetWriteDeadline(t time.Time) error {
+func (c *dataChannelConn) SetWriteDeadline(t time.Time) error {
 	return nil
 }

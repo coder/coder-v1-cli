@@ -329,7 +329,7 @@ func (l *listener) handle(msg BrokerMessage) func(dc *webrtc.DataChannel) {
 			}
 			// Must wrap the data channel inside this connection
 			// for buffering from the dialed endpoint to the client.
-			co := &conn{
+			co := &dataChannelConn{
 				addr: nil,
 				dc:   dc,
 				rw:   rw,
