@@ -52,6 +52,8 @@ func ExampleDial_basic() {
 // nolint:gocognit,gocyclo
 func TestDial(t *testing.T) {
 	t.Run("Ping", func(t *testing.T) {
+		t.Parallel()
+
 		connectAddr, listenAddr := createDumbBroker(t)
 		_, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {
@@ -69,7 +71,38 @@ func TestDial(t *testing.T) {
 		}
 	})
 
+	t.Run("Ping Close", func(t *testing.T) {
+		t.Parallel()
+
+		connectAddr, listenAddr := createDumbBroker(t)
+		_, err := Listen(context.Background(), listenAddr)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		turnAddr, closeTurn := createTURNServer(t, ice.SchemeTypeTURN)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, []webrtc.ICEServer{{
+			URLs:           []string{fmt.Sprintf("turn:%s", turnAddr)},
+			Username:       "example",
+			Credential:     testPass,
+			CredentialType: webrtc.ICECredentialTypePassword,
+		}})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		_ = dialer.Ping(context.Background())
+		closeTurn()
+		err = dialer.Ping(context.Background())
+		if err != io.EOF {
+			t.Error(err)
+			return
+		}
+	})
+
 	t.Run("OPError", func(t *testing.T) {
+		t.Parallel()
+
 		connectAddr, listenAddr := createDumbBroker(t)
 		_, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {
@@ -93,6 +126,8 @@ func TestDial(t *testing.T) {
 	})
 
 	t.Run("Proxy", func(t *testing.T) {
+		t.Parallel()
+
 		listener, err := net.Listen("tcp", "0.0.0.0:0")
 		if err != nil {
 			t.Error(err)
@@ -136,6 +171,8 @@ func TestDial(t *testing.T) {
 
 	// Expect that we'd get an EOF on the server closing.
 	t.Run("EOF on Close", func(t *testing.T) {
+		t.Parallel()
+
 		listener, err := net.Listen("tcp", "0.0.0.0:0")
 		if err != nil {
 			t.Error(err)
@@ -169,6 +206,8 @@ func TestDial(t *testing.T) {
 	})
 
 	t.Run("Disconnect", func(t *testing.T) {
+		t.Parallel()
+
 		connectAddr, listenAddr := createDumbBroker(t)
 		_, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {
@@ -192,6 +231,8 @@ func TestDial(t *testing.T) {
 	})
 
 	t.Run("Disconnect DialContext", func(t *testing.T) {
+		t.Parallel()
+
 		tcpListener, err := net.Listen("tcp", "0.0.0.0:0")
 		if err != nil {
 			t.Error(err)
@@ -236,6 +277,8 @@ func TestDial(t *testing.T) {
 	})
 
 	t.Run("Closed", func(t *testing.T) {
+		t.Parallel()
+
 		connectAddr, listenAddr := createDumbBroker(t)
 		_, err := Listen(context.Background(), listenAddr, nil)
 		if err != nil {

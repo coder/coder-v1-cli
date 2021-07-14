@@ -160,7 +160,7 @@ func newPeerConnection(servers []webrtc.ICEServer, dialer proxy.Dialer) (*webrtc
 	se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
 	se.SetSrflxAcceptanceMinWait(0)
 	se.DetachDataChannels()
-	se.SetICETimeouts(time.Second*5, time.Second*5, time.Second*2)
+	se.SetICETimeouts(time.Second*3, time.Second*3, time.Second*2)
 	lf := logging.NewDefaultLoggerFactory()
 	lf.DefaultLogLevel = logging.LogLevelDisabled
 	se.LoggerFactory = lf
@@ -258,6 +258,9 @@ func waitForConnectionOpen(ctx context.Context, conn *webrtc.PeerConnection) err
 func waitForDataChannelOpen(ctx context.Context, channel *webrtc.DataChannel) error {
 	if channel.ReadyState() == webrtc.DataChannelStateOpen {
 		return nil
+	}
+	if channel.ReadyState() != webrtc.DataChannelStateConnecting {
+		return fmt.Errorf("channel closed")
 	}
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
 	defer cancelFunc()

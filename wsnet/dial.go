@@ -107,7 +107,7 @@ func Dial(conn net.Conn, options *DialOptions) (*Dialer, error) {
 		ctrl:        ctrl,
 		rtc:         rtc,
 		closedChan:  make(chan struct{}),
-		connClosers: make([]io.Closer, 0),
+		connClosers: []io.Closer{ctrl},
 	}
 
 	return dialer, dialer.negotiate()
