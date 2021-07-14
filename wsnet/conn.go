@@ -95,7 +95,7 @@ func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
 	}
 
 	return &turnProxyConn{
-		conn: websocket.NetConn(ctx, conn, websocket.MessageBinary),
+		conn: websocket.NetConn(context.Background(), conn, websocket.MessageBinary),
 	}, nil
 }
 
@@ -126,10 +126,7 @@ func (t *turnProxyConn) LocalAddr() net.Addr {
 }
 
 func (t *turnProxyConn) RemoteAddr() net.Addr {
-	return &net.TCPAddr{
-		IP:   net.IPv4(127, 0, 0, 1),
-		Port: 0,
-	}
+	return t.conn.RemoteAddr()
 }
 
 func (t *turnProxyConn) SetDeadline(time time.Time) error {
