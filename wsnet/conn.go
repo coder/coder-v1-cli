@@ -98,52 +98,24 @@ func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
 	}
 
 	return &turnProxyConn{
-		conn: websocket.NetConn(context.Background(), conn, websocket.MessageBinary),
+		websocket.NetConn(context.Background(), conn, websocket.MessageBinary),
 	}, nil
 }
 
 // turnProxyConn is a net.Conn wrapper that returns a TCPAddr for the
-// LocalAddr and RemoteAddr functions. pion/ice unsafely checks the
-// types. See: https://github.com/pion/ice/blob/e78f26fb435987420546c70369ade5d713beca39/gather.go#L448
+// LocalAddr function. pion/ice unsafely checks the types. See:
+// https://github.com/pion/ice/blob/e78f26fb435987420546c70369ade5d713beca39/gather.go#L448
 type turnProxyConn struct {
-	conn net.Conn
-}
-
-func (t *turnProxyConn) Read(b []byte) (n int, err error) {
-	return t.conn.Read(b)
-}
-
-func (t *turnProxyConn) Write(b []byte) (n int, err error) {
-	return t.conn.Write(b)
-}
-
-func (t *turnProxyConn) Close() error {
-	return t.conn.Close()
+	net.Conn
 }
 
 // The LocalAddr specified here doesn't really matter,
 // it just has to be of type "TCPAddr".
-func (t *turnProxyConn) LocalAddr() net.Addr {
+func (*turnProxyConn) LocalAddr() net.Addr {
 	return &net.TCPAddr{
 		IP:   net.IPv4(127, 0, 0, 1),
 		Port: 0,
 	}
-}
-
-func (t *turnProxyConn) RemoteAddr() net.Addr {
-	return t.conn.RemoteAddr()
-}
-
-func (t *turnProxyConn) SetDeadline(time time.Time) error {
-	return t.conn.SetDeadline(time)
-}
-
-func (t *turnProxyConn) SetReadDeadline(time time.Time) error {
-	return t.conn.SetReadDeadline(time)
-}
-
-func (t *turnProxyConn) SetWriteDeadline(time time.Time) error {
-	return t.conn.SetWriteDeadline(time)
 }
 
 // Properly buffers data for data channel connections.
