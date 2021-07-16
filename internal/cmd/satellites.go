@@ -164,12 +164,12 @@ coder satellites ls`,
 				return xerrors.Errorf("get satellites request: %w", err)
 			}
 
-			if len(sats.Data) == 0 {
+			if len(sats) == 0 {
 				return xerrors.Errorf("no satellites found")
 			}
 
-			err = tablewriter.WriteTable(cmd.OutOrStdout(), len(sats.Data), func(i int) interface{} {
-				return sats.Data[i]
+			err = tablewriter.WriteTable(cmd.OutOrStdout(), len(sats), func(i int) interface{} {
+				return sats[i]
 			})
 			if err != nil {
 				return xerrors.Errorf("write table: %w", err)
@@ -203,7 +203,7 @@ coder satellites rm my-satellite`,
 				return xerrors.Errorf("get satellites request: %w", err)
 			}
 
-			for _, sat := range sats.Data {
+			for _, sat := range sats {
 				if sat.Name == name {
 					err = client.DeleteSatelliteByID(ctx, sat.ID)
 					if err != nil {

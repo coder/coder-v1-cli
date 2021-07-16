@@ -11,18 +11,22 @@ type Satellite struct {
 	Fingerprint string `json:"fingerprint"`
 }
 
-type Satellites struct {
+type satellites struct {
 	Data []Satellite `json:"data"`
 }
 
+type createSatelliteResponse struct {
+	Data Satellite `json:"data"`
+}
+
 // Satellites fetches all satellitess known to the Coder control plane.
-func (c *DefaultClient) Satellites(ctx context.Context) (*Satellites, error) {
-	var res Satellites
+func (c *DefaultClient) Satellites(ctx context.Context) ([]Satellite, error) {
+	var res satellites
 	err := c.requestBody(ctx, http.MethodGet, "/api/private/satellites", nil, &res)
 	if err != nil {
 		return nil, err
 	}
-	return &res, nil
+	return res.Data, nil
 }
 
 // CreateSatelliteReq defines the request parameters for creating a new satellite entity.
@@ -32,13 +36,13 @@ type CreateSatelliteReq struct {
 }
 
 // CreateSatellite creates a new satellite entity.
-func (c *DefaultClient) CreateSatellite(ctx context.Context, req CreateSatelliteReq) (*Satellites, error) {
-	var res Satellites
+func (c *DefaultClient) CreateSatellite(ctx context.Context, req CreateSatelliteReq) (*Satellite, error) {
+	var res createSatelliteResponse
 	err := c.requestBody(ctx, http.MethodPost, "/api/private/satellites", req, &res)
 	if err != nil {
 		return nil, err
 	}
-	return &res, nil
+	return &res.Data, nil
 }
 
 // DeleteSatelliteByID deletes a satellite entity from the Coder control plane.
