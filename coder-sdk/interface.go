@@ -241,4 +241,13 @@ type Client interface {
 
 	// SetPolicyTemplate sets the workspace policy template
 	SetPolicyTemplate(ctx context.Context, templateID string, templateScope TemplateScope, dryRun bool) (*SetPolicyTemplateResponse, error)
+
+	// satellites fetches all satellitess known to the Coder control plane.
+	Satellites(ctx context.Context) ([]Satellite, error)
+
+	// CreateSatellite creates a new satellite entity.
+	CreateSatellite(ctx context.Context, req CreateSatelliteReq) (*Satellite, error)
+
+	// DeleteSatelliteByID deletes a satellite entity from the Coder control plane.
+	DeleteSatelliteByID(ctx context.Context, id string) error
 }
