@@ -164,6 +164,10 @@ coder satellites ls`,
 				return xerrors.Errorf("get satellites request: %w", err)
 			}
 
+			if len(sats.Data) == 0 {
+				return xerrors.Errorf("no satellites found")
+			}
+
 			err = tablewriter.WriteTable(cmd.OutOrStdout(), len(sats.Data), func(i int) interface{} {
 				return sats.Data[i]
 			})
