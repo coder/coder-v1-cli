@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	satelliteKeyPath =  "/api/private/satellites/key"
+	satelliteKeyPath = "/api/private/satellites/key"
 )
 
 type satelliteKeyResponse struct {
@@ -28,10 +28,9 @@ type satelliteKeyResponse struct {
 
 func satellitesCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:    "satellites",
-		Short:  "Interact with Coder satellite deployments",
-		Long:   "Perform operations on the Coder satellites for the platform.",
-		Hidden: true,
+		Use:   "satellites",
+		Short: "Interact with Coder satellite deployments",
+		Long:  "Perform operations on the Coder satellites for the platform.",
 	}
 
 	cmd.AddCommand(
@@ -53,19 +52,19 @@ func createSatelliteCmd() *cobra.Command {
 coder satellites create eu-west https://eu-west-coder.com`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var (
-				ctx = cmd.Context()
-				name = args[0]
+				ctx       = cmd.Context()
+				name      = args[0]
 				accessURL = args[1]
 			)
 
 			client, err := newClient(ctx, true)
 			if err != nil {
-				return xerrors.Errorf("making coder client", err)
+				return xerrors.Errorf("making coder client: %w", err)
 			}
 
 			sURL, err := url.Parse(accessURL)
 			if err != nil {
-				return xerrors.Errorf("parsing satellite access url", err)
+				return xerrors.Errorf("parsing satellite access url: %w", err)
 			}
 			sURL.Path = satelliteKeyPath
 
@@ -90,10 +89,10 @@ coder satellites create eu-west https://eu-west-coder.com`,
 			}
 
 			if keyRes.Key == "" {
-				return xerrors.Errorf("key field empty in response")
+				return xerrors.New("key field empty in response")
 			}
 			if keyRes.Fingerprint == "" {
-				return xerrors.Errorf("fingerprint field empty in response")
+				return xerrors.New("fingerprint field empty in response")
 			}
 
 			fmt.Printf(`The following satellite will be created:
@@ -156,12 +155,12 @@ coder satellites ls`,
 
 			client, err := newClient(ctx, true)
 			if err != nil {
-				return xerrors.Errorf("making coder client", err)
+				return xerrors.Errorf("making coder client: %w", err)
 			}
 
 			sats, err := client.Satellites(ctx)
 			if err != nil {
-				return xerrors.Errorf("get satellites request", err)
+				return xerrors.Errorf("get satellites request: %w", err)
 			}
 
 			err = tablewriter.WriteTable(cmd.OutOrStdout(), len(sats.Data), func(i int) interface{} {
@@ -196,14 +195,14 @@ coder satellites rm my-satellite`,
 
 			sats, err := client.Satellites(ctx)
 			if err != nil {
-				return xerrors.Errorf("get satellites request", err)
+				return xerrors.Errorf("get satellites request: %w", err)
 			}
 
 			for _, sat := range sats.Data {
 				if sat.Name == name {
 					err = client.DeleteSatelliteByID(ctx, sat.ID)
 					if err != nil {
-						return xerrors.Errorf("delete satellites request", err)
+						return xerrors.Errorf("delete satellites request: %w", err)
 					}
 					clog.LogSuccess(fmt.Sprintf("satellite %s successfully deleted", name))
 
@@ -216,5 +215,3 @@ coder satellites rm my-satellite`,
 	}
 	return cmd
 }
-
-

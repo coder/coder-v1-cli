@@ -6,9 +6,9 @@ import (
 )
 
 type Satellite struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Fingerprint string    `json:"fingerprint"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Fingerprint string `json:"fingerprint"`
 }
 
 type Satellites struct {
