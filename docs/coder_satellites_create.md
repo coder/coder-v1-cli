@@ -15,7 +15,7 @@ coder satellites create [name] [satellite_access_url] [flags]
 ```
 # create a new satellite
 
-coder satellites create eu-west https://eu-west-coder.com
+coder satellites create eu-west https://eu-west.coder.com
 ```
 
 ### Options
