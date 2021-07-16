@@ -104,7 +104,7 @@ Public Key:
 Fingerprint:
 %s
 
-Do you wish to continue? (y)
+Do you wish to continue? (y/n)
 `, name, keyRes.Key, keyRes.Fingerprint)
 			err = getConfirmation()
 			if err != nil {
@@ -136,7 +136,8 @@ func getConfirmation() error {
 		return xerrors.Errorf("scan line: %w", err)
 	}
 
-	if strings.ToLower(response) != "y" && strings.ToLower(response) != "yes" {
+	response = strings.ToLower(strings.TrimSpace(response))
+	if response != "y" && response != "yes" {
 		return xerrors.New("request canceled")
 	}
 
