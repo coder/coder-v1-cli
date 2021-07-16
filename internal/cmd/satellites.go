@@ -49,7 +49,7 @@ func createSatelliteCmd() *cobra.Command {
 		Long:  "Create a new Coder satellite.",
 		Example: `# create a new satellite
 
-coder satellites create eu-west https://eu-west-coder.com`,
+coder satellites create eu-west https://eu-west.coder.com`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var (
 				ctx       = cmd.Context()
