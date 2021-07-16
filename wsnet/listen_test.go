@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"cdr.dev/slog/sloggers/slogtest"
 	"nhooyr.io/websocket"
 )
 
@@ -45,7 +46,7 @@ func TestListen(t *testing.T) {
 		addr := listener.Addr()
 		broker := fmt.Sprintf("http://%s/", addr.String())
 
-		_, err = Listen(context.Background(), broker, "")
+		_, err = Listen(context.Background(), slogtest.Make(t, nil), broker, "")
 		if err != nil {
 			t.Error(err)
 			return
