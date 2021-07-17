@@ -11,7 +11,6 @@ import (
 
 	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
-	"golang.org/x/net/proxy"
 	"nhooyr.io/websocket"
 
 	"cdr.dev/coder-cli/coder-sdk"
@@ -56,14 +55,6 @@ func TURNProxyICECandidate(baseURL *url.URL) webrtc.ICEServer {
 		Username:       turnProxyMagicUsername,
 		Credential:     baseURL.String(),
 		CredentialType: webrtc.ICECredentialTypePassword,
-	}
-}
-
-// TURNWebSocketDialer proxies all TURN traffic through a WebSocket.
-func TURNProxyWebSocket(baseURL *url.URL, token string) proxy.Dialer {
-	return &turnProxyDialer{
-		baseURL: baseURL,
-		token:   token,
 	}
 }
 
