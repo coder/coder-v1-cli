@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -17,7 +18,6 @@ import (
 	"github.com/pion/logging"
 	"github.com/pion/turn/v2"
 	"github.com/pion/webrtc/v3"
-	"golang.org/x/net/proxy"
 )
 
 var (
@@ -155,7 +155,7 @@ func dialICEURL(server webrtc.ICEServer, rawURL string, options *DialICEOptions)
 }
 
 // Generalizes creating a new peer connection with consistent options.
-func newPeerConnection(servers []webrtc.ICEServer, dialer proxy.Dialer) (*webrtc.PeerConnection, error) {
+func newPeerConnection(servers []webrtc.ICEServer, turnProxyAuthToken string) (*webrtc.PeerConnection, error) {
 	se := webrtc.SettingEngine{}
 	se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
 	se.SetSrflxAcceptanceMinWait(0)
@@ -165,10 +165,28 @@ func newPeerConnection(servers []webrtc.ICEServer, dialer proxy.Dialer) (*webrtc
 	lf.DefaultLogLevel = logging.LogLevelDisabled
 	se.LoggerFactory = lf
 
-	// Enables tunneling of TURN traffic through an arbitrary proxy.
-	// We proxy TURN over a WebSocket to reduce deployment complexity.
-	if dialer != nil {
-		se.SetICEProxyDialer(dialer)
+	for _, server := range servers {
+		if server.Username != turnProxyMagicUsername {
+			continue
+		}
+		if server.Credential == nil {
+			return nil, errors.New("invalid magical turn candidate")
+		}
+		if turnProxyAuthToken == "" {
+			return nil, errors.New("magic candidate provided but token wasn't provided")
+		}
+		u, err := url.Parse(server.Credential.(string))
+		if err != nil {
+			return nil, fmt.Errorf("parse magical candidate credential: %w", err)
+		}
+
+		// Enables tunneling of TURN traffic through an arbitrary proxy.
+		// We proxy TURN over a WebSocket to reduce deployment complexity.
+		se.SetICEProxyDialer(&turnProxyDialer{
+			baseURL: u,
+			token:   turnProxyAuthToken,
+		})
+		break
 	}
 
 	transportPolicy := webrtc.ICETransportPolicyAll

@@ -12,7 +12,6 @@ import (
 
 	"github.com/hashicorp/yamux"
 	"github.com/pion/webrtc/v3"
-	"golang.org/x/net/proxy"
 	"nhooyr.io/websocket"
 
 	"cdr.dev/coder-cli/coder-sdk"
@@ -40,11 +39,11 @@ type DialChannelResponse struct {
 
 // Listen connects to the broker proxies connections to the local net.
 // Close will end all RTC connections.
-func Listen(ctx context.Context, broker string, tcpProxy proxy.Dialer) (io.Closer, error) {
+func Listen(ctx context.Context, broker string, turnProxyAuthToken string) (io.Closer, error) {
 	l := &listener{
-		broker:      broker,
-		connClosers: make([]io.Closer, 0),
-		tcpProxy:    tcpProxy,
+		broker:             broker,
+		connClosers:        make([]io.Closer, 0),
+		turnProxyAuthToken: turnProxyAuthToken,
 	}
 	// We do a one-off dial outside of the loop to ensure the initial
 	// connection is successful. If not, there's likely an error the
@@ -85,8 +84,8 @@ func Listen(ctx context.Context, broker string, tcpProxy proxy.Dialer) (io.Close
 }
 
 type listener struct {
-	broker   string
-	tcpProxy proxy.Dialer
+	broker             string
+	turnProxyAuthToken string
 
 	acceptError    error
 	ws             *websocket.Conn
@@ -189,7 +188,7 @@ func (l *listener) negotiate(conn net.Conn) {
 				return
 			}
 			for _, server := range msg.Servers {
-				if server.Username == TURNProxyICECandidate().Username {
+				if server.Username == turnProxyMagicUsername {
 					// This candidate is only used when proxying,
 					// so it will not validate.
 					continue
@@ -200,7 +199,7 @@ func (l *listener) negotiate(conn net.Conn) {
 					return
 				}
 			}
-			rtc, err = newPeerConnection(msg.Servers, l.tcpProxy)
+			rtc, err = newPeerConnection(msg.Servers, l.turnProxyAuthToken)
 			if err != nil {
 				closeError(err)
 				return

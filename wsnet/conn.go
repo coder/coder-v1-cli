@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	httpScheme = "http"
+	httpScheme             = "http"
+	turnProxyMagicUsername = "~magicalusername~"
 
 	bufferedAmountLowThreshold uint64 = 512 * 1024  // 512 KB
 	maxBufferedAmount          uint64 = 1024 * 1024 // 1 MB
@@ -46,13 +47,14 @@ func ConnectEndpoint(baseURL *url.URL, workspace, token string) string {
 	return fmt.Sprintf("%s://%s%s%s%s%s", wsScheme, baseURL.Host, "/api/private/envagent/", workspace, "/connect?session_token=", token)
 }
 
-// TURNWebSocketICECandidate returns a valid relay ICEServer that can be used to
-// trigger a TURNWebSocketDialer.
-func TURNProxyICECandidate() webrtc.ICEServer {
+// TURNWebSocketICECandidate returns a fake TCP relay ICEServer.
+// It's used to trigger the ICEProxyDialer. The "Credential" field
+// is used to store the URL to dial.
+func TURNProxyICECandidate(baseURL *url.URL) webrtc.ICEServer {
 	return webrtc.ICEServer{
 		URLs:           []string{"turn:127.0.0.1:3478?transport=tcp"},
-		Username:       "~magicalusername~",
-		Credential:     "~magicalpassword~",
+		Username:       turnProxyMagicUsername,
+		Credential:     baseURL.String(),
 		CredentialType: webrtc.ICECredentialTypePassword,
 	}
 }

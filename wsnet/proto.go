@@ -51,6 +51,7 @@ type BrokerMessage struct {
 	// Dialer -> Listener
 	Offer   *webrtc.SessionDescription `json:"offer"`
 	Servers []webrtc.ICEServer         `json:"servers"`
+
 	// Policies denote which addresses the client can dial. If empty or nil, all
 	// addresses are permitted.
 	Policies []DialPolicy `json:"ports"`
