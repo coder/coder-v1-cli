@@ -47,13 +47,12 @@ func ConnectEndpoint(baseURL *url.URL, workspace, token string) string {
 }
 
 // TURNWebSocketICECandidate returns a fake TCP relay ICEServer.
-// It's used to trigger the ICEProxyDialer. The "Credential" field
-// is used to store the URL to dial.
-func TURNProxyICECandidate(baseURL *url.URL) webrtc.ICEServer {
+// It's used to trigger the ICEProxyDialer.
+func TURNProxyICECandidate() webrtc.ICEServer {
 	return webrtc.ICEServer{
 		URLs:           []string{"turn:127.0.0.1:3478?transport=tcp"},
 		Username:       turnProxyMagicUsername,
-		Credential:     baseURL.String(),
+		Credential:     turnProxyMagicUsername,
 		CredentialType: webrtc.ICECredentialTypePassword,
 	}
 }

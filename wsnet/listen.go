@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/yamux"
 	"github.com/pion/webrtc/v3"
+	"golang.org/x/net/proxy"
 	"nhooyr.io/websocket"
 
 	"cdr.dev/coder-cli/coder-sdk"
@@ -199,7 +201,19 @@ func (l *listener) negotiate(conn net.Conn) {
 					return
 				}
 			}
-			rtc, err = newPeerConnection(msg.Servers, l.turnProxyAuthToken)
+			var turnProxy proxy.Dialer
+			if msg.TURNProxyURL != "" {
+				u, err := url.Parse(msg.TURNProxyURL)
+				if err != nil {
+					closeError(fmt.Errorf("parse turn proxy url: %w", err))
+					return
+				}
+				turnProxy = &turnProxyDialer{
+					baseURL: u,
+					token:   l.turnProxyAuthToken,
+				}
+			}
+			rtc, err = newPeerConnection(msg.Servers, turnProxy)
 			if err != nil {
 				closeError(err)
 				return

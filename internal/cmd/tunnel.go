@@ -109,7 +109,8 @@ func (c *tunnneler) start(ctx context.Context) error {
 		wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token),
 		&wsnet.DialOptions{
 			TURNProxyAuthToken: c.token,
-			ICEServers:         []webrtc.ICEServer{wsnet.TURNProxyICECandidate(c.brokerAddr)},
+			TURNProxyURL:       c.brokerAddr,
+			ICEServers:         []webrtc.ICEServer{wsnet.TURNProxyICECandidate()},
 		},
 	)
 	if err != nil {

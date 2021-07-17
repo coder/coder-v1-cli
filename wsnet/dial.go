@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"sync"
 	"time"
 
 	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
+	"golang.org/x/net/proxy"
 	"nhooyr.io/websocket"
 
 	"cdr.dev/coder-cli/coder-sdk"
@@ -23,8 +25,13 @@ type DialOptions struct {
 	// See: https://developer.mozilla.org/en-US/docs/Web/API/RTCConfiguration/iceServers
 	ICEServers []webrtc.ICEServer
 
-	// TURNProxyAuthToken is used to authenticate dial requests for TURNProxy candidates.
+	// TURNProxyAuthToken is used to authenticate a TURN proxy request.
 	TURNProxyAuthToken string
+
+	// TURNProxyURL is the URL to proxy all TURN data through.
+	// This URL is sent to the listener during handshake so both
+	// ends connect to the same TURN endpoint.
+	TURNProxyURL *url.URL
 }
 
 // DialWebsocket dials the broker with a WebSocket and negotiates a connection.
@@ -57,7 +64,14 @@ func Dial(conn net.Conn, options *DialOptions) (*Dialer, error) {
 		options.ICEServers = []webrtc.ICEServer{}
 	}
 
-	rtc, err := newPeerConnection(options.ICEServers, options.TURNProxyAuthToken)
+	var turnProxy proxy.Dialer
+	if options.TURNProxyURL != nil {
+		turnProxy = &turnProxyDialer{
+			baseURL: options.TURNProxyURL,
+			token:   options.TURNProxyAuthToken,
+		}
+	}
+	rtc, err := newPeerConnection(options.ICEServers, turnProxy)
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w", err)
 	}
@@ -81,9 +95,15 @@ func Dial(conn net.Conn, options *DialOptions) (*Dialer, error) {
 		return nil, fmt.Errorf("set local offer: %w", err)
 	}
 
+	var turnProxyURL string
+	if options.TURNProxyURL != nil {
+		turnProxyURL = options.TURNProxyURL.String()
+	}
+
 	offerMessage, err := json.Marshal(&BrokerMessage{
-		Offer:   &offer,
-		Servers: options.ICEServers,
+		Offer:        &offer,
+		Servers:      options.ICEServers,
+		TURNProxyURL: turnProxyURL,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("marshal offer message: %w", err)
