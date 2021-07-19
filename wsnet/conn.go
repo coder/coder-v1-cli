@@ -11,14 +11,14 @@ import (
 
 	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
-	"golang.org/x/net/proxy"
 	"nhooyr.io/websocket"
 
 	"cdr.dev/coder-cli/coder-sdk"
 )
 
 const (
-	httpScheme = "http"
+	httpScheme             = "http"
+	turnProxyMagicUsername = "~magicalusername~"
 
 	bufferedAmountLowThreshold uint64 = 512 * 1024  // 512 KB
 	maxBufferedAmount          uint64 = 1024 * 1024 // 1 MB
@@ -46,22 +46,14 @@ func ConnectEndpoint(baseURL *url.URL, workspace, token string) string {
 	return fmt.Sprintf("%s://%s%s%s%s%s", wsScheme, baseURL.Host, "/api/private/envagent/", workspace, "/connect?session_token=", token)
 }
 
-// TURNWebSocketICECandidate returns a valid relay ICEServer that can be used to
-// trigger a TURNWebSocketDialer.
+// TURNWebSocketICECandidate returns a fake TCP relay ICEServer.
+// It's used to trigger the ICEProxyDialer.
 func TURNProxyICECandidate() webrtc.ICEServer {
 	return webrtc.ICEServer{
 		URLs:           []string{"turn:127.0.0.1:3478?transport=tcp"},
-		Username:       "~magicalusername~",
-		Credential:     "~magicalpassword~",
+		Username:       turnProxyMagicUsername,
+		Credential:     turnProxyMagicUsername,
 		CredentialType: webrtc.ICECredentialTypePassword,
-	}
-}
-
-// TURNWebSocketDialer proxies all TURN traffic through a WebSocket.
-func TURNProxyWebSocket(baseURL *url.URL, token string) proxy.Dialer {
-	return &turnProxyDialer{
-		baseURL: baseURL,
-		token:   token,
 	}
 }
 

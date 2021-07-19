@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"sync"
 	"time"
 
@@ -24,10 +25,13 @@ type DialOptions struct {
 	// See: https://developer.mozilla.org/en-US/docs/Web/API/RTCConfiguration/iceServers
 	ICEServers []webrtc.ICEServer
 
-	// TURNProxy is a function used to proxy all TURN traffic.
-	// If specified without ICEServers, `TURNProxyICECandidate`
-	// will be used.
-	TURNProxy proxy.Dialer
+	// TURNProxyAuthToken is used to authenticate a TURN proxy request.
+	TURNProxyAuthToken string
+
+	// TURNProxyURL is the URL to proxy all TURN data through.
+	// This URL is sent to the listener during handshake so both
+	// ends connect to the same TURN endpoint.
+	TURNProxyURL *url.URL
 }
 
 // DialWebsocket dials the broker with a WebSocket and negotiates a connection.
@@ -59,13 +63,15 @@ func Dial(conn net.Conn, options *DialOptions) (*Dialer, error) {
 	if options.ICEServers == nil {
 		options.ICEServers = []webrtc.ICEServer{}
 	}
-	// If the TURNProxy is specified and ICEServers aren't,
-	// it's safe to assume we can inject the default proxy candidate.
-	if len(options.ICEServers) == 0 && options.TURNProxy != nil {
-		options.ICEServers = []webrtc.ICEServer{TURNProxyICECandidate()}
-	}
 
-	rtc, err := newPeerConnection(options.ICEServers, options.TURNProxy)
+	var turnProxy proxy.Dialer
+	if options.TURNProxyURL != nil {
+		turnProxy = &turnProxyDialer{
+			baseURL: options.TURNProxyURL,
+			token:   options.TURNProxyAuthToken,
+		}
+	}
+	rtc, err := newPeerConnection(options.ICEServers, turnProxy)
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w", err)
 	}
@@ -89,9 +95,15 @@ func Dial(conn net.Conn, options *DialOptions) (*Dialer, error) {
 		return nil, fmt.Errorf("set local offer: %w", err)
 	}
 
+	var turnProxyURL string
+	if options.TURNProxyURL != nil {
+		turnProxyURL = options.TURNProxyURL.String()
+	}
+
 	offerMessage, err := json.Marshal(&BrokerMessage{
-		Offer:   &offer,
-		Servers: options.ICEServers,
+		Offer:        &offer,
+		Servers:      options.ICEServers,
+		TURNProxyURL: turnProxyURL,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("marshal offer message: %w", err)

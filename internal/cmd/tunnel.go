@@ -11,6 +11,7 @@ import (
 
 	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/sloghuman"
+	"github.com/pion/webrtc/v3"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
@@ -107,7 +108,9 @@ func (c *tunnneler) start(ctx context.Context) error {
 		ctx,
 		wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token),
 		&wsnet.DialOptions{
-			TURNProxy: wsnet.TURNProxyWebSocket(c.brokerAddr, c.token),
+			TURNProxyAuthToken: c.token,
+			TURNProxyURL:       c.brokerAddr,
+			ICEServers:         []webrtc.ICEServer{wsnet.TURNProxyICECandidate()},
 		},
 	)
 	if err != nil {

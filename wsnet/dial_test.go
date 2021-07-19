@@ -55,7 +55,7 @@ func TestDial(t *testing.T) {
 		t.Parallel()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err := Listen(context.Background(), listenAddr, nil)
+		_, err := Listen(context.Background(), listenAddr, "")
 		if err != nil {
 			t.Error(err)
 			return
@@ -75,7 +75,7 @@ func TestDial(t *testing.T) {
 		t.Parallel()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err := Listen(context.Background(), listenAddr, nil)
+		_, err := Listen(context.Background(), listenAddr, "")
 		if err != nil {
 			t.Error(err)
 			return
@@ -106,7 +106,7 @@ func TestDial(t *testing.T) {
 		t.Parallel()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err := Listen(context.Background(), listenAddr, nil)
+		_, err := Listen(context.Background(), listenAddr, "")
 		if err != nil {
 			t.Error(err)
 			return
@@ -145,7 +145,7 @@ func TestDial(t *testing.T) {
 		}()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err = Listen(context.Background(), listenAddr, nil)
+		_, err = Listen(context.Background(), listenAddr, "")
 		if err != nil {
 			t.Error(err)
 			return
@@ -184,7 +184,7 @@ func TestDial(t *testing.T) {
 			_, _ = listener.Accept()
 		}()
 		connectAddr, listenAddr := createDumbBroker(t)
-		srv, err := Listen(context.Background(), listenAddr, nil)
+		srv, err := Listen(context.Background(), listenAddr, "")
 		if err != nil {
 			t.Error(err)
 			return
@@ -211,7 +211,7 @@ func TestDial(t *testing.T) {
 		t.Parallel()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err := Listen(context.Background(), listenAddr, nil)
+		_, err := Listen(context.Background(), listenAddr, "")
 		if err != nil {
 			t.Error(err)
 			return
@@ -245,7 +245,7 @@ func TestDial(t *testing.T) {
 		}()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err = Listen(context.Background(), listenAddr, nil)
+		_, err = Listen(context.Background(), listenAddr, "")
 		if err != nil {
 			t.Error(err)
 			return
@@ -282,7 +282,7 @@ func TestDial(t *testing.T) {
 		t.Parallel()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err := Listen(context.Background(), listenAddr, nil)
+		_, err := Listen(context.Background(), listenAddr, "")
 		if err != nil {
 			t.Error(err)
 			return
@@ -333,7 +333,7 @@ func BenchmarkThroughput(b *testing.B) {
 		}
 	}()
 	connectAddr, listenAddr := createDumbBroker(b)
-	_, err = Listen(context.Background(), listenAddr, nil)
+	_, err = Listen(context.Background(), listenAddr, "")
 	if err != nil {
 		b.Error(err)
 		return
