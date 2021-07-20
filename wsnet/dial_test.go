@@ -328,10 +328,11 @@ func TestDial(t *testing.T) {
 		assert.Equal(t, "one active connection", 1, dialer.ActiveConnections())
 		_ = conn.Close()
 		assert.Equal(t, "no active connections", 0, dialer.ActiveConnections())
-		_, err = dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
-		conn, err = dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+		_, _ = dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+		conn, _ = dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
 		assert.Equal(t, "two active connections", 2, dialer.ActiveConnections())
 		_ = conn.Close()
+		assert.Equal(t, "one active connection", 1, dialer.ActiveConnections())
 	})
 }
 
