@@ -17,8 +17,9 @@ import (
 	"golang.org/x/net/proxy"
 	"nhooyr.io/websocket"
 
-	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/slog"
+
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 // Codes for DialChannelResponse.
