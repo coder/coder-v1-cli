@@ -49,6 +49,7 @@ func Listen(ctx context.Context, log slog.Logger, broker string, turnProxyAuthTo
 		log:                log,
 		broker:             broker,
 		connClosers:        make([]io.Closer, 0),
+		closed:             make(chan struct{}, 1),
 		turnProxyAuthToken: turnProxyAuthToken,
 	}
 
@@ -62,6 +63,14 @@ func Listen(ctx context.Context, log slog.Logger, broker string, turnProxyAuthTo
 	go func() {
 		for {
 			err := <-ch
+			select {
+			case _, ok := <-l.closed:
+				if !ok {
+					return
+				}
+			default:
+			}
+
 			if errors.Is(err, io.EOF) || errors.Is(err, yamux.ErrKeepAliveTimeout) {
 				l.log.Warn(ctx, "disconnected from broker", slog.Error(err))
 
@@ -101,7 +110,7 @@ type listener struct {
 	ws             *websocket.Conn
 	connClosers    []io.Closer
 	connClosersMut sync.Mutex
-
+	closed         chan struct{}
 	nextConnNumber int64
 }
 
@@ -340,7 +349,7 @@ func (l *listener) handle(ctx context.Context, msg BrokerMessage) func(dc *webrt
 			return
 		}
 
-		ctx = slog.With(ctx,
+		ctx := slog.With(ctx,
 			slog.F("dc_id", dc.ID()),
 			slog.F("dc_label", dc.Label()),
 			slog.F("dc_proto", dc.Protocol()),
@@ -428,12 +437,22 @@ func (l *listener) Close() error {
 	l.log.Info(context.Background(), "listener closed")
 
 	l.connClosersMut.Lock()
+	defer l.connClosersMut.Unlock()
+
+	select {
+	case _, ok := <-l.closed:
+		if !ok {
+			return errors.New("already closed")
+		}
+	default:
+	}
+	close(l.closed)
+
 	for _, connCloser := range l.connClosers {
 		// We can ignore the error here... it doesn't
 		// really matter if these fail to close.
 		_ = connCloser.Close()
 	}
-	l.connClosersMut.Unlock()
 	return l.ws.Close(websocket.StatusNormalClosure, "")
 }
 
