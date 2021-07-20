@@ -243,6 +243,38 @@ func TestDial(t *testing.T) {
 			t.Error("didn't close in time")
 		}
 	})
+
+	t.Run("Active Connections", func(t *testing.T) {
+		t.Parallel()
+
+		listener, err := net.Listen("tcp", "0.0.0.0:0")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		go func() {
+			_, _ = listener.Accept()
+		}()
+		connectAddr, listenAddr := createDumbBroker(t)
+		_, err = Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		conn, _ := dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+		assert.Equal(t, 1, dialer.ActiveConnections())
+		_ = conn.Close()
+		assert.Equal(t, 0, dialer.ActiveConnections())
+		_, _ = dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+		conn, _ = dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+		assert.Equal(t, 2, dialer.ActiveConnections())
+		_ = conn.Close()
+		assert.Equal(t, 1, dialer.ActiveConnections())
+	})
 }
 
 func BenchmarkThroughput(b *testing.B) {
