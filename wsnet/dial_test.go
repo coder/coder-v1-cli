@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"cdr.dev/slog/sloggers/slogtest"
-	"cdr.dev/slog/sloggers/slogtest/assert"
 	"github.com/pion/ice/v2"
 	"github.com/pion/webrtc/v3"
 	"github.com/stretchr/testify/assert"
@@ -257,7 +256,7 @@ func TestDial(t *testing.T) {
 			_, _ = listener.Accept()
 		}()
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err = Listen(context.Background(), listenAddr, "")
+		_, err = Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
 		if err != nil {
 			t.Error(err)
 			return
@@ -267,14 +266,14 @@ func TestDial(t *testing.T) {
 			t.Error(err)
 		}
 		conn, _ := dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
-		assert.Equal(t, "one active connection", 1, dialer.ActiveConnections())
+		assert.Equal(t, 1, dialer.ActiveConnections())
 		_ = conn.Close()
-		assert.Equal(t, "no active connections", 0, dialer.ActiveConnections())
+		assert.Equal(t, 0, dialer.ActiveConnections())
 		_, _ = dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
 		conn, _ = dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
-		assert.Equal(t, "two active connections", 2, dialer.ActiveConnections())
+		assert.Equal(t, 2, dialer.ActiveConnections())
 		_ = conn.Close()
-		assert.Equal(t, "one active connection", 1, dialer.ActiveConnections())
+		assert.Equal(t, 1, dialer.ActiveConnections())
 	})
 }
 
