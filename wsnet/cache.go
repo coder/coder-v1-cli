@@ -9,7 +9,7 @@ import (
 )
 
 // dialerFunc is used to reference a dialer returned for caching.
-type dialerFunc func(ctx context.Context, key string, options *DialOptions) (*Dialer, error)
+type dialerFunc func(ctx context.Context, key string) (*Dialer, error)
 
 // DialCache constructs a new DialerCache.
 // The cache clears connections that:
@@ -98,7 +98,7 @@ func (d *DialerCache) evict() {
 
 // Dial returns a Dialer from the cache if one exists with the key provided,
 // or dials a new connection using the dialerFunc.
-func (d *DialerCache) Dial(ctx context.Context, key string, options *DialOptions) (*Dialer, bool, error) {
+func (d *DialerCache) Dial(ctx context.Context, key string) (*Dialer, bool, error) {
 	d.mut.RLock()
 	if dialer, ok := d.dialers[key]; ok {
 		closed := false
@@ -119,7 +119,7 @@ func (d *DialerCache) Dial(ctx context.Context, key string, options *DialOptions
 	d.mut.RUnlock()
 
 	dialer, err, _ := d.flightGroup.Do(key, func() (interface{}, error) {
-		dialer, err := d.dialerFunc(ctx, key, options)
+		dialer, err := d.dialerFunc(ctx, key)
 		if err != nil {
 			return nil, err
 		}
