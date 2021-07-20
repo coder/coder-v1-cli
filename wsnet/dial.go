@@ -232,6 +232,17 @@ func (d *Dialer) Closed() <-chan struct{} {
 	return d.closedChan
 }
 
+// ActiveConnections returns the amount of active connections.
+// DialContext opens a connection, and close will end it.
+func (d *Dialer) ActiveConnections() int {
+	stats, ok := d.rtc.GetStats().GetConnectionStats(d.rtc)
+	if !ok {
+		return -1
+	}
+	// Subtract 1 for the control channel.
+	return int(stats.DataChannelsRequested-stats.DataChannelsClosed) - 1
+}
+
 // Close closes the RTC connection.
 // All data channels dialed will be closed.
 func (d *Dialer) Close() error {
