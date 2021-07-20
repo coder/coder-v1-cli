@@ -246,6 +246,12 @@ func (d *Dialer) ActiveConnections() int {
 // Close closes the RTC connection.
 // All data channels dialed will be closed.
 func (d *Dialer) Close() error {
+	select {
+	case <-d.closedChan:
+		return nil
+	default:
+	}
+	close(d.closedChan)
 	return d.rtc.Close()
 }
 
