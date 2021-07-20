@@ -1,13 +1,15 @@
 package cmd
 
 import (
-	"context"
-	"log"
 	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 
+	// We use slog here since agent runs in the background and we can benefit
+	// from structured logging.
+	"cdr.dev/slog"
+	"cdr.dev/slog/sloggers/sloghuman"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
@@ -46,7 +48,10 @@ coder agent start
 coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
+			var (
+				ctx = cmd.Context()
+				log = slog.Make(sloghuman.Sink(os.Stderr)).Leveled(slog.LevelDebug)
+			)
 			if coderURL == "" {
 				var ok bool
 				coderURL, ok = os.LookupEnv("CODER_URL")
@@ -73,19 +78,22 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 				}
 			}
 
-			listener, err := wsnet.Listen(context.Background(), wsnet.ListenEndpoint(u, token), token)
+			log.Info(ctx, "starting wsnet listener", slog.F("coder_access_url", u.String()))
+			listener, err := wsnet.Listen(ctx, log, wsnet.ListenEndpoint(u, token), token)
 			if err != nil {
 				return xerrors.Errorf("listen: %w", err)
 			}
+			defer func() {
+				err := listener.Close()
+				if err != nil {
+					log.Error(ctx, "close listener", slog.Error(err))
+				}
+			}()
 
 			// Block until user sends SIGINT or SIGTERM
 			sigs := make(chan os.Signal, 1)
 			signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 			<-sigs
-
-			if err = listener.Close(); err != nil {
-				log.Panic(err)
-			}
 
 			return nil
 		},

@@ -2,12 +2,13 @@ package wsnet
 
 import (
 	"context"
-	"fmt"
-	"net"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	"cdr.dev/slog/sloggers/slogtest"
+	"github.com/stretchr/testify/require"
 	"nhooyr.io/websocket"
 )
 
@@ -21,9 +22,6 @@ func TestListen(t *testing.T) {
 		var (
 			connCh = make(chan *websocket.Conn)
 			mux    = http.NewServeMux()
-			srv    = http.Server{
-				Handler: mux,
-			}
 		)
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			ws, err := websocket.Accept(w, r, nil)
@@ -34,39 +32,20 @@ func TestListen(t *testing.T) {
 			connCh <- ws
 		})
 
-		listener, err := net.Listen("tcp4", "127.0.0.1:0")
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		go func() {
-			_ = srv.Serve(listener)
-		}()
-		addr := listener.Addr()
-		broker := fmt.Sprintf("http://%s/", addr.String())
+		s := httptest.NewServer(mux)
+		defer s.Close()
 
-		_, err = Listen(context.Background(), broker, "")
-		if err != nil {
-			t.Error(err)
-			return
-		}
+		l, err := Listen(context.Background(), slogtest.Make(t, nil), s.URL, "")
+		require.NoError(t, err)
+		defer l.Close()
 		conn := <-connCh
-		_ = listener.Close()
-		// We need to close the connection too... closing a TCP
-		// listener does not close active local connections.
-		_ = conn.Close(websocket.StatusGoingAway, "")
+
+		// Kill the server connection.
+		err = conn.Close(websocket.StatusGoingAway, "")
+		require.NoError(t, err)
 
 		// At least a few retry attempts should be had...
 		time.Sleep(connectionRetryInterval * 5)
-
-		listener, err = net.Listen("tcp4", addr.String())
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		go func() {
-			_ = srv.Serve(listener)
-		}()
 		<-connCh
 	})
 }
