@@ -29,9 +29,10 @@ func DialCache(ttl time.Duration) *DialerCache {
 type DialerCache struct {
 	ttl         time.Duration
 	flightGroup *singleflight.Group
+	closed      chan struct{}
+	mut         sync.RWMutex
 
-	closed  chan struct{}
-	mut     sync.RWMutex
+	// Key is the "key" of a dialer.
 	dialers map[string]*Dialer
 	atime   map[string]time.Time
 }
