@@ -52,11 +52,11 @@ func DialWebsocket(ctx context.Context, broker string, netOpts *DialOptions, wsO
 		// We should close the socket intentionally.
 		_ = conn.Close(websocket.StatusInternalError, "an error occurred")
 	}()
-	return Dial(nconn, netOpts)
+	return Dial(ctx, nconn, netOpts)
 }
 
 // Dial negotiates a connection to a listener.
-func Dial(conn net.Conn, options *DialOptions) (*Dialer, error) {
+func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, error) {
 	if options == nil {
 		options = &DialOptions{}
 	}
@@ -121,7 +121,7 @@ func Dial(conn net.Conn, options *DialOptions) (*Dialer, error) {
 		connClosers: []io.Closer{ctrl},
 	}
 
-	return dialer, dialer.negotiate()
+	return dialer, dialer.negotiate(ctx)
 }
 
 // Dialer enables arbitrary dialing to any network and address
@@ -138,7 +138,7 @@ type Dialer struct {
 	pingMut        sync.Mutex
 }
 
-func (d *Dialer) negotiate() (err error) {
+func (d *Dialer) negotiate(ctx context.Context) (err error) {
 	var (
 		decoder = json.NewDecoder(d.conn)
 		errCh   = make(chan error)
@@ -171,6 +171,19 @@ func (d *Dialer) negotiate() (err error) {
 			}
 			d.connClosers = make([]io.Closer, 0)
 		})
+	}()
+
+	go func() {
+		// If a connection is opened but the other end may not be, negotiation
+		// can get stuck forever. We don't want this, so we must listen to the
+		// context as well.
+		<-ctx.Done()
+		select {
+		case <-errCh:
+		default:
+			errCh <- ctx.Err()
+			close(errCh)
+		}
 	}()
 
 	for {
