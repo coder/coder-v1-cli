@@ -118,7 +118,6 @@ func Dial(conn net.Conn, options *DialOptions) (*Dialer, error) {
 		conn:        conn,
 		ctrl:        ctrl,
 		rtc:         rtc,
-		closedChan:  make(chan struct{}),
 		connClosers: []io.Closer{ctrl},
 	}
 
@@ -134,7 +133,6 @@ type Dialer struct {
 	ctrlrw datachannel.ReadWriteCloser
 	rtc    *webrtc.PeerConnection
 
-	closedChan     chan struct{}
 	connClosers    []io.Closer
 	connClosersMut sync.Mutex
 	pingMut        sync.Mutex
@@ -161,25 +159,17 @@ func (d *Dialer) negotiate() (err error) {
 			return
 		}
 		d.rtc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
-			if pcs != webrtc.PeerConnectionStateDisconnected {
+			if pcs == webrtc.PeerConnectionStateConnected {
 				return
 			}
 
-			// Close connections opened while the RTC was alive.
+			// Close connections opened when RTC was alive.
 			d.connClosersMut.Lock()
 			defer d.connClosersMut.Unlock()
 			for _, connCloser := range d.connClosers {
 				_ = connCloser.Close()
 			}
 			d.connClosers = make([]io.Closer, 0)
-
-			select {
-			case <-d.closedChan:
-				return
-			default:
-			}
-			close(d.closedChan)
-			_ = d.rtc.Close()
 		})
 	}()
 
@@ -228,15 +218,9 @@ func (d *Dialer) negotiate() (err error) {
 	return <-errCh
 }
 
-// Closed returns a channel that closes when
-// the connection is closed.
-func (d *Dialer) Closed() <-chan struct{} {
-	return d.closedChan
-}
-
 // ActiveConnections returns the amount of active connections.
 // DialContext opens a connection, and close will end it.
-func (d *Dialer) ActiveConnections() int {
+func (d *Dialer) activeConnections() int {
 	stats, ok := d.rtc.GetStats().GetConnectionStats(d.rtc)
 	if !ok {
 		return -1
@@ -248,12 +232,6 @@ func (d *Dialer) ActiveConnections() int {
 // Close closes the RTC connection.
 // All data channels dialed will be closed.
 func (d *Dialer) Close() error {
-	select {
-	case <-d.closedChan:
-		return nil
-	default:
-	}
-	close(d.closedChan)
 	return d.rtc.Close()
 }
 

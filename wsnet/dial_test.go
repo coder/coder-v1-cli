@@ -9,7 +9,6 @@ import (
 	"net"
 	"strconv"
 	"testing"
-	"time"
 
 	"cdr.dev/slog/sloggers/slogtest"
 	"github.com/pion/ice/v2"
@@ -223,27 +222,6 @@ func TestDial(t *testing.T) {
 		assert.ErrorIs(t, err, io.EOF)
 	})
 
-	t.Run("Closed", func(t *testing.T) {
-		t.Parallel()
-
-		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
-		require.NoError(t, err)
-		defer l.Close()
-
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
-		require.NoError(t, err)
-		go func() {
-			_ = dialer.Close()
-		}()
-
-		select {
-		case <-dialer.Closed():
-		case <-time.NewTimer(time.Second).C:
-			t.Error("didn't close in time")
-		}
-	})
-
 	t.Run("Active Connections", func(t *testing.T) {
 		t.Parallel()
 
@@ -266,14 +244,14 @@ func TestDial(t *testing.T) {
 			t.Error(err)
 		}
 		conn, _ := dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
-		assert.Equal(t, 1, dialer.ActiveConnections())
+		assert.Equal(t, 1, dialer.activeConnections())
 		_ = conn.Close()
-		assert.Equal(t, 0, dialer.ActiveConnections())
+		assert.Equal(t, 0, dialer.activeConnections())
 		_, _ = dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
 		conn, _ = dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
-		assert.Equal(t, 2, dialer.ActiveConnections())
+		assert.Equal(t, 2, dialer.activeConnections())
 		_ = conn.Close()
-		assert.Equal(t, 1, dialer.ActiveConnections())
+		assert.Equal(t, 1, dialer.activeConnections())
 	})
 }
 

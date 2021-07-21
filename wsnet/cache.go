@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pion/webrtc/v3"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -39,7 +40,7 @@ type DialerCache struct {
 
 // init starts the ticker for evicting connections.
 func (d *DialerCache) init() {
-	ticker := time.NewTicker(time.Second * 30)
+	ticker := time.NewTicker(time.Second * 5)
 	defer ticker.Stop()
 	for {
 		select {
@@ -62,17 +63,11 @@ func (d *DialerCache) evict() {
 		go func() {
 			defer wg.Done()
 
-			evict := false
-			select {
-			case <-dialer.Closed():
+			// If we're no longer signaling, the connection is pending close.
+			evict := dialer.rtc.SignalingState() == webrtc.SignalingStateClosed
+			if dialer.activeConnections() == 0 && time.Since(d.atime[key]) >= d.ttl {
 				evict = true
-			default:
-			}
-			if dialer.ActiveConnections() == 0 && time.Since(d.atime[key]) >= d.ttl {
-				evict = true
-			}
-			// If we're already evicting there's no point in trying to ping.
-			if !evict {
+			} else {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 				defer cancel()
 				err := dialer.Ping(ctx)
@@ -116,17 +111,12 @@ func (d *DialerCache) Dial(ctx context.Context, key string, dialerFunc func() (*
 	dialer, ok := d.dialers[key]
 	d.mut.RUnlock()
 	if ok {
-		closed := false
-		select {
-		case <-dialer.Closed():
-			closed = true
-		default:
-		}
-		if !closed {
-			d.mut.Lock()
-			d.atime[key] = time.Now()
-			d.mut.Unlock()
+		d.mut.Lock()
+		d.atime[key] = time.Now()
+		d.mut.Unlock()
 
+		// The connection is pending close here...
+		if dialer.rtc.SignalingState() != webrtc.SignalingStateClosed {
 			return dialer, true, nil
 		}
 	}

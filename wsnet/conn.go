@@ -2,6 +2,7 @@ package wsnet
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -73,9 +74,13 @@ func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
 
 	// Copy the baseURL so we can adjust path.
 	url := *t.baseURL
-	url.Scheme = "wss"
-	if url.Scheme == httpScheme {
+	switch url.Scheme {
+	case "http":
 		url.Scheme = "ws"
+	case "https":
+		url.Scheme = "wss"
+	default:
+		return nil, errors.New("invalid turn url addr scheme provided")
 	}
 	url.Path = "/api/private/turn"
 	conn, resp, err := websocket.Dial(ctx, url.String(), &websocket.DialOptions{
