@@ -251,7 +251,7 @@ func waitForConnectionOpen(ctx context.Context, conn *webrtc.PeerConnection) err
 	defer cancel()
 	conn.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 		if pcs == webrtc.PeerConnectionStateConnected {
-			cancelFunc()
+			cancel()
 		}
 	})
 	<-ctx.Done()
