@@ -286,10 +286,10 @@ func (d *Dialer) Ping(ctx context.Context) error {
 		// There's a race in which connections can get lost-mid ping
 		// in which case this would block forever.
 		defer close(errCh)
-		_, err = d.ctrlrw.Read(make([]byte, 1))
+		_, err = d.ctrlrw.Read(make([]byte, 4))
 		errCh <- err
 	}()
-	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*5)
+	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
 	defer cancelFunc()
 	select {
 	case err := <-errCh:
