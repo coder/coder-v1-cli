@@ -160,7 +160,9 @@ func newPeerConnection(servers []webrtc.ICEServer, dialer proxy.Dialer) (*webrtc
 	se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
 	se.SetSrflxAcceptanceMinWait(0)
 	se.DetachDataChannels()
-	se.SetICETimeouts(time.Second*3, time.Second*3, time.Second*2)
+	// If the disconnect and keep-alive timeouts are too closely related, we'll
+	// experience "random" connection failures.
+	se.SetICETimeouts(time.Second*5, time.Second*25, time.Second*2)
 	lf := logging.NewDefaultLoggerFactory()
 	lf.DefaultLogLevel = logging.LogLevelDisabled
 	se.LoggerFactory = lf

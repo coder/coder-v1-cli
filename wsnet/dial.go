@@ -137,6 +137,7 @@ type Dialer struct {
 	closedChan     chan struct{}
 	connClosers    []io.Closer
 	connClosersMut sync.Mutex
+	pingMut        sync.Mutex
 }
 
 func (d *Dialer) negotiate() (err error) {
@@ -160,7 +161,7 @@ func (d *Dialer) negotiate() (err error) {
 			return
 		}
 		d.rtc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
-			if pcs == webrtc.PeerConnectionStateConnected {
+			if pcs != webrtc.PeerConnectionStateDisconnected {
 				return
 			}
 
@@ -178,6 +179,7 @@ func (d *Dialer) negotiate() (err error) {
 			default:
 			}
 			close(d.closedChan)
+			_ = d.rtc.Close()
 		})
 	}()
 
@@ -263,7 +265,7 @@ func (d *Dialer) Ping(ctx context.Context) error {
 	// Since we control the client and server we could open this
 	// data channel with `Negotiated` true to reduce traffic being
 	// sent when the RTC connection is opened.
-	err := waitForDataChannelOpen(context.Background(), d.ctrl)
+	err := waitForDataChannelOpen(ctx, d.ctrl)
 	if err != nil {
 		return err
 	}
@@ -273,13 +275,28 @@ func (d *Dialer) Ping(ctx context.Context) error {
 			return err
 		}
 	}
+	d.pingMut.Lock()
+	defer d.pingMut.Unlock()
 	_, err = d.ctrlrw.Write([]byte{'a'})
 	if err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
-	b := make([]byte, 4)
-	_, err = d.ctrlrw.Read(b)
-	return err
+	errCh := make(chan error)
+	go func() {
+		// There's a race in which connections can get lost-mid ping
+		// in which case this would block forever.
+		defer close(errCh)
+		_, err = d.ctrlrw.Read(make([]byte, 1))
+		errCh <- err
+	}()
+	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*5)
+	defer cancelFunc()
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // DialContext dials the network and address on the remote listener.
