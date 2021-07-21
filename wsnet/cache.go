@@ -9,16 +9,15 @@ import (
 )
 
 // dialerFunc is used to reference a dialer returned for caching.
-type dialerFunc func(ctx context.Context, key string) (*Dialer, error)
+type dialerFunc func() (*Dialer, error)
 
 // DialCache constructs a new DialerCache.
 // The cache clears connections that:
 // 1. Are older than the TTL and have no active user-created connections.
 // 2. Have been closed.
-func DialCache(ttl time.Duration, dialer dialerFunc) *DialerCache {
+func DialCache(ttl time.Duration) *DialerCache {
 	dc := &DialerCache{
 		ttl:         ttl,
-		dialerFunc:  dialer,
 		closed:      make(chan struct{}),
 		flightGroup: &singleflight.Group{},
 		mut:         sync.RWMutex{},
@@ -30,7 +29,6 @@ func DialCache(ttl time.Duration, dialer dialerFunc) *DialerCache {
 }
 
 type DialerCache struct {
-	dialerFunc  dialerFunc
 	ttl         time.Duration
 	flightGroup *singleflight.Group
 
@@ -98,7 +96,7 @@ func (d *DialerCache) evict() {
 
 // Dial returns a Dialer from the cache if one exists with the key provided,
 // or dials a new connection using the dialerFunc.
-func (d *DialerCache) Dial(ctx context.Context, key string) (*Dialer, bool, error) {
+func (d *DialerCache) Dial(ctx context.Context, key string, dialerFunc func() (*Dialer, error)) (*Dialer, bool, error) {
 	d.mut.RLock()
 	if dialer, ok := d.dialers[key]; ok {
 		closed := false
@@ -119,7 +117,7 @@ func (d *DialerCache) Dial(ctx context.Context, key string) (*Dialer, bool, erro
 	d.mut.RUnlock()
 
 	dialer, err, _ := d.flightGroup.Do(key, func() (interface{}, error) {
-		dialer, err := d.dialerFunc(ctx, key)
+		dialer, err := dialerFunc()
 		if err != nil {
 			return nil, err
 		}

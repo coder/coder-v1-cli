@@ -10,19 +10,23 @@ import (
 )
 
 func TestCache(t *testing.T) {
+	dialFunc := func(connectAddr string) func() (*Dialer, error) {
+		return func() (*Dialer, error) {
+			return DialWebsocket(context.Background(), connectAddr, nil)
+		}
+	}
+
 	t.Run("Caches", func(t *testing.T) {
 		connectAddr, listenAddr := createDumbBroker(t)
 		l, err := Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
 		require.NoError(t, err)
 		defer l.Close()
 
-		cache := DialCache(time.Hour, func(ctx context.Context, key string) (*Dialer, error) {
-			return DialWebsocket(ctx, connectAddr, nil)
-		})
-		_, cached, err := cache.Dial(context.Background(), "example")
+		cache := DialCache(time.Hour)
+		_, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, false)
-		_, cached, err = cache.Dial(context.Background(), "example")
+		_, cached, err = cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, true)
 	})
@@ -33,15 +37,13 @@ func TestCache(t *testing.T) {
 		require.NoError(t, err)
 		defer l.Close()
 
-		cache := DialCache(time.Hour, func(ctx context.Context, key string) (*Dialer, error) {
-			return DialWebsocket(ctx, connectAddr, nil)
-		})
+		cache := DialCache(time.Hour)
 
-		conn, cached, err := cache.Dial(context.Background(), "example")
+		conn, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, false)
 		require.NoError(t, conn.Close())
-		_, cached, err = cache.Dial(context.Background(), "example")
+		_, cached, err = cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, false)
 	})
@@ -52,15 +54,13 @@ func TestCache(t *testing.T) {
 		require.NoError(t, err)
 		defer l.Close()
 
-		cache := DialCache(0, func(ctx context.Context, key string) (*Dialer, error) {
-			return DialWebsocket(ctx, connectAddr, nil)
-		})
+		cache := DialCache(0)
 
-		_, cached, err := cache.Dial(context.Background(), "example")
+		_, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, false)
 		cache.evict()
-		_, cached, err = cache.Dial(context.Background(), "example")
+		_, cached, err = cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, false)
 	})
