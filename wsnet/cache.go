@@ -39,7 +39,7 @@ type DialerCache struct {
 
 // init starts the ticker for evicting connections.
 func (d *DialerCache) init() {
-	ticker := time.NewTicker(time.Second * 30)
+	ticker := time.NewTicker(time.Second * 5)
 	defer ticker.Stop()
 	for {
 		select {
