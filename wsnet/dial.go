@@ -153,7 +153,7 @@ func (d *Dialer) negotiate(ctx context.Context) (err error) {
 		defer func() {
 			_ = d.conn.Close()
 		}()
-		err := waitForConnectionOpen(context.Background(), d.rtc)
+		err := waitForConnectionOpen(ctx, d.rtc)
 		if err != nil {
 			errCh <- err
 			return
@@ -171,19 +171,6 @@ func (d *Dialer) negotiate(ctx context.Context) (err error) {
 			}
 			d.connClosers = make([]io.Closer, 0)
 		})
-	}()
-
-	go func() {
-		// If a connection is opened but the other end may not be, negotiation
-		// can get stuck forever. We don't want this, so we must listen to the
-		// context as well.
-		<-ctx.Done()
-		select {
-		case <-errCh:
-		default:
-			errCh <- ctx.Err()
-			close(errCh)
-		}
 	}()
 
 	for {
