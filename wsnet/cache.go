@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pion/webrtc/v3"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -62,7 +63,8 @@ func (d *DialerCache) evict() {
 		go func() {
 			defer wg.Done()
 
-			evict := false
+			// If we're no longer signaling, the connection is pending close.
+			evict := dialer.rtc.SignalingState() == webrtc.SignalingStateClosed
 			if dialer.activeConnections() == 0 && time.Since(d.atime[key]) >= d.ttl {
 				evict = true
 			} else {
@@ -113,7 +115,10 @@ func (d *DialerCache) Dial(ctx context.Context, key string, dialerFunc func() (*
 		d.atime[key] = time.Now()
 		d.mut.Unlock()
 
-		return dialer, true, nil
+		// The connection is pending close here...
+		if dialer.rtc.SignalingState() != webrtc.SignalingStateClosed {
+			return dialer, true, nil
+		}
 	}
 
 	rawDialer, err, _ := d.flightGroup.Do(key, func() (interface{}, error) {
