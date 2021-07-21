@@ -39,7 +39,7 @@ func ExampleDial_basic() {
 
 	dialer, err := DialWebsocket(context.Background(), "wss://master.cdr.dev/agent/workspace/connect", &DialOptions{
 		ICEServers: servers,
-	})
+	}, nil)
 	if err != nil {
 		// Do something...
 	}
@@ -60,7 +60,7 @@ func TestDial(t *testing.T) {
 		require.NoError(t, err)
 		defer l.Close()
 
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 		require.NoError(t, err)
 
 		err = dialer.Ping(context.Background())
@@ -83,7 +83,7 @@ func TestDial(t *testing.T) {
 				Credential:     testPass,
 				CredentialType: webrtc.ICECredentialTypePassword,
 			}},
-		})
+		}, nil)
 		require.NoError(t, err)
 
 		_ = dialer.Ping(context.Background())
@@ -100,7 +100,7 @@ func TestDial(t *testing.T) {
 		require.NoError(t, err)
 		defer l.Close()
 
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 		require.NoError(t, err)
 
 		_, err = dialer.DialContext(context.Background(), "tcp", "localhost:100")
@@ -130,7 +130,7 @@ func TestDial(t *testing.T) {
 		require.NoError(t, err)
 		defer l.Close()
 
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 		require.NoError(t, err)
 
 		conn, err := dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
@@ -158,7 +158,7 @@ func TestDial(t *testing.T) {
 		require.NoError(t, err)
 		defer l.Close()
 
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 		require.NoError(t, err)
 
 		conn, err := dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
@@ -178,7 +178,7 @@ func TestDial(t *testing.T) {
 		require.NoError(t, err)
 		defer l.Close()
 
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 		require.NoError(t, err)
 
 		err = dialer.Close()
@@ -210,7 +210,7 @@ func TestDial(t *testing.T) {
 				Credential:     testPass,
 				CredentialType: webrtc.ICECredentialTypePassword,
 			}},
-		})
+		}, nil)
 		require.NoError(t, err)
 
 		conn, err := dialer.DialContext(context.Background(), "tcp", tcpListener.Addr().String())
@@ -231,7 +231,7 @@ func TestDial(t *testing.T) {
 		require.NoError(t, err)
 		defer l.Close()
 
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 		require.NoError(t, err)
 		go func() {
 			_ = dialer.Close()
@@ -261,7 +261,7 @@ func TestDial(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -314,7 +314,7 @@ func BenchmarkThroughput(b *testing.B) {
 	}
 	defer l.Close()
 
-	dialer, err := DialWebsocket(context.Background(), connectAddr, nil)
+	dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
 	if err != nil {
 		b.Error(err)
 		return

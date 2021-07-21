@@ -35,8 +35,8 @@ type DialOptions struct {
 }
 
 // DialWebsocket dials the broker with a WebSocket and negotiates a connection.
-func DialWebsocket(ctx context.Context, broker string, options *DialOptions) (*Dialer, error) {
-	conn, resp, err := websocket.Dial(ctx, broker, nil)
+func DialWebsocket(ctx context.Context, broker string, netOpts *DialOptions, wsOpts *websocket.DialOptions) (*Dialer, error) {
+	conn, resp, err := websocket.Dial(ctx, broker, wsOpts)
 	if err != nil {
 		if resp != nil {
 			defer func() {
@@ -52,7 +52,7 @@ func DialWebsocket(ctx context.Context, broker string, options *DialOptions) (*D
 		// We should close the socket intentionally.
 		_ = conn.Close(websocket.StatusInternalError, "an error occurred")
 	}()
-	return Dial(nconn, options)
+	return Dial(nconn, netOpts)
 }
 
 // Dial negotiates a connection to a listener.
@@ -246,6 +246,12 @@ func (d *Dialer) ActiveConnections() int {
 // Close closes the RTC connection.
 // All data channels dialed will be closed.
 func (d *Dialer) Close() error {
+	select {
+	case <-d.closedChan:
+		return nil
+	default:
+	}
+	close(d.closedChan)
 	return d.rtc.Close()
 }
 

@@ -112,6 +112,7 @@ func (c *tunnneler) start(ctx context.Context) error {
 			TURNProxyURL:       c.brokerAddr,
 			ICEServers:         []webrtc.ICEServer{wsnet.TURNProxyICECandidate()},
 		},
+		nil,
 	)
 	if err != nil {
 		return xerrors.Errorf("creating workspace dialer: %w", err)
