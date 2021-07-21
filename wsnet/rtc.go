@@ -242,11 +242,16 @@ func waitForConnectionOpen(ctx context.Context, conn *webrtc.PeerConnection) err
 	if conn.ConnectionState() == webrtc.PeerConnectionStateConnected {
 		return nil
 	}
-	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
-	defer cancelFunc()
+	var cancel context.CancelFunc
+	if _, deadlineSet := ctx.Deadline(); deadlineSet {
+		ctx, cancel = context.WithCancel(ctx)
+	} else {
+		ctx, cancel = context.WithTimeout(ctx, time.Second*15)
+	}
+	defer cancel()
 	conn.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 		if pcs == webrtc.PeerConnectionStateConnected {
-			cancelFunc()
+			cancel()
 		}
 	})
 	<-ctx.Done()

@@ -52,11 +52,11 @@ func DialWebsocket(ctx context.Context, broker string, netOpts *DialOptions, wsO
 		// We should close the socket intentionally.
 		_ = conn.Close(websocket.StatusInternalError, "an error occurred")
 	}()
-	return Dial(nconn, netOpts)
+	return Dial(ctx, nconn, netOpts)
 }
 
 // Dial negotiates a connection to a listener.
-func Dial(conn net.Conn, options *DialOptions) (*Dialer, error) {
+func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, error) {
 	if options == nil {
 		options = &DialOptions{}
 	}
@@ -121,7 +121,7 @@ func Dial(conn net.Conn, options *DialOptions) (*Dialer, error) {
 		connClosers: []io.Closer{ctrl},
 	}
 
-	return dialer, dialer.negotiate()
+	return dialer, dialer.negotiate(ctx)
 }
 
 // Dialer enables arbitrary dialing to any network and address
@@ -138,7 +138,7 @@ type Dialer struct {
 	pingMut        sync.Mutex
 }
 
-func (d *Dialer) negotiate() (err error) {
+func (d *Dialer) negotiate(ctx context.Context) (err error) {
 	var (
 		decoder = json.NewDecoder(d.conn)
 		errCh   = make(chan error)
@@ -153,7 +153,7 @@ func (d *Dialer) negotiate() (err error) {
 		defer func() {
 			_ = d.conn.Close()
 		}()
-		err := waitForConnectionOpen(context.Background(), d.rtc)
+		err := waitForConnectionOpen(ctx, d.rtc)
 		if err != nil {
 			errCh <- err
 			return
