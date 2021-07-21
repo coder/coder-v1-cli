@@ -59,12 +59,13 @@ func TestCache(t *testing.T) {
 
 		cache := DialCache(0)
 
-		_, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
+		c1, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, false)
 		cache.evict()
-		_, cached, err = cache.Dial(context.Background(), "example", dialFunc(connectAddr))
+		c2, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, false)
+		assert.NotSame(t, c1, c2)
 	})
 }

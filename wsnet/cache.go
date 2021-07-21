@@ -32,7 +32,7 @@ type DialerCache struct {
 	closed      chan struct{}
 	mut         sync.RWMutex
 
-	// Key is the "key" of a dialer.
+	// Key is the "key" of a dialer, which is usually the workspace ID.
 	dialers map[string]*Dialer
 	atime   map[string]time.Time
 }
@@ -81,13 +81,21 @@ func (d *DialerCache) evict() {
 				}
 			}
 
-			if evict {
-				_ = dialer.Close()
-				d.mut.Lock()
-				delete(d.atime, key)
-				delete(d.dialers, key)
-				d.mut.Unlock()
+			if !evict {
+				return
 			}
+
+			_ = dialer.Close()
+			// Ensure after Ping and potential delays that we're still testing against
+			// the proper dialer.
+			if dialer != d.dialers[key] {
+				return
+			}
+
+			d.mut.Lock()
+			defer d.mut.Unlock()
+			delete(d.atime, key)
+			delete(d.dialers, key)
 		}()
 	}
 	d.mut.RUnlock()
