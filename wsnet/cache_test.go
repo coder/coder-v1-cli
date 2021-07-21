@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"cdr.dev/slog/sloggers/slogtest"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,12 +24,13 @@ func TestCache(t *testing.T) {
 		defer l.Close()
 
 		cache := DialCache(time.Hour)
-		_, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
+		c1, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, false)
-		_, cached, err = cache.Dial(context.Background(), "example", dialFunc(connectAddr))
+		c2, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, true)
+		assert.Same(t, c1, c2)
 	})
 
 	t.Run("Create If Closed", func(t *testing.T) {
@@ -39,13 +41,14 @@ func TestCache(t *testing.T) {
 
 		cache := DialCache(time.Hour)
 
-		conn, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
+		c1, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, false)
-		require.NoError(t, conn.Close())
-		_, cached, err = cache.Dial(context.Background(), "example", dialFunc(connectAddr))
+		require.NoError(t, c1.Close())
+		c2, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, false)
+		assert.NotSame(t, c1, c2)
 	})
 
 	t.Run("Evict No Connections", func(t *testing.T) {

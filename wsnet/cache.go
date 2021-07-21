@@ -2,14 +2,12 @@ package wsnet
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
 	"golang.org/x/sync/singleflight"
 )
-
-// dialerFunc is used to reference a dialer returned for caching.
-type dialerFunc func() (*Dialer, error)
 
 // DialCache constructs a new DialerCache.
 // The cache clears connections that:
@@ -72,6 +70,7 @@ func (d *DialerCache) evict() {
 			if dialer.ActiveConnections() == 0 && time.Since(d.atime[key]) >= d.ttl {
 				evict = true
 			}
+			// If we're already evicting there's no point in trying to ping.
 			if !evict {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 				defer cancel()
@@ -96,9 +95,18 @@ func (d *DialerCache) evict() {
 
 // Dial returns a Dialer from the cache if one exists with the key provided,
 // or dials a new connection using the dialerFunc.
+// The bool returns whether the connection was found in the cache or not.
 func (d *DialerCache) Dial(ctx context.Context, key string, dialerFunc func() (*Dialer, error)) (*Dialer, bool, error) {
+	select {
+	case <-d.closed:
+		return nil, false, errors.New("cache closed")
+	default:
+	}
+
 	d.mut.RLock()
-	if dialer, ok := d.dialers[key]; ok {
+	dialer, ok := d.dialers[key]
+	d.mut.RUnlock()
+	if ok {
 		closed := false
 		select {
 		case <-dialer.Closed():
@@ -106,7 +114,6 @@ func (d *DialerCache) Dial(ctx context.Context, key string, dialerFunc func() (*
 		default:
 		}
 		if !closed {
-			d.mut.RUnlock()
 			d.mut.Lock()
 			d.atime[key] = time.Now()
 			d.mut.Unlock()
@@ -114,9 +121,8 @@ func (d *DialerCache) Dial(ctx context.Context, key string, dialerFunc func() (*
 			return dialer, true, nil
 		}
 	}
-	d.mut.RUnlock()
 
-	dialer, err, _ := d.flightGroup.Do(key, func() (interface{}, error) {
+	rawDialer, err, _ := d.flightGroup.Do(key, func() (interface{}, error) {
 		dialer, err := dialerFunc()
 		if err != nil {
 			return nil, err
@@ -131,7 +137,13 @@ func (d *DialerCache) Dial(ctx context.Context, key string, dialerFunc func() (*
 	if err != nil {
 		return nil, false, err
 	}
-	return dialer.(*Dialer), false, nil
+	select {
+	case <-d.closed:
+		return nil, false, errors.New("cache closed")
+	default:
+	}
+
+	return rawDialer.(*Dialer), false, nil
 }
 
 // Close closes all cached dialers.
@@ -139,9 +151,7 @@ func (d *DialerCache) Close() error {
 	d.mut.Lock()
 	defer d.mut.Unlock()
 
-	for key, dialer := range d.dialers {
-		d.flightGroup.Forget(key)
-
+	for _, dialer := range d.dialers {
 		err := dialer.Close()
 		if err != nil {
 			return err
