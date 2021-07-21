@@ -74,7 +74,7 @@ func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
 	// Copy the baseURL so we can adjust path.
 	url := *t.baseURL
 	url.Scheme = "wss"
-	if url.Scheme == httpScheme {
+	if t.baseURL.Scheme == httpScheme {
 		url.Scheme = "ws"
 	}
 	url.Path = "/api/private/turn"
