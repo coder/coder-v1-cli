@@ -12,7 +12,7 @@ import (
 func TestCache(t *testing.T) {
 	dialFunc := func(connectAddr string) func() (*Dialer, error) {
 		return func() (*Dialer, error) {
-			return DialWebsocket(context.Background(), connectAddr, nil)
+			return DialWebsocket(context.Background(), connectAddr, nil, nil)
 		}
 	}
 
