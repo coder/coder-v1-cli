@@ -63,16 +63,9 @@ func (d *DialerCache) evict() {
 			defer wg.Done()
 
 			evict := false
-			select {
-			case <-dialer.Closed():
+			if dialer.activeConnections() == 0 && time.Since(d.atime[key]) >= d.ttl {
 				evict = true
-			default:
-			}
-			if dialer.ActiveConnections() == 0 && time.Since(d.atime[key]) >= d.ttl {
-				evict = true
-			}
-			// If we're already evicting there's no point in trying to ping.
-			if !evict {
+			} else {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 				defer cancel()
 				err := dialer.Ping(ctx)
@@ -116,19 +109,11 @@ func (d *DialerCache) Dial(ctx context.Context, key string, dialerFunc func() (*
 	dialer, ok := d.dialers[key]
 	d.mut.RUnlock()
 	if ok {
-		closed := false
-		select {
-		case <-dialer.Closed():
-			closed = true
-		default:
-		}
-		if !closed {
-			d.mut.Lock()
-			d.atime[key] = time.Now()
-			d.mut.Unlock()
+		d.mut.Lock()
+		d.atime[key] = time.Now()
+		d.mut.Unlock()
 
-			return dialer, true, nil
-		}
+		return dialer, true, nil
 	}
 
 	rawDialer, err, _ := d.flightGroup.Do(key, func() (interface{}, error) {
