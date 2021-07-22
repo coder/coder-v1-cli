@@ -256,10 +256,10 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 			}
 			rtc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 				l.log.Info(ctx, "connection state change", slog.F("state", pcs.String()))
-				if pcs == webrtc.PeerConnectionStateConnecting {
+				switch pcs {
+				case webrtc.PeerConnectionStateConnected:
 					return
-				}
-				if pcs == webrtc.PeerConnectionStateConnected {
+				case webrtc.PeerConnectionStateConnecting:
 					// Safe to close the negotiating WebSocket.
 					_ = conn.Close()
 					return
