@@ -296,15 +296,22 @@ func TestDial(t *testing.T) {
 
 		closeTurn()
 
+		list := l.(*listener)
+
 		for i := 0; i < 15; i++ {
 			time.Sleep(time.Second)
 
-			if len(l.(*listener).connClosers) == 0 {
+			list.connClosersMut.Lock()
+			size := len(list.connClosers)
+			list.connClosersMut.Unlock()
+			if size == 0 {
 				break
 			}
 		}
 
-		assert.Equal(t, 0, len(l.(*listener).connClosers))
+		list.connClosersMut.Lock()
+		assert.Equal(t, 0, len(list.connClosers))
+		list.connClosersMut.Unlock()
 	})
 }
 
