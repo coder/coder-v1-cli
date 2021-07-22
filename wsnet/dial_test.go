@@ -59,8 +59,9 @@ func TestDial(t *testing.T) {
 
 		ctx, cancelFunc := context.WithTimeout(context.Background(), time.Millisecond*50)
 		defer cancelFunc()
-		_, err := DialWebsocket(ctx, connectAddr, nil, nil)
+		dialer, err := DialWebsocket(ctx, connectAddr, nil, nil)
 		require.True(t, errors.Is(err, context.DeadlineExceeded))
+		require.Error(t, dialer.conn.Close(), "already wrote close")
 	})
 
 	t.Run("Ping", func(t *testing.T) {

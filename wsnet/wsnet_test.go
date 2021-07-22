@@ -68,6 +68,8 @@ func createDumbBroker(t testing.TB) (connectAddr string, listenAddr string) {
 		mut.Lock()
 		defer mut.Unlock()
 		if sess == nil {
+			// We discard inbound to emulate a pubsub where we don't know if anyone
+			// is listening on the other side.
 			_, _ = io.Copy(io.Discard, nc)
 			return
 		}
