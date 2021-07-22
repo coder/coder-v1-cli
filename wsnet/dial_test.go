@@ -266,6 +266,46 @@ func TestDial(t *testing.T) {
 		_ = conn.Close()
 		assert.Equal(t, 1, dialer.activeConnections())
 	})
+
+	t.Run("Close Listeners on Disconnect", func(t *testing.T) {
+		t.Parallel()
+
+		tcpListener, err := net.Listen("tcp", "0.0.0.0:0")
+		require.NoError(t, err)
+		go func() {
+			_, _ = tcpListener.Accept()
+		}()
+
+		connectAddr, listenAddr := createDumbBroker(t)
+		l, err := Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		require.NoError(t, err)
+
+		turnAddr, closeTurn := createTURNServer(t, ice.SchemeTypeTURN)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			ICEServers: []webrtc.ICEServer{{
+				URLs:           []string{fmt.Sprintf("turn:%s", turnAddr)},
+				Username:       "example",
+				Credential:     testPass,
+				CredentialType: webrtc.ICECredentialTypePassword,
+			}},
+		}, nil)
+		require.NoError(t, err)
+
+		_, err = dialer.DialContext(context.Background(), "tcp", tcpListener.Addr().String())
+		require.NoError(t, err)
+
+		closeTurn()
+
+		for i := 0; i < 15; i++ {
+			time.Sleep(time.Second)
+
+			if len(l.(*listener).connClosers) == 0 {
+				break
+			}
+		}
+
+		assert.Equal(t, 0, len(l.(*listener).connClosers))
+	})
 }
 
 func BenchmarkThroughput(b *testing.B) {

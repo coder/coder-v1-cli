@@ -255,17 +255,26 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 				return
 			}
 			rtc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
-				l.log.Debug(ctx, "connection state change", slog.F("state", pcs.String()))
+				l.log.Info(ctx, "connection state change", slog.F("state", pcs.String()))
 				if pcs == webrtc.PeerConnectionStateConnecting {
 					return
 				}
-				_ = conn.Close()
+				if pcs == webrtc.PeerConnectionStateConnected {
+					// Safe to close the negotiating WebSocket.
+					_ = conn.Close()
+					return
+				}
+
+				// Close connections opened when RTC was alive.
+				l.connClosersMut.Lock()
+				defer l.connClosersMut.Unlock()
+				for _, connCloser := range l.connClosers {
+					_ = connCloser.Close()
+				}
+				l.connClosers = make([]io.Closer, 0)
 			})
 
 			flushCandidates := proxyICECandidates(rtc, conn)
-			l.connClosersMut.Lock()
-			l.connClosers = append(l.connClosers, rtc)
-			l.connClosersMut.Unlock()
 			rtc.OnDataChannel(l.handle(ctx, msg))
 
 			l.log.Debug(ctx, "set remote description", slog.F("offer", *msg.Offer))
@@ -420,6 +429,9 @@ func (l *listener) handle(ctx context.Context, msg BrokerMessage) func(dc *webrt
 				dc:   dc,
 				rw:   rw,
 			}
+			l.connClosersMut.Lock()
+			l.connClosers = append(l.connClosers, co)
+			l.connClosersMut.Unlock()
 			co.init()
 			defer nc.Close()
 			defer co.Close()
