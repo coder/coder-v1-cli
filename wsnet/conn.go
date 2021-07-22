@@ -169,9 +169,7 @@ func (c *dataChannelConn) Write(b []byte) (n int, err error) {
 
 func (c *dataChannelConn) Close() error {
 	c.closedMutex.Lock()
-	c.writeMutex.Lock()
 	defer c.closedMutex.Unlock()
-	defer c.writeMutex.Unlock()
 	if !c.closed {
 		c.closed = true
 		close(c.sendMore)
