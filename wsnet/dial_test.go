@@ -9,6 +9,7 @@ import (
 	"net"
 	"strconv"
 	"testing"
+	"time"
 
 	"cdr.dev/slog/sloggers/slogtest"
 	"github.com/pion/ice/v2"
@@ -51,6 +52,18 @@ func ExampleDial_basic() {
 }
 
 func TestDial(t *testing.T) {
+	t.Run("Timeout", func(t *testing.T) {
+		t.Parallel()
+
+		connectAddr, _ := createDumbBroker(t)
+
+		ctx, cancelFunc := context.WithTimeout(context.Background(), time.Millisecond*50)
+		defer cancelFunc()
+		dialer, err := DialWebsocket(ctx, connectAddr, nil, nil)
+		require.True(t, errors.Is(err, context.DeadlineExceeded))
+		require.Error(t, dialer.conn.Close(), "already wrote close")
+	})
+
 	t.Run("Ping", func(t *testing.T) {
 		t.Parallel()
 
