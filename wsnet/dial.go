@@ -147,7 +147,6 @@ func (d *Dialer) negotiate(ctx context.Context) (err error) {
 		// so it's better to buffer and process than fail.
 		pendingCandidates = []webrtc.ICECandidateInit{}
 	)
-
 	go func() {
 		defer close(errCh)
 		defer func() {
@@ -155,6 +154,9 @@ func (d *Dialer) negotiate(ctx context.Context) (err error) {
 		}()
 		err := waitForConnectionOpen(ctx, d.rtc)
 		if err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
+				_ = d.conn.Close()
+			}
 			errCh <- err
 			return
 		}

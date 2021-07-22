@@ -68,7 +68,7 @@ func createDumbBroker(t testing.TB) (connectAddr string, listenAddr string) {
 		mut.Lock()
 		defer mut.Unlock()
 		if sess == nil {
-			t.Error("listen not called")
+			_, _ = io.Copy(io.Discard, nc)
 			return
 		}
 		oc, err := sess.Open()

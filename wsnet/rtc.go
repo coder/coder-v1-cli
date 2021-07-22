@@ -256,7 +256,7 @@ func waitForConnectionOpen(ctx context.Context, conn *webrtc.PeerConnection) err
 	})
 	<-ctx.Done()
 	if ctx.Err() == context.DeadlineExceeded {
-		return ctx.Err()
+		return context.DeadlineExceeded
 	}
 	return nil
 }
