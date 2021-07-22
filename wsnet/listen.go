@@ -159,9 +159,11 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 // so the cognitive overload linter has been disabled.
 // nolint:gocognit,nestif
 func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
+	id := atomic.AddInt64(&l.nextConnNumber, 1)
+	ctx = slog.With(ctx, slog.F("conn_id", id))
+
 	var (
 		err     error
-		id      = atomic.AddInt64(&l.nextConnNumber, 1)
 		decoder = json.NewDecoder(conn)
 		rtc     *webrtc.PeerConnection
 		// If candidates are sent before an offer, we place them here.
@@ -171,7 +173,7 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 		// Sends the error provided then closes the connection.
 		// If RTC isn't connected, we'll close it.
 		closeError = func(err error) {
-			l.log.Warn(ctx, "negotiation error, closing connection", slog.Error(err))
+			// l.log.Warn(ctx, "negotiation error, closing connection", slog.Error(err))
 
 			d, _ := json.Marshal(&BrokerMessage{
 				Error: err.Error(),
@@ -187,7 +189,6 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 		}
 	)
 
-	ctx = slog.With(ctx, slog.F("conn_id", id))
 	l.log.Info(ctx, "accepted new session from broker connection, negotiating")
 
 	for {
