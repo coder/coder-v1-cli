@@ -301,7 +301,7 @@ func TestDial(t *testing.T) {
 			list.connClosersMut.Lock()
 			defer list.connClosersMut.Unlock()
 			return len(list.connClosers) == 0
-		}, time.Second*15, time.Second)
+		}, time.Second*15, time.Millisecond*100)
 	})
 }
 
