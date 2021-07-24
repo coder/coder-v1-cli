@@ -191,13 +191,14 @@ func (d *Dialer) negotiate(ctx context.Context) (err error) {
 		defer func() {
 			_ = d.conn.Close()
 		}()
-		err := waitForConnectionOpen(ctx, d.rtc)
+
+		err := waitForConnectionOpen(context.Background(), d.rtc)
 		if err != nil {
 			d.log.Debug(ctx, "negotiation error", slog.Error(err))
 			if errors.Is(err, context.DeadlineExceeded) {
 				_ = d.conn.Close()
 			}
-			errCh <- err
+			errCh <- fmt.Errorf("wait for connection to open: %w", err)
 			return
 		}
 
@@ -265,12 +266,13 @@ func (d *Dialer) negotiate(ctx context.Context) (err error) {
 		}
 
 		if msg.Error != "" {
-			d.log.Debug(ctx, "got error from remote", slog.F("err", msg.Error))
-			return errors.New(msg.Error)
+			d.log.Debug(ctx, "got error from peer", slog.F("err", msg.Error))
+			return fmt.Errorf("error from peer: %v", msg.Error)
 		}
 
 		return fmt.Errorf("unhandled message: %+v", msg)
 	}
+
 	return <-errCh
 }
 
