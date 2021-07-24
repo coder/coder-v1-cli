@@ -8,11 +8,17 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)/ci/scripts"
 
-tag=$(git describe --tags)
+tag="$(git describe --tags)"
 
-echo "--- building coder-cli for $GOOS-$GOARCH"
+flavor="$GOOS"
+if [[ "$GOOS" == "windows" ]]; then
+	unset GOARCH
+else
+	flavor+="-$GOARCH"
+fi
+echo "--- building coder-cli for $flavor"
 
-tmpdir=$(mktemp -d)
+tmpdir="$(mktemp -d)"
 go build -ldflags "-X cdr.dev/coder-cli/internal/version.Version=${tag}" -o "$tmpdir/coder" ../../cmd/coder
 
 cp ../gon.json $tmpdir/gon.json
@@ -20,7 +26,7 @@ cp ../gon.json $tmpdir/gon.json
 pushd "$tmpdir"
 case "$GOOS" in
 "windows")
-	artifact="coder-cli-$GOOS-$GOARCH.zip"
+	artifact="coder-cli-$GOOS.zip"
 	mv coder coder.exe
 	zip "$artifact" coder.exe
 	;;

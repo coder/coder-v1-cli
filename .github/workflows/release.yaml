@@ -22,8 +22,8 @@ jobs:
       - name: Upload windows
         uses: actions/upload-artifact@v2
         with:
-          name: coder-cli-windows-386
-          path: ./ci/bin/coder-cli-windows-386.zip
+          name: coder-cli-windows
+          path: ./ci/bin/coder-cli-windows.zip
   build_darwin:
     name: Build darwin binary
     runs-on: macos-latest
@@ -74,7 +74,7 @@ jobs:
           draft: true
           prerelease: false
       - name: Upload Linux Release
-        id: upload-linux-release-asset 
+        id: upload-linux-release-asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -84,7 +84,7 @@ jobs:
           asset_name: coder-cli-linux-amd64.tar.gz
           asset_content_type: application/tar+gzip
       - name: Upload MacOS Release
-        id: upload-macos-release-asset 
+        id: upload-macos-release-asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -94,12 +94,12 @@ jobs:
           asset_name: coder-cli-darwin-amd64.zip
           asset_content_type: application/zip
       - name: Upload Windows Release
-        id: upload-windows-release-asset 
+        id: upload-windows-release-asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: coder-cli-windows-386/coder-cli-windows-386.zip
-          asset_name: coder-cli-windows-386.zip
+          asset_path: coder-cli-windows/coder-cli-windows.zip
+          asset_name: coder-cli-windows.zip
           asset_content_type: application/zip

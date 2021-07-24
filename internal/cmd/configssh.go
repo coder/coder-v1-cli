@@ -161,6 +161,7 @@ func binPath() (string, error) {
 	// if it isn't.
 	if runtime.GOOS == "windows" {
 		binName := filepath.Base(exePath)
+
 		// We use safeexec instead of os/exec because os/exec returns paths in
 		// the current working directory, which we will run into very often when
 		// looking for our own path.
