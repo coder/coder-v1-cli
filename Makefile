@@ -1,4 +1,4 @@
-# Makefile for Coder CLI 
+# Makefile for Coder CLI
 
 .PHONY: clean build build/macos build/windows build/linux fmt lint gendocs test/go dev
 
