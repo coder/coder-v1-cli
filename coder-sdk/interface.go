@@ -250,4 +250,7 @@ type Client interface {
 
 	// DeleteSatelliteByID deletes a satellite entity from the Coder control plane.
 	DeleteSatelliteByID(ctx context.Context, id string) error
+
+	// UpdateLastConnectionAt updates the last connection at attribute of a workspace.
+	UpdateLastConnectionAt(ctx context.Context, workspaceID string) error
 }
