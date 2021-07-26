@@ -1,4 +1,4 @@
-FROM golang:1.16.3
+FROM golang:1.16.5
 
 ENV GOFLAGS="-mod=readonly"
 ENV CI=true

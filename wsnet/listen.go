@@ -159,9 +159,11 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 // so the cognitive overload linter has been disabled.
 // nolint:gocognit,nestif
 func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
+	id := atomic.AddInt64(&l.nextConnNumber, 1)
+	ctx = slog.With(ctx, slog.F("conn_id", id))
+
 	var (
 		err     error
-		id      = atomic.AddInt64(&l.nextConnNumber, 1)
 		decoder = json.NewDecoder(conn)
 		rtc     *webrtc.PeerConnection
 		// If candidates are sent before an offer, we place them here.
@@ -171,7 +173,7 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 		// Sends the error provided then closes the connection.
 		// If RTC isn't connected, we'll close it.
 		closeError = func(err error) {
-			l.log.Warn(ctx, "negotiation error, closing connection", slog.Error(err))
+			// l.log.Warn(ctx, "negotiation error, closing connection", slog.Error(err))
 
 			d, _ := json.Marshal(&BrokerMessage{
 				Error: err.Error(),
@@ -187,7 +189,6 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 		}
 	)
 
-	ctx = slog.With(ctx, slog.F("conn_id", id))
 	l.log.Info(ctx, "accepted new session from broker connection, negotiating")
 
 	for {
@@ -255,17 +256,26 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 				return
 			}
 			rtc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
-				l.log.Debug(ctx, "connection state change", slog.F("state", pcs.String()))
-				if pcs == webrtc.PeerConnectionStateConnecting {
+				l.log.Info(ctx, "connection state change", slog.F("state", pcs.String()))
+				switch pcs {
+				case webrtc.PeerConnectionStateConnected:
+					return
+				case webrtc.PeerConnectionStateConnecting:
+					// Safe to close the negotiating WebSocket.
+					_ = conn.Close()
 					return
 				}
-				_ = conn.Close()
+
+				// Close connections opened when RTC was alive.
+				l.connClosersMut.Lock()
+				defer l.connClosersMut.Unlock()
+				for _, connCloser := range l.connClosers {
+					_ = connCloser.Close()
+				}
+				l.connClosers = make([]io.Closer, 0)
 			})
 
 			flushCandidates := proxyICECandidates(rtc, conn)
-			l.connClosersMut.Lock()
-			l.connClosers = append(l.connClosers, rtc)
-			l.connClosersMut.Unlock()
 			rtc.OnDataChannel(l.handle(ctx, msg))
 
 			l.log.Debug(ctx, "set remote description", slog.F("offer", *msg.Offer))
@@ -420,6 +430,9 @@ func (l *listener) handle(ctx context.Context, msg BrokerMessage) func(dc *webrt
 				dc:   dc,
 				rw:   rw,
 			}
+			l.connClosersMut.Lock()
+			l.connClosers = append(l.connClosers, co)
+			l.connClosersMut.Unlock()
 			co.init()
 			defer nc.Close()
 			defer co.Close()

@@ -129,6 +129,8 @@ type dataChannelConn struct {
 }
 
 func (c *dataChannelConn) init() {
+	c.closedMutex.Lock()
+	defer c.closedMutex.Unlock()
 	c.sendMore = make(chan struct{}, 1)
 	c.dc.SetBufferedAmountLowThreshold(bufferedAmountLowThreshold)
 	c.dc.OnBufferedAmountLow(func() {
