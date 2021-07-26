@@ -6,6 +6,7 @@ require (
 	cdr.dev/slog v1.4.1
 	cdr.dev/wsep v0.0.0-20200728013649-82316a09813f
 	github.com/briandowns/spinner v1.16.0
+	github.com/cli/safeexec v1.0.0
 	github.com/fatih/color v1.12.0
 	github.com/google/go-cmp v0.5.6
 	github.com/gorilla/websocket v1.4.2

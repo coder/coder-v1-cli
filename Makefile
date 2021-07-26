@@ -14,7 +14,7 @@ build/macos:
 	# requires darwin
 	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 ./ci/scripts/build.sh
 build/windows:
-	CGO_ENABLED=0 GOOS=windows GOARCH=386 ./ci/scripts/build.sh
+	CGO_ENABLED=0 GOOS=windows ./ci/scripts/build.sh
 build/linux:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 ./ci/scripts/build.sh
 
