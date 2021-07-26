@@ -281,7 +281,7 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 			})
 
 			flushCandidates := proxyICECandidates(rtc, conn)
-			rtc.OnDataChannel(l.handle(ctx, msg, connClosers, &connClosersMut))
+			rtc.OnDataChannel(l.handle(ctx, msg, &connClosers, &connClosersMut))
 
 			l.log.Debug(ctx, "set remote description", slog.F("offer", *msg.Offer))
 			err = rtc.SetRemoteDescription(*msg.Offer)
@@ -334,7 +334,7 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 }
 
 // nolint:gocognit
-func (l *listener) handle(ctx context.Context, msg BrokerMessage, connClosers []io.Closer, connClosersMut *sync.Mutex) func(dc *webrtc.DataChannel) {
+func (l *listener) handle(ctx context.Context, msg BrokerMessage, connClosers *[]io.Closer, connClosersMut *sync.Mutex) func(dc *webrtc.DataChannel) {
 	return func(dc *webrtc.DataChannel) {
 		if dc.Protocol() == controlChannel {
 			// The control channel handles pings.
@@ -436,7 +436,7 @@ func (l *listener) handle(ctx context.Context, msg BrokerMessage, connClosers []
 				rw:   rw,
 			}
 			connClosersMut.Lock()
-			connClosers = append(connClosers, co)
+			*connClosers = append(*connClosers, co)
 			connClosersMut.Unlock()
 			co.init()
 			defer nc.Close()
