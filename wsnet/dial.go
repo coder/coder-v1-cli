@@ -104,6 +104,17 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 		return nil, fmt.Errorf("create peer connection: %w", err)
 	}
 	log.Debug(ctx, "created peer connection")
+	defer func() {
+		if err != nil {
+			// Wrap our error with some extra details.
+			err = errWrap{
+				err:        err,
+				iceServers: rtc.GetConfiguration().ICEServers,
+				rtc:        rtc.ConnectionState(),
+			}
+		}
+	}()
+
 	rtc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 		log.Debug(ctx, "connection state change", slog.F("state", pcs.String()))
 	})
@@ -159,7 +170,9 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 		connClosers: []io.Closer{ctrl},
 	}
 
-	return dialer, dialer.negotiate(ctx)
+	// This is on a separate line so the defer above catches it.
+	err = dialer.negotiate(ctx)
+	return dialer, err
 }
 
 // Dialer enables arbitrary dialing to any network and address
