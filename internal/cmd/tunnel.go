@@ -150,7 +150,7 @@ func (c *tunnneler) start(ctx context.Context) error {
 				_ = sdk.UpdateLastConnectionAt(ctx, c.workspaceID)
 			}
 		}
-	} ()
+	}()
 
 	// proxy via stdio
 	if c.stdio {
