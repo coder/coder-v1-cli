@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"time"
 
 	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/sloghuman"
@@ -129,6 +130,27 @@ func (c *tunnneler) start(ctx context.Context) error {
 		return err
 	}
 	c.log.Debug(ctx, "Connected to workspace!")
+
+	sdk, err := newClient(ctx, false)
+	if err != nil {
+		return xerrors.Errorf("getting coder client: %w", err)
+	}
+
+	// regularly update the last connection at
+	go func() {
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				// silently ignore failures so we don't spam the console
+				_ = sdk.UpdateLastConnectionAt(ctx, c.workspaceID)
+			}
+		}
+	}()
 
 	// proxy via stdio
 	if c.stdio {
