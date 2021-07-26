@@ -12,6 +12,7 @@ tag="$(git describe --tags)"
 
 flavor="$GOOS"
 if [[ "$GOOS" == "windows" ]]; then
+	# GOARCH causes bugs with the safeexec package on Windows.
 	unset GOARCH
 else
 	flavor+="-$GOARCH"
