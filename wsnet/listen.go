@@ -163,9 +163,11 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 	ctx = slog.With(ctx, slog.F("conn_id", id))
 
 	var (
-		err     error
-		decoder = json.NewDecoder(conn)
-		rtc     *webrtc.PeerConnection
+		err            error
+		decoder        = json.NewDecoder(conn)
+		rtc            *webrtc.PeerConnection
+		connClosers    = make([]io.Closer, 0)
+		connClosersMut sync.Mutex
 		// If candidates are sent before an offer, we place them here.
 		// We currently have no assurances to ensure this can't happen,
 		// so it's better to buffer and process than fail.
@@ -255,6 +257,9 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 				closeError(err)
 				return
 			}
+			l.connClosersMut.Lock()
+			l.connClosers = append(l.connClosers, rtc)
+			l.connClosersMut.Unlock()
 			rtc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 				l.log.Info(ctx, "connection state change", slog.F("state", pcs.String()))
 				switch pcs {
@@ -267,16 +272,16 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 				}
 
 				// Close connections opened when RTC was alive.
-				l.connClosersMut.Lock()
-				defer l.connClosersMut.Unlock()
-				for _, connCloser := range l.connClosers {
+				connClosersMut.Lock()
+				defer connClosersMut.Unlock()
+				for _, connCloser := range connClosers {
 					_ = connCloser.Close()
 				}
-				l.connClosers = make([]io.Closer, 0)
+				connClosers = make([]io.Closer, 0)
 			})
 
 			flushCandidates := proxyICECandidates(rtc, conn)
-			rtc.OnDataChannel(l.handle(ctx, msg))
+			rtc.OnDataChannel(l.handle(ctx, msg, connClosers, &connClosersMut))
 
 			l.log.Debug(ctx, "set remote description", slog.F("offer", *msg.Offer))
 			err = rtc.SetRemoteDescription(*msg.Offer)
@@ -329,7 +334,7 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 }
 
 // nolint:gocognit
-func (l *listener) handle(ctx context.Context, msg BrokerMessage) func(dc *webrtc.DataChannel) {
+func (l *listener) handle(ctx context.Context, msg BrokerMessage, connClosers []io.Closer, connClosersMut *sync.Mutex) func(dc *webrtc.DataChannel) {
 	return func(dc *webrtc.DataChannel) {
 		if dc.Protocol() == controlChannel {
 			// The control channel handles pings.
@@ -430,9 +435,9 @@ func (l *listener) handle(ctx context.Context, msg BrokerMessage) func(dc *webrt
 				dc:   dc,
 				rw:   rw,
 			}
-			l.connClosersMut.Lock()
-			l.connClosers = append(l.connClosers, co)
-			l.connClosersMut.Unlock()
+			connClosersMut.Lock()
+			connClosers = append(connClosers, co)
+			connClosersMut.Unlock()
 			co.init()
 			defer nc.Close()
 			defer co.Close()

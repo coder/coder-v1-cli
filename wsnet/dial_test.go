@@ -327,6 +327,59 @@ func TestDial(t *testing.T) {
 			return len(list.connClosers) == 0
 		}, time.Second*15, time.Millisecond*100)
 	})
+
+	t.Run("Close Old Connection Listeners on Disconnect", func(t *testing.T) {
+		t.Parallel()
+		log := slogtest.Make(t, nil)
+
+		listener, err := net.Listen("tcp", "0.0.0.0:0")
+		require.NoError(t, err)
+		go func() {
+			for {
+				c, _ := listener.Accept()
+
+				go func() {
+					b := make([]byte, 5)
+					_, err := c.Read(b)
+					if err != nil {
+						return
+					}
+					_, err = c.Write(b)
+					require.NoError(t, err)
+				}()
+			}
+
+		}()
+		connectAddr, listenAddr := createDumbBroker(t)
+		_, err = Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		require.NoError(t, err)
+
+		d1, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			Log: &log,
+		}, nil)
+		require.NoError(t, err)
+		_, err = d1.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+		require.NoError(t, err)
+
+		d2, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			Log: &log,
+		}, nil)
+		require.NoError(t, err)
+		conn, err := d2.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+		require.NoError(t, err)
+		err = d1.Close()
+		require.NoError(t, err)
+
+		assert.Eventually(t, func() bool {
+			return d1.rtc.ConnectionState() == webrtc.PeerConnectionStateClosed
+		}, time.Second*15, time.Millisecond*100)
+
+		b := []byte("hello")
+		_, err = conn.Write(b)
+		require.NoError(t, err)
+		_, err = conn.Read(b)
+		require.NoError(t, err)
+	})
 }
 
 func BenchmarkThroughput(b *testing.B) {
