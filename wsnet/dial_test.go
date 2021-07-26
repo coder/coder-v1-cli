@@ -348,7 +348,6 @@ func TestDial(t *testing.T) {
 					require.NoError(t, err)
 				}()
 			}
-
 		}()
 		connectAddr, listenAddr := createDumbBroker(t)
 		_, err = Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
@@ -370,9 +369,10 @@ func TestDial(t *testing.T) {
 		err = d1.Close()
 		require.NoError(t, err)
 
-		assert.Eventually(t, func() bool {
-			return d1.rtc.ConnectionState() == webrtc.PeerConnectionStateClosed
-		}, time.Second*15, time.Millisecond*100)
+		// TODO: This needs to be longer than the KeepAlive timeout for the RTC connection.
+		// Once the listener stores RTC connections instead of io.Closer we can directly
+		// reference the RTC connection to ensure it's properly closed.
+		time.Sleep(time.Second * 10)
 
 		b := []byte("hello")
 		_, err = conn.Write(b)
