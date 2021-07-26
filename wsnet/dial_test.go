@@ -66,13 +66,16 @@ func TestDial(t *testing.T) {
 
 	t.Run("Ping", func(t *testing.T) {
 		t.Parallel()
+		log := slogtest.Make(t, nil)
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		l, err := Listen(context.Background(), log, listenAddr, "")
 		require.NoError(t, err)
 		defer l.Close()
 
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			Log: &log,
+		}, nil)
 		require.NoError(t, err)
 
 		err = dialer.Ping(context.Background())
@@ -81,14 +84,16 @@ func TestDial(t *testing.T) {
 
 	t.Run("Ping Close", func(t *testing.T) {
 		t.Parallel()
+		log := slogtest.Make(t, nil)
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		l, err := Listen(context.Background(), log, listenAddr, "")
 		require.NoError(t, err)
 		defer l.Close()
 
 		turnAddr, closeTurn := createTURNServer(t, ice.SchemeTypeTURN)
 		dialer, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			Log: &log,
 			ICEServers: []webrtc.ICEServer{{
 				URLs:           []string{fmt.Sprintf("turn:%s", turnAddr)},
 				Username:       "example",
@@ -101,18 +106,22 @@ func TestDial(t *testing.T) {
 		_ = dialer.Ping(context.Background())
 		closeTurn()
 		err = dialer.Ping(context.Background())
+		assert.Error(t, err)
 		assert.ErrorIs(t, err, io.EOF)
 	})
 
 	t.Run("OPError", func(t *testing.T) {
 		t.Parallel()
+		log := slogtest.Make(t, nil)
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		l, err := Listen(context.Background(), log, listenAddr, "")
 		require.NoError(t, err)
 		defer l.Close()
 
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			Log: &log,
+		}, nil)
 		require.NoError(t, err)
 
 		_, err = dialer.DialContext(context.Background(), "tcp", "localhost:100")
@@ -125,6 +134,7 @@ func TestDial(t *testing.T) {
 
 	t.Run("Proxy", func(t *testing.T) {
 		t.Parallel()
+		log := slogtest.Make(t, nil)
 
 		listener, err := net.Listen("tcp", "0.0.0.0:0")
 		require.NoError(t, err)
@@ -138,11 +148,13 @@ func TestDial(t *testing.T) {
 		}()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		l, err := Listen(context.Background(), log, listenAddr, "")
 		require.NoError(t, err)
 		defer l.Close()
 
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			Log: &log,
+		}, nil)
 		require.NoError(t, err)
 
 		conn, err := dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
@@ -158,6 +170,7 @@ func TestDial(t *testing.T) {
 	// Expect that we'd get an EOF on the server closing.
 	t.Run("EOF on Close", func(t *testing.T) {
 		t.Parallel()
+		log := slogtest.Make(t, nil)
 
 		listener, err := net.Listen("tcp", "0.0.0.0:0")
 		require.NoError(t, err)
@@ -166,11 +179,13 @@ func TestDial(t *testing.T) {
 		}()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		l, err := Listen(context.Background(), log, listenAddr, "")
 		require.NoError(t, err)
 		defer l.Close()
 
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			Log: &log,
+		}, nil)
 		require.NoError(t, err)
 
 		conn, err := dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
@@ -184,13 +199,16 @@ func TestDial(t *testing.T) {
 
 	t.Run("Disconnect", func(t *testing.T) {
 		t.Parallel()
+		log := slogtest.Make(t, nil)
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		l, err := Listen(context.Background(), log, listenAddr, "")
 		require.NoError(t, err)
 		defer l.Close()
 
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
+		dialer, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			Log: &log,
+		}, nil)
 		require.NoError(t, err)
 
 		err = dialer.Close()
@@ -202,6 +220,7 @@ func TestDial(t *testing.T) {
 
 	t.Run("Disconnect DialContext", func(t *testing.T) {
 		t.Parallel()
+		log := slogtest.Make(t, nil)
 
 		tcpListener, err := net.Listen("tcp", "0.0.0.0:0")
 		require.NoError(t, err)
@@ -210,12 +229,13 @@ func TestDial(t *testing.T) {
 		}()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		l, err := Listen(context.Background(), log, listenAddr, "")
 		require.NoError(t, err)
 		defer l.Close()
 
 		turnAddr, closeTurn := createTURNServer(t, ice.SchemeTypeTURN)
 		dialer, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			Log: &log,
 			ICEServers: []webrtc.ICEServer{{
 				URLs:           []string{fmt.Sprintf("turn:%s", turnAddr)},
 				Username:       "example",
@@ -237,6 +257,7 @@ func TestDial(t *testing.T) {
 
 	t.Run("Active Connections", func(t *testing.T) {
 		t.Parallel()
+		log := slogtest.Make(t, nil)
 
 		listener, err := net.Listen("tcp", "0.0.0.0:0")
 		if err != nil {
@@ -252,7 +273,10 @@ func TestDial(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		dialer, err := DialWebsocket(context.Background(), connectAddr, nil, nil)
+
+		dialer, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			Log: &log,
+		}, nil)
 		if err != nil {
 			t.Error(err)
 		}

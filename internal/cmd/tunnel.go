@@ -34,6 +34,10 @@ coder tunnel my-dev 3000 3000
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			log := slog.Make(sloghuman.Sink(os.Stderr))
+			if os.Getenv("CODER_TUNNEL_DEBUG") != "" {
+				log = log.Leveled(slog.LevelDebug)
+				log.Info(ctx, "debug logging enabled")
+			}
 
 			remotePort, err := strconv.ParseUint(args[1], 10, 16)
 			if err != nil {
@@ -104,10 +108,13 @@ type tunnneler struct {
 
 func (c *tunnneler) start(ctx context.Context) error {
 	c.log.Debug(ctx, "Connecting to workspace...")
+
+	dialLog := c.log.Named("wsnet")
 	wd, err := wsnet.DialWebsocket(
 		ctx,
 		wsnet.ConnectEndpoint(c.brokerAddr, c.workspaceID, c.token),
 		&wsnet.DialOptions{
+			Log:                &dialLog,
 			TURNProxyAuthToken: c.token,
 			TURNProxyURL:       c.brokerAddr,
 			ICEServers:         []webrtc.ICEServer{wsnet.TURNProxyICECandidate()},
