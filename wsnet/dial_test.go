@@ -293,39 +293,55 @@ func TestDial(t *testing.T) {
 
 	t.Run("Close Listeners on Disconnect", func(t *testing.T) {
 		t.Parallel()
+		log := slogtest.Make(t, nil)
 
-		tcpListener, err := net.Listen("tcp", "0.0.0.0:0")
+		listener, err := net.Listen("tcp", "0.0.0.0:0")
 		require.NoError(t, err)
 		go func() {
-			_, _ = tcpListener.Accept()
-		}()
+			for {
+				c, _ := listener.Accept()
 
+				go func() {
+					b := make([]byte, 5)
+					_, err := c.Read(b)
+					if err != nil {
+						return
+					}
+					_, err = c.Write(b)
+					require.NoError(t, err)
+				}()
+			}
+		}()
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		_, err = Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
 		require.NoError(t, err)
 
-		turnAddr, closeTurn := createTURNServer(t, ice.SchemeTypeTURN)
-		dialer, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
-			ICEServers: []webrtc.ICEServer{{
-				URLs:           []string{fmt.Sprintf("turn:%s", turnAddr)},
-				Username:       "example",
-				Credential:     testPass,
-				CredentialType: webrtc.ICECredentialTypePassword,
-			}},
+		d1, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			Log: &log,
 		}, nil)
 		require.NoError(t, err)
-
-		_, err = dialer.DialContext(context.Background(), "tcp", tcpListener.Addr().String())
+		_, err = d1.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
 		require.NoError(t, err)
 
-		closeTurn()
+		d2, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
+			Log: &log,
+		}, nil)
+		require.NoError(t, err)
+		conn, err := d2.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+		require.NoError(t, err)
+		err = d1.Close()
+		require.NoError(t, err)
 
-		list := l.(*listener)
-		assert.Eventually(t, func() bool {
-			list.connClosersMut.Lock()
-			defer list.connClosersMut.Unlock()
-			return len(list.connClosers) == 0
-		}, time.Second*15, time.Millisecond*100)
+		// TODO: This needs to be longer than the KeepAlive timeout for the RTC connection.
+		// Once the listener stores RTC connections instead of io.Closer we can directly
+		// reference the RTC connection to ensure it's properly closed.
+		time.Sleep(time.Second * 10)
+
+		b := []byte("hello")
+		_, err = conn.Write(b)
+		require.NoError(t, err)
+		_, err = conn.Read(b)
+		require.NoError(t, err)
 	})
 }
 
