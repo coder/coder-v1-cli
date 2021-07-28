@@ -117,7 +117,8 @@ func (c *tunnneler) start(ctx context.Context) error {
 		&wsnet.DialOptions{
 			Log:                &dialLog,
 			TURNProxyAuthToken: c.token,
-			TURNProxyURL:       c.brokerAddr,
+			TURNRemoteProxyURL: c.brokerAddr,
+			TURNLocalProxyURL:  c.brokerAddr,
 			ICEServers:         []webrtc.ICEServer{wsnet.TURNProxyICECandidate()},
 		},
 		nil,

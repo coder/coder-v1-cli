@@ -36,10 +36,11 @@ type DialOptions struct {
 	// TURNProxyAuthToken is used to authenticate a TURN proxy request.
 	TURNProxyAuthToken string
 
-	// TURNProxyURL is the URL to proxy all TURN data through.
-	// This URL is sent to the listener during handshake so both
-	// ends connect to the same TURN endpoint.
-	TURNProxyURL *url.URL
+	// TURNRemoteProxyURL is the URL to proxy listener TURN data through.
+	TURNRemoteProxyURL *url.URL
+
+	// TURNLocalProxyURL is the URL to proxy client TURN data through.
+	TURNLocalProxyURL *url.URL
 }
 
 // DialWebsocket dials the broker with a WebSocket and negotiates a connection.
@@ -91,9 +92,9 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 	}
 
 	var turnProxy proxy.Dialer
-	if options.TURNProxyURL != nil {
+	if options.TURNLocalProxyURL != nil {
 		turnProxy = &turnProxyDialer{
-			baseURL: options.TURNProxyURL,
+			baseURL: options.TURNLocalProxyURL,
 			token:   options.TURNProxyAuthToken,
 		}
 	}
@@ -141,8 +142,8 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 	}
 
 	var turnProxyURL string
-	if options.TURNProxyURL != nil {
-		turnProxyURL = options.TURNProxyURL.String()
+	if options.TURNRemoteProxyURL != nil {
+		turnProxyURL = options.TURNRemoteProxyURL.String()
 	}
 
 	bmsg := BrokerMessage{
