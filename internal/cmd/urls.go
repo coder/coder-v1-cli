@@ -205,7 +205,7 @@ func createDevURLCmd() *cobra.Command {
 // The maximum length of the name component is 43 characters.
 var devURLValidNameRx = regexp.MustCompile("^[a-zA-Z]([a-zA-Z0-9_-]{0,41}[a-zA-Z0-9])?$")
 var devURLInvalidNameMsg = "invalid devurl name %q: names must begin with a letter, " +
-	"followed by zero or more letters, digits, hyphens, or underscores, end with a " +
+	"followed by zero or more letters, digits, hyphens, or underscores, and end with a " +
 	"letter or digit, and be a maximum of 43 characters in length."
 
 // devURLID returns the ID of a devURL, given the workspace name and port
