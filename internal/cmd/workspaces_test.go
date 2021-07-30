@@ -81,7 +81,7 @@ func Test_workspace_create(t *testing.T) {
 	res.error(t)
 	res.stderrContains(t, "fatal: image not found - did you forget to import this image?")
 
-	ensureImageImported(ctx, t, testCoderClient, "ubuntu")
+	ensureImageImported(ctx, t, testCoderClient, "codercom/enterprise-base", "ubuntu")
 
 	name := randString(10)
 	cpu := 2.3
@@ -89,7 +89,7 @@ func Test_workspace_create(t *testing.T) {
 	// attempt to remove the workspace on cleanup
 	t.Cleanup(func() { _ = execute(t, nil, "workspaces", "rm", name, "--force") })
 
-	res = execute(t, nil, "workspaces", "create", name, "--image=ubuntu", fmt.Sprintf("--cpu=%f", cpu))
+	res = execute(t, nil, "workspaces", "create", name, "--image=codercom/enterprise-base", "--tag=ubuntu", fmt.Sprintf("--cpu=%f", cpu))
 	res.success(t)
 
 	res = execute(t, nil, "workspaces", "ls")
@@ -108,7 +108,7 @@ func Test_workspace_create(t *testing.T) {
 
 	// edit the CPU of the workspace
 	cpu = 2.1
-	res = execute(t, nil, "workspaces", "edit", name, fmt.Sprintf("--cpu=%f", cpu), "--follow", "--force")
+	res = execute(t, nil, "workspaces", "edit", name, "--image=codercom/enterprise-base", "--tag=ubuntu", fmt.Sprintf("--cpu=%f", cpu), "--follow", "--force")
 	res.success(t)
 
 	// assert that the CPU actually did change after edit
@@ -153,7 +153,7 @@ var floatComparer = cmp.Comparer(func(x, y float64) bool {
 // this is a stopgap until we have support for a `coder images` subcommand
 // until then, we can use the coder.Client to ensure our integration tests
 // work on fresh deployments.
-func ensureImageImported(ctx context.Context, t *testing.T, client coder.Client, img string) {
+func ensureImageImported(ctx context.Context, t *testing.T, client coder.Client, img, tag string) {
 	orgs, err := client.Organizations(ctx)
 	assert.Success(t, "get orgs", err)
 
@@ -198,7 +198,7 @@ search:
 			RegistryID:      &dockerhubID,
 			OrgID:           org.ID,
 			Repository:      img,
-			Tag:             "latest",
+			Tag:             tag,
 			DefaultCPUCores: 2.5,
 			DefaultDiskGB:   22,
 			DefaultMemoryGB: 3,

@@ -18,7 +18,7 @@ func Test_tags(t *testing.T) {
 	res := execute(t, nil, "tags", "ls")
 	res.error(t)
 
-	ensureImageImported(ctx, t, testCoderClient, "ubuntu")
+	ensureImageImported(ctx, t, testCoderClient, "ubuntu", "latest")
 
 	res = execute(t, nil, "tags", "ls", "--image=ubuntu", "--org=default")
 	res.success(t)
