@@ -144,8 +144,8 @@ func createDevURLCmd() *cobra.Command {
 				return xerrors.Errorf("invalid access level %q", access)
 			}
 
-			if urlname != "" && !devURLNameValidRx.MatchString(urlname) {
-				return xerrors.New("update devurl: name must be < 64 chars in length, begin with a letter and only contain letters or digits.")
+			if urlname != "" && !devURLValidNameRx.MatchString(urlname) {
+				return xerrors.Errorf(devURLInvalidNameMsg, urlname)
 			}
 			client, err := newClient(ctx, true)
 			if err != nil {
@@ -199,9 +199,14 @@ func createDevURLCmd() *cobra.Command {
 }
 
 // devURLNameValidRx is the regex used to validate devurl names specified
-// via the --name subcommand. Named devurls must begin with a letter, and
-// consist solely of letters and digits, with a max length of 64 chars.
-var devURLNameValidRx = regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9]{0,63}$")
+// via the --name subcommand. Named devurls must begin with a letter
+// followed by zero or more letters, numbers, hyphens, or underscores,
+// end with a letter or a number, and be maximum 64 characters in length.
+// The maximum length of the name component is 43 characters.
+var devURLValidNameRx = regexp.MustCompile("^[a-zA-Z]([a-zA-Z0-9_-]{0,41}[a-zA-Z0-9])?$")
+var devURLInvalidNameMsg = "invalid devurl name %q: names must begin with a letter, " +
+	"followed by zero or more letters, digits, hyphens, or underscores, and end with a " +
+	"letter or digit, and be a maximum of 43 characters in length."
 
 // devURLID returns the ID of a devURL, given the workspace name and port
 // from a list of DevURL records.
