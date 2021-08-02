@@ -247,7 +247,7 @@ func makeNewConfigs(binPath, userName string, workspaces []coderutil.WorkspaceWi
 	return newConfig
 }
 
-func makeSSHConfig(binPath, userName, workspaceName, privateKeyFilepath string) string {
+func makeSSHConfig(binPath, workspaceName, privateKeyFilepath string) string {
 	entry := fmt.Sprintf(
 		`Host coder.%s
    HostName coder.%s
