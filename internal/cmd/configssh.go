@@ -118,7 +118,7 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			return xerrors.Errorf("Failed to get executable path: %w", err)
 		}
 
-		newConfig := makeNewConfigs(binPath, user.Username, workspacesWithProviders, privateKeyFilepath)
+		newConfig := makeNewConfigs(binPath, workspacesWithProviders, privateKeyFilepath)
 
 		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
 		if err != nil {
@@ -226,7 +226,7 @@ func writeSSHKey(ctx context.Context, client coder.Client, privateKeyPath string
 	return ioutil.WriteFile(privateKeyPath, []byte(key.PrivateKey), 0600)
 }
 
-func makeNewConfigs(binPath, userName string, workspaces []coderutil.WorkspaceWithWorkspaceProvider, privateKeyFilepath string) string {
+func makeNewConfigs(binPath string, workspaces []coderutil.WorkspaceWithWorkspaceProvider, privateKeyFilepath string) string {
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", sshStartToken, sshStartMessage)
 
 	sort.Slice(workspaces, func(i, j int) bool { return workspaces[i].Workspace.Name < workspaces[j].Workspace.Name })
