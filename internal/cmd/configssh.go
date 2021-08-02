@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -119,7 +118,7 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			return xerrors.Errorf("Failed to get executable path: %w", err)
 		}
 
-		newConfig := makeNewConfigs(binPath, user.Username, workspacesWithProviders, privateKeyFilepath)
+		newConfig := makeNewConfigs(binPath, workspacesWithProviders, privateKeyFilepath)
 
 		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
 		if err != nil {
@@ -227,7 +226,7 @@ func writeSSHKey(ctx context.Context, client coder.Client, privateKeyPath string
 	return ioutil.WriteFile(privateKeyPath, []byte(key.PrivateKey), 0600)
 }
 
-func makeNewConfigs(binPath, userName string, workspaces []coderutil.WorkspaceWithWorkspaceProvider, privateKeyFilepath string) string {
+func makeNewConfigs(binPath string, workspaces []coderutil.WorkspaceWithWorkspaceProvider, privateKeyFilepath string) string {
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", sshStartToken, sshStartMessage)
 
 	sort.Slice(workspaces, func(i, j int) bool { return workspaces[i].Workspace.Name < workspaces[j].Workspace.Name })
@@ -240,24 +239,17 @@ func makeNewConfigs(binPath, userName string, workspaces []coderutil.WorkspaceWi
 			)
 			continue
 		}
-		u, err := url.Parse(workspace.WorkspaceProvider.EnvproxyAccessURL)
-		if err != nil {
-			clog.LogWarn("invalid access url", clog.Causef("malformed url: %q", workspace.WorkspaceProvider.EnvproxyAccessURL))
-			continue
-		}
 
-		useTunnel := workspace.WorkspaceProvider.SSHEnabled && workspace.WorkspaceProvider.EnableNetV2
-		newConfig += makeSSHConfig(binPath, u.Host, userName, workspace.Workspace.Name, privateKeyFilepath, useTunnel)
+		newConfig += makeSSHConfig(binPath, workspace.Workspace.Name, privateKeyFilepath)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", sshEndToken)
 
 	return newConfig
 }
 
-func makeSSHConfig(binPath, host, userName, workspaceName, privateKeyFilepath string, tunnel bool) string {
-	if tunnel {
-		host := fmt.Sprintf(
-			`Host coder.%s
+func makeSSHConfig(binPath, workspaceName, privateKeyFilepath string) string {
+	entry := fmt.Sprintf(
+		`Host coder.%s
    HostName coder.%s
    ProxyCommand "%s" tunnel %s 12213 stdio
    StrictHostKeyChecking no
@@ -266,25 +258,14 @@ func makeSSHConfig(binPath, host, userName, workspaceName, privateKeyFilepath st
    IdentityFile="%s"
 `, workspaceName, workspaceName, binPath, workspaceName, privateKeyFilepath)
 
-		if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
-			host += `   ControlMaster auto
+	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
+		entry += `   ControlMaster auto
    ControlPath ~/.ssh/.connection-%r@%h:%p
    ControlPersist 600
 `
-		}
-
-		return host
 	}
 
-	return fmt.Sprintf(
-		`Host coder.%s
-   HostName %s
-   User %s-%s
-   StrictHostKeyChecking no
-   ConnectTimeout=0
-   IdentitiesOnly yes
-   IdentityFile="%s"
-`, workspaceName, host, userName, workspaceName, privateKeyFilepath)
+	return entry
 }
 
 func writeStr(filename, data string) error {
