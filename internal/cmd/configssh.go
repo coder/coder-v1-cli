@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -240,20 +239,15 @@ func makeNewConfigs(binPath, userName string, workspaces []coderutil.WorkspaceWi
 			)
 			continue
 		}
-		u, err := url.Parse(workspace.WorkspaceProvider.EnvproxyAccessURL)
-		if err != nil {
-			clog.LogWarn("invalid access url", clog.Causef("malformed url: %q", workspace.WorkspaceProvider.EnvproxyAccessURL))
-			continue
-		}
 
-		newConfig += makeSSHConfig(binPath, u.Host, userName, workspace.Workspace.Name, privateKeyFilepath)
+		newConfig += makeSSHConfig(binPath, userName, workspace.Workspace.Name, privateKeyFilepath)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", sshEndToken)
 
 	return newConfig
 }
 
-func makeSSHConfig(binPath, host, userName, workspaceName, privateKeyFilepath string) string {
+func makeSSHConfig(binPath, userName, workspaceName, privateKeyFilepath string) string {
 	entry := fmt.Sprintf(
 		`Host coder.%s
    HostName coder.%s
