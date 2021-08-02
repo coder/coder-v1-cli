@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"cdr.dev/wsep"
+	"github.com/pion/webrtc/v3"
 	"nhooyr.io/websocket"
 )
 
@@ -242,7 +243,7 @@ type Client interface {
 	// SetPolicyTemplate sets the workspace policy template
 	SetPolicyTemplate(ctx context.Context, templateID string, templateScope TemplateScope, dryRun bool) (*SetPolicyTemplateResponse, error)
 
-	// satellites fetches all satellitess known to the Coder control plane.
+	// Satellites fetches all satellitess known to the Coder control plane.
 	Satellites(ctx context.Context) ([]Satellite, error)
 
 	// CreateSatellite creates a new satellite entity.
@@ -253,4 +254,7 @@ type Client interface {
 
 	// UpdateLastConnectionAt updates the last connection at attribute of a workspace.
 	UpdateLastConnectionAt(ctx context.Context, workspaceID string) error
+
+	// ICEServers fetches the list of ICE servers advertised by the deployment.
+	ICEServers(ctx context.Context) ([]webrtc.ICEServer, error)
 }

@@ -75,11 +75,18 @@ coder tunnel my-dev 3000 3000
 				return xerrors.Errorf("No workspace found by name '%s'", args[0])
 			}
 
+			iceServers, err := sdk.ICEServers(ctx)
+			if err != nil {
+				return xerrors.Errorf("get ICE servers: %w", err)
+			}
+			log.Debug(ctx, "got ICE servers", slog.F("ice", iceServers))
+
 			c := &tunnneler{
 				log:         log,
 				brokerAddr:  &baseURL,
 				token:       sdk.Token(),
 				workspaceID: workspaceID,
+				iceServers:  iceServers,
 				stdio:       args[2] == "stdio",
 				localPort:   uint16(localPort),
 				remotePort:  uint16(remotePort),
@@ -102,6 +109,7 @@ type tunnneler struct {
 	brokerAddr  *url.URL
 	token       string
 	workspaceID string
+	iceServers  []webrtc.ICEServer
 	remotePort  uint16
 	localPort   uint16
 	stdio       bool
@@ -119,7 +127,7 @@ func (c *tunnneler) start(ctx context.Context) error {
 			TURNProxyAuthToken: c.token,
 			TURNRemoteProxyURL: c.brokerAddr,
 			TURNLocalProxyURL:  c.brokerAddr,
-			ICEServers:         []webrtc.ICEServer{wsnet.TURNProxyICECandidate()},
+			ICEServers:         c.iceServers,
 		},
 		nil,
 	)
