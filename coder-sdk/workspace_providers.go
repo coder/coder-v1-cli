@@ -19,7 +19,6 @@ type KubernetesProvider struct {
 	EnvproxyAccessURL  string                  `json:"envproxy_access_url" table:"Access URL" validate:"required"`
 	DevurlHost         string                  `json:"devurl_host"         table:"Devurl Host"`
 	OrgWhitelist       []string                `json:"org_whitelist"       table:"-"`
-	EnableNetV2        bool                    `json:"enable_net_v2"       table:"Enable NetV2"`
 	KubeProviderConfig `json:"config" table:"_"`
 }
 

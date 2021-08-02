@@ -246,18 +246,16 @@ func makeNewConfigs(binPath, userName string, workspaces []coderutil.WorkspaceWi
 			continue
 		}
 
-		useTunnel := workspace.WorkspaceProvider.SSHEnabled && workspace.WorkspaceProvider.EnableNetV2
-		newConfig += makeSSHConfig(binPath, u.Host, userName, workspace.Workspace.Name, privateKeyFilepath, useTunnel)
+		newConfig += makeSSHConfig(binPath, u.Host, userName, workspace.Workspace.Name, privateKeyFilepath)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", sshEndToken)
 
 	return newConfig
 }
 
-func makeSSHConfig(binPath, host, userName, workspaceName, privateKeyFilepath string, tunnel bool) string {
-	if tunnel {
-		host := fmt.Sprintf(
-			`Host coder.%s
+func makeSSHConfig(binPath, host, userName, workspaceName, privateKeyFilepath string) string {
+	entry := fmt.Sprintf(
+		`Host coder.%s
    HostName coder.%s
    ProxyCommand "%s" tunnel %s 12213 stdio
    StrictHostKeyChecking no
@@ -266,25 +264,14 @@ func makeSSHConfig(binPath, host, userName, workspaceName, privateKeyFilepath st
    IdentityFile="%s"
 `, workspaceName, workspaceName, binPath, workspaceName, privateKeyFilepath)
 
-		if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
-			host += `   ControlMaster auto
+	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
+		entry += `   ControlMaster auto
    ControlPath ~/.ssh/.connection-%r@%h:%p
    ControlPersist 600
 `
-		}
-
-		return host
 	}
 
-	return fmt.Sprintf(
-		`Host coder.%s
-   HostName %s
-   User %s-%s
-   StrictHostKeyChecking no
-   ConnectTimeout=0
-   IdentitiesOnly yes
-   IdentityFile="%s"
-`, workspaceName, host, userName, workspaceName, privateKeyFilepath)
+	return entry
 }
 
 func writeStr(filename, data string) error {
