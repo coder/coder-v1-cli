@@ -240,7 +240,7 @@ func makeNewConfigs(binPath, userName string, workspaces []coderutil.WorkspaceWi
 			continue
 		}
 
-		newConfig += makeSSHConfig(binPath, userName, workspace.Workspace.Name, privateKeyFilepath)
+		newConfig += makeSSHConfig(binPath, workspace.Workspace.Name, privateKeyFilepath)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", sshEndToken)
 
