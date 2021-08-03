@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"os/exec"
 	"os/user"
@@ -41,10 +40,7 @@ func shell(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	me, err := client.Me(ctx)
-	if err != nil {
-		return err
-	}
+
 	workspace, err := findWorkspace(ctx, client, args[0], coder.Me)
 	if err != nil {
 		return err
@@ -60,9 +56,9 @@ func shell(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	u, err := url.Parse(wp.EnvproxyAccessURL)
-	if err != nil {
-		return err
+
+	if !wp.SSHEnabled {
+		return clog.Error("SSH is disabled on this Workspace")
 	}
 
 	usr, err := user.Current()
@@ -75,13 +71,21 @@ func shell(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	binPath, err := binPath()
+	if err != nil {
+		return xerrors.Errorf("Failed to get executable path: %w", err)
+	}
+
 	ssh := exec.CommandContext(ctx,
 		"ssh", "-i"+privateKeyFilepath,
-		fmt.Sprintf("%s-%s@%s", me.Username, workspace.Name, u.Hostname()),
+		"-o"+fmt.Sprintf("ProxyCommand=%s", proxyCommand(binPath, workspace.Name, false)),
+		workspace.Name,
 	)
 	if len(args) > 1 {
 		ssh.Args = append(ssh.Args, args[1:]...)
 	}
+
 	ssh.Stderr = os.Stderr
 	ssh.Stdout = os.Stdout
 	ssh.Stdin = os.Stdin

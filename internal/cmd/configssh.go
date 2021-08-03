@@ -251,12 +251,12 @@ func makeSSHConfig(binPath, workspaceName, privateKeyFilepath string) string {
 	entry := fmt.Sprintf(
 		`Host coder.%s
    HostName coder.%s
-   ProxyCommand "%s" tunnel %s 12213 stdio
+   ProxyCommand %s
    StrictHostKeyChecking no
    ConnectTimeout=0
    IdentitiesOnly yes
    IdentityFile="%s"
-`, workspaceName, workspaceName, binPath, workspaceName, privateKeyFilepath)
+`, workspaceName, workspaceName, proxyCommand(binPath, workspaceName, true), privateKeyFilepath)
 
 	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
 		entry += `   ControlMaster auto
@@ -266,6 +266,13 @@ func makeSSHConfig(binPath, workspaceName, privateKeyFilepath string) string {
 	}
 
 	return entry
+}
+
+func proxyCommand(binPath, workspaceName string, quoted bool) string {
+	if quoted {
+		binPath = fmt.Sprintf("%q", binPath)
+	}
+	return fmt.Sprintf(`%s tunnel %s 12213 stdio`, binPath, workspaceName)
 }
 
 func writeStr(filename, data string) error {
