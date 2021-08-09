@@ -33,25 +33,25 @@ const sshEndToken = "# ------------END-CODER-ENTERPRISE------------"
 
 func configSSHCmd() *cobra.Command {
 	var (
-		configpath string
-		noCache    = false
-		remove     = false
+		configpath        string
+		remove            = false
+		additionalOptions []string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "config-ssh",
 		Short: "Configure SSH to access Coder workspaces",
 		Long:  "Inject the proper OpenSSH configuration into your local SSH config file.",
-		RunE:  configSSH(&configpath, &remove, &noCache),
+		RunE:  configSSH(&configpath, &remove, &additionalOptions),
 	}
 	cmd.Flags().StringVar(&configpath, "filepath", filepath.Join("~", ".ssh", "config"), "override the default path of your ssh config file")
-	cmd.Flags().BoolVar(&noCache, "no-cache", false, "disable ssh connection caching")
+	cmd.Flags().StringSliceVarP(&additionalOptions, "option", "o", []string{}, "additional options injected in the ssh config (ex. disable caching with \"-o ControlPath=none\")")
 	cmd.Flags().BoolVar(&remove, "remove", false, "remove the auto-generated Coder ssh config")
 
 	return cmd
 }
 
-func configSSH(configpath *string, remove *bool, noCache *bool) func(cmd *cobra.Command, _ []string) error {
+func configSSH(configpath *string, remove *bool, additionalOptions *[]string) func(cmd *cobra.Command, _ []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
 		usr, err := user.Current()
@@ -120,7 +120,7 @@ func configSSH(configpath *string, remove *bool, noCache *bool) func(cmd *cobra.
 			return xerrors.Errorf("Failed to get executable path: %w", err)
 		}
 
-		newConfig := makeNewConfigs(binPath, workspacesWithProviders, privateKeyFilepath, *noCache)
+		newConfig := makeNewConfigs(binPath, workspacesWithProviders, privateKeyFilepath, *additionalOptions)
 
 		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
 		if err != nil {
@@ -228,7 +228,7 @@ func writeSSHKey(ctx context.Context, client coder.Client, privateKeyPath string
 	return ioutil.WriteFile(privateKeyPath, []byte(key.PrivateKey), 0600)
 }
 
-func makeNewConfigs(binPath string, workspaces []coderutil.WorkspaceWithWorkspaceProvider, privateKeyFilepath string, noCache bool) string {
+func makeNewConfigs(binPath string, workspaces []coderutil.WorkspaceWithWorkspaceProvider, privateKeyFilepath string, additionalOptions []string) string {
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", sshStartToken, sshStartMessage)
 
 	sort.Slice(workspaces, func(i, j int) bool { return workspaces[i].Workspace.Name < workspaces[j].Workspace.Name })
@@ -242,32 +242,34 @@ func makeNewConfigs(binPath string, workspaces []coderutil.WorkspaceWithWorkspac
 			continue
 		}
 
-		newConfig += makeSSHConfig(binPath, workspace.Workspace.Name, privateKeyFilepath, noCache)
+		newConfig += makeSSHConfig(binPath, workspace.Workspace.Name, privateKeyFilepath, additionalOptions)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", sshEndToken)
 
 	return newConfig
 }
 
-func makeSSHConfig(binPath, workspaceName, privateKeyFilepath string, noCache bool) string {
-	entry := fmt.Sprintf(
-		`Host coder.%s
-   HostName coder.%s
-   ProxyCommand "%s" tunnel %s 12213 stdio
-   StrictHostKeyChecking no
-   ConnectTimeout=0
-   IdentitiesOnly yes
-   IdentityFile="%s"
-`, workspaceName, workspaceName, binPath, workspaceName, privateKeyFilepath)
+func makeSSHConfig(binPath, workspaceName, privateKeyFilepath string, additionalOptions []string) string {
+	// Custom user options come first to maximizessh customization.
+	options := additionalOptions
+	options = append(options,
+		fmt.Sprintf("HostName coder.%s", workspaceName),
+		fmt.Sprintf("ProxyCommand %q tunnel %s 12213 stdio", binPath, workspaceName),
+		"StrictHostKeyChecking no",
+		"ConnectTimeout=0",
+		"IdentitiesOnly yes",
+		fmt.Sprintf("IdentityFile=%q", privateKeyFilepath),
+	)
 
-	if !noCache && (runtime.GOOS == "linux" || runtime.GOOS == "darwin") {
-		entry += `   ControlMaster auto
-   ControlPath ~/.ssh/.connection-%r@%h:%p
-   ControlPersist 600
-`
+	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
+		options = append(options,
+			"ControlMaster auto",
+			"ControlPath ~/.ssh/.connection-%r@%h:%p",
+			"ControlPersist 600",
+		)
 	}
 
-	return entry
+	return fmt.Sprintf("Host coder.%s\n\t%s\n\n", workspaceName, strings.Join(options, "\n\t"))
 }
 
 func writeStr(filename, data string) error {
