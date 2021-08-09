@@ -301,6 +301,11 @@ func (d *Dialer) activeConnections() int {
 	return int(stats.DataChannelsRequested-stats.DataChannelsClosed) - 1
 }
 
+// Candidates returns the candidate pair that was chosen for the connection.
+func (d *Dialer) Candidates() (*webrtc.ICECandidatePair, error) {
+	return d.rtc.SCTP().Transport().ICETransport().GetSelectedCandidatePair()
+}
+
 // Close closes the RTC connection.
 // All data channels dialed will be closed.
 func (d *Dialer) Close() error {
