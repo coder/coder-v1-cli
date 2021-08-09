@@ -8,13 +8,14 @@ import (
 	"strings"
 	"time"
 
-	"cdr.dev/coder-cli/coder-sdk"
-	"cdr.dev/coder-cli/pkg/clog"
-	"cdr.dev/coder-cli/wsnet"
 	"github.com/fatih/color"
 	"github.com/pion/webrtc/v3"
 	"github.com/spf13/cobra"
 	"nhooyr.io/websocket"
+
+	"cdr.dev/coder-cli/coder-sdk"
+	"cdr.dev/coder-cli/pkg/clog"
+	"cdr.dev/coder-cli/wsnet"
 )
 
 func pingCmd() *cobra.Command {
