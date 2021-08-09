@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -98,29 +99,9 @@ func pingCmd() *cobra.Command {
 			for {
 				select {
 				case <-ticker.C:
-					start := time.Now()
-					err := dialer.Ping(ctx)
+					pingMS, connectionText, err := ping(ctx, client, dialer, tunneled, args[0])
 					if err != nil {
-						if errors.Is(err, io.EOF) {
-							workspace, err = findWorkspace(ctx, client, args[0], coder.Me)
-							if err != nil {
-								return err
-							}
-							if workspace.LatestStat.ContainerStatus != coder.WorkspaceOn {
-								return clog.Error("workspace changed state",
-									fmt.Sprintf("current status: \"%s\"", workspace.LatestStat.ContainerStatus),
-									clog.BlankLine,
-									clog.Tipf("use \"coder workspaces rebuild %s\" to rebuild this workspace", workspace.Name),
-								)
-							}
-							return errors.New("connection was closed unexpectedly")
-						}
 						return err
-					}
-					pingMS := float64(time.Since(start).Microseconds()) / 1000
-					connectionText = "you ↔ workspace"
-					if tunneled {
-						connectionText = fmt.Sprintf("you ↔ %s ↔ workspace", url.Host)
 					}
 
 					fmt.Printf("%.2fms (%s) seq=%d\n",
@@ -136,4 +117,33 @@ func pingCmd() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func ping(ctx context.Context, client coder.Client, dialer *wsnet.Dialer, tunneled bool, workspaceName string) (float64, string, error) {
+	start := time.Now()
+	err := dialer.Ping(ctx)
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			workspace, err := findWorkspace(ctx, client, workspaceName, coder.Me)
+			if err != nil {
+				return -1, "", err
+			}
+			if workspace.LatestStat.ContainerStatus != coder.WorkspaceOn {
+				return -1, "", clog.Error("workspace changed state",
+					fmt.Sprintf("current status: \"%s\"", workspace.LatestStat.ContainerStatus),
+					clog.BlankLine,
+					clog.Tipf("use \"coder workspaces rebuild %s\" to rebuild this workspace", workspace.Name),
+				)
+			}
+			return -1, "", errors.New("connection was closed unexpectedly")
+		}
+		return -1, "", err
+	}
+	pingMS := float64(time.Since(start).Microseconds()) / 1000
+	url := client.BaseURL()
+	connectionText := "you ↔ workspace"
+	if tunneled {
+		connectionText = fmt.Sprintf("you ↔ %s ↔ workspace", url.Host)
+	}
+	return pingMS, connectionText, nil
 }
