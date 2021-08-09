@@ -21,6 +21,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
+	"github.com/pion/ice/v2"
 	"github.com/pion/webrtc/v3"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -129,6 +130,10 @@ func lsWorkspacesCommand() *cobra.Command {
 }
 
 func pingWorkspaceCommand() *cobra.Command {
+	var (
+		schemes []string
+	)
+
 	cmd := &cobra.Command{
 		Use:     "ping [workspace_name]",
 		Short:   "ping Coder workspaces by name",
@@ -146,9 +151,19 @@ func pingWorkspaceCommand() *cobra.Command {
 				return err
 			}
 
+			iceSchemes := map[ice.SchemeType]interface{}{}
+			for _, rawScheme := range schemes {
+				scheme := ice.NewSchemeType(rawScheme)
+				if scheme == ice.Unknown {
+					return fmt.Errorf("scheme type %q not recognized", rawScheme)
+				}
+				iceSchemes[scheme] = nil
+			}
+
 			pinger := &wsPinger{
-				client:    client,
-				workspace: workspace,
+				client:     client,
+				workspace:  workspace,
+				iceSchemes: iceSchemes,
 			}
 
 			ticker := time.NewTicker(time.Second)
@@ -166,14 +181,16 @@ func pingWorkspaceCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringSliceVarP(&schemes, "scheme", "s", []string{"stun", "stuns", "turn", "turns"}, "customize schemes to filter ice servers")
 	return cmd
 }
 
 type wsPinger struct {
-	client    coder.Client
-	workspace *coder.Workspace
-	dialer    *wsnet.Dialer
-	tunneled  bool
+	client     coder.Client
+	workspace  *coder.Workspace
+	dialer     *wsnet.Dialer
+	iceSchemes map[ice.SchemeType]interface{}
+	tunneled   bool
 }
 
 // Only return fatal errors
@@ -195,6 +212,29 @@ func (w *wsPinger) ping(ctx context.Context) error {
 			logFail(fmt.Sprintf("list ice servers: %s", err.Error()))
 			return nil
 		}
+		filteredServers := make([]webrtc.ICEServer, 0)
+		for _, server := range servers {
+			good := true
+			for _, rawUrl := range server.URLs {
+				url, err := ice.ParseURL(rawUrl)
+				if err != nil {
+					return fmt.Errorf("parse url %q: %w", rawUrl, err)
+				}
+				if _, ok := w.iceSchemes[url.Scheme]; !ok {
+					good = false
+				}
+			}
+			if good {
+				filteredServers = append(filteredServers, server)
+			}
+		}
+		if len(filteredServers) == 0 {
+			schemes := make([]string, 0)
+			for scheme := range w.iceSchemes {
+				schemes = append(schemes, scheme.String())
+			}
+			return fmt.Errorf("no ice servers match the schemes provided: %s", strings.Join(schemes, ","))
+		}
 		workspace, err := w.client.WorkspaceByID(ctx, w.workspace.ID)
 		if err != nil {
 			return err
@@ -205,7 +245,7 @@ func (w *wsPinger) ping(ctx context.Context) error {
 		}
 		connectStart := time.Now()
 		w.dialer, err = wsnet.DialWebsocket(ctx, wsnet.ConnectEndpoint(&url, w.workspace.ID, w.client.Token()), &wsnet.DialOptions{
-			ICEServers:         servers,
+			ICEServers:         filteredServers,
 			TURNProxyAuthToken: w.client.Token(),
 			TURNRemoteProxyURL: &url,
 			TURNLocalProxyURL:  &url,
@@ -224,9 +264,9 @@ func (w *wsPinger) ping(ctx context.Context) error {
 		w.tunneled = false
 		candidateURLs := []string{}
 
-		for _, server := range servers {
+		for _, server := range filteredServers {
 			if server.Username == wsnet.TURNProxyICECandidate().Username {
-				candidateURLs = append(candidateURLs, fmt.Sprintf("turns:%s", url.Host))
+				candidateURLs = append(candidateURLs, fmt.Sprintf("turn:%s", url.Host))
 				if !isRelaying {
 					continue
 				}
