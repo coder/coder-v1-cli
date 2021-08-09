@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 
@@ -132,6 +133,7 @@ func lsWorkspacesCommand() *cobra.Command {
 func pingWorkspaceCommand() *cobra.Command {
 	var (
 		schemes []string
+		count   int
 	)
 
 	cmd := &cobra.Command{
@@ -166,6 +168,7 @@ func pingWorkspaceCommand() *cobra.Command {
 				iceSchemes: iceSchemes,
 			}
 
+			seq := 0
 			ticker := time.NewTicker(time.Second)
 			for {
 				select {
@@ -173,6 +176,10 @@ func pingWorkspaceCommand() *cobra.Command {
 					err := pinger.ping(ctx)
 					if err != nil {
 						return err
+					}
+					seq++
+					if count != 0 && seq >= count {
+						os.Exit(0)
 					}
 				case <-ctx.Done():
 					return nil
@@ -182,6 +189,7 @@ func pingWorkspaceCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVarP(&schemes, "scheme", "s", []string{"stun", "stuns", "turn", "turns"}, "customize schemes to filter ice servers")
+	cmd.Flags().IntVarP(&count, "count", "c", 0, "stop after <count> replies")
 	return cmd
 }
 
