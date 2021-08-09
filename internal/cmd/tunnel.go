@@ -70,7 +70,7 @@ coder tunnel my-dev 3000 3000
 			if workspace.LatestStat.ContainerStatus != coder.WorkspaceOn {
 				color.NoColor = false
 				notAvailableError := clog.Error("workspace not available",
-					fmt.Sprintf("current status: \"%s\"", workspace.LatestStat.ContainerStatus),
+					fmt.Sprintf("current status: %q", workspace.LatestStat.ContainerStatus),
 					clog.BlankLine,
 					clog.Tipf("use \"coder workspaces rebuild %s\" to rebuild this workspace", workspace.Name),
 				)
