@@ -22,25 +22,25 @@ func Make() *cobra.Command {
 	}
 
 	app.AddCommand(
-		loginCmd(),
-		logoutCmd(),
-		sshCmd(),
-		usersCmd(),
-		tagsCmd(),
+		agentCmd(),
+		completionCmd(),
 		configSSHCmd(),
 		envCmd(), // DEPRECATED.
-		workspacesCmd(),
-		syncCmd(),
-		urlCmd(),
-		tokensCmd(),
-		resourceCmd(),
-		completionCmd(),
-		imgsCmd(),
-		providersCmd(),
 		genDocsCmd(app),
-		agentCmd(),
-		tunnelCmd(),
+		imgsCmd(),
+		loginCmd(),
+		logoutCmd(),
+		providersCmd(),
+		resourceCmd(),
 		satellitesCmd(),
+		sshCmd(),
+		syncCmd(),
+		tagsCmd(),
+		tokensCmd(),
+		tunnelCmd(),
+		urlCmd(),
+		usersCmd(),
+		workspacesCmd(),
 	)
 	app.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "show verbose output")
 	return app

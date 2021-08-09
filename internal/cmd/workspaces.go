@@ -4,17 +4,27 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
+	"strings"
+	"time"
+
+	"nhooyr.io/websocket"
 
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/coder-cli/pkg/tablewriter"
+	"cdr.dev/coder-cli/wsnet"
 
+	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
+	"github.com/pion/ice/v2"
+	"github.com/pion/webrtc/v3"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
@@ -38,16 +48,17 @@ func workspacesCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		lsWorkspacesCommand(),
-		stopWorkspacesCmd(),
-		rmWorkspacesCmd(),
-		watchBuildLogCommand(),
-		rebuildWorkspaceCommand(),
 		createWorkspaceCmd(),
-		workspaceFromConfigCmd(true),
-		workspaceFromConfigCmd(false),
 		editWorkspaceCmd(),
+		lsWorkspacesCommand(),
+		pingWorkspaceCommand(),
+		rebuildWorkspaceCommand(),
+		rmWorkspacesCmd(),
 		setPolicyTemplate(),
+		stopWorkspacesCmd(),
+		watchBuildLogCommand(),
+		workspaceFromConfigCmd(false),
+		workspaceFromConfigCmd(true),
 	)
 	return cmd
 }
@@ -118,6 +129,203 @@ func lsWorkspacesCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&provider, "provider", "p", "", "Filter workspaces by a particular workspace provider name.")
 
 	return cmd
+}
+
+func pingWorkspaceCommand() *cobra.Command {
+	var (
+		schemes []string
+		count   int
+	)
+
+	cmd := &cobra.Command{
+		Use:     "ping <workspace_name>",
+		Short:   "ping Coder workspaces by name",
+		Long:    "ping Coder workspaces by name",
+		Example: `coder workspaces ping front-end-workspace`,
+		Args:    xcobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			client, err := newClient(ctx, true)
+			if err != nil {
+				return err
+			}
+			workspace, err := findWorkspace(ctx, client, args[0], coder.Me)
+			if err != nil {
+				return err
+			}
+
+			iceSchemes := map[ice.SchemeType]interface{}{}
+			for _, rawScheme := range schemes {
+				scheme := ice.NewSchemeType(rawScheme)
+				if scheme == ice.Unknown {
+					return fmt.Errorf("scheme type %q not recognized", rawScheme)
+				}
+				iceSchemes[scheme] = nil
+			}
+
+			pinger := &wsPinger{
+				client:     client,
+				workspace:  workspace,
+				iceSchemes: iceSchemes,
+			}
+
+			seq := 0
+			ticker := time.NewTicker(time.Second)
+			for {
+				select {
+				case <-ticker.C:
+					err := pinger.ping(ctx)
+					if err != nil {
+						return err
+					}
+					seq++
+					if count > 0 && seq >= count {
+						os.Exit(0)
+					}
+				case <-ctx.Done():
+					return nil
+				}
+			}
+		},
+	}
+
+	cmd.Flags().StringSliceVarP(&schemes, "scheme", "s", []string{"stun", "stuns", "turn", "turns"}, "customize schemes to filter ice servers")
+	cmd.Flags().IntVarP(&count, "count", "c", 0, "stop after <count> replies")
+	return cmd
+}
+
+type wsPinger struct {
+	client     coder.Client
+	workspace  *coder.Workspace
+	dialer     *wsnet.Dialer
+	iceSchemes map[ice.SchemeType]interface{}
+	tunneled   bool
+}
+
+func (*wsPinger) logFail(msg string) {
+	fmt.Printf("%s: %s\n", color.New(color.Bold, color.FgRed).Sprint("——"), msg)
+}
+
+func (*wsPinger) logSuccess(timeStr, msg string) {
+	fmt.Printf("%s: %s\n", color.New(color.Bold, color.FgGreen).Sprint(timeStr), msg)
+}
+
+// Only return fatal errors
+func (w *wsPinger) ping(ctx context.Context) error {
+	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
+	defer cancelFunc()
+	url := w.client.BaseURL()
+
+	// If the dialer is nil we create a new!
+	// nolint:nestif
+	if w.dialer == nil {
+		servers, err := w.client.ICEServers(ctx)
+		if err != nil {
+			w.logFail(fmt.Sprintf("list ice servers: %s", err.Error()))
+			return nil
+		}
+		filteredServers := make([]webrtc.ICEServer, 0, len(servers))
+		for _, server := range servers {
+			good := true
+			for _, rawURL := range server.URLs {
+				url, err := ice.ParseURL(rawURL)
+				if err != nil {
+					return fmt.Errorf("parse url %q: %w", rawURL, err)
+				}
+				if _, ok := w.iceSchemes[url.Scheme]; !ok {
+					good = false
+				}
+			}
+			if good {
+				filteredServers = append(filteredServers, server)
+			}
+		}
+		if len(filteredServers) == 0 {
+			schemes := make([]string, 0)
+			for scheme := range w.iceSchemes {
+				schemes = append(schemes, scheme.String())
+			}
+			return fmt.Errorf("no ice servers match the schemes provided: %s", strings.Join(schemes, ","))
+		}
+		workspace, err := w.client.WorkspaceByID(ctx, w.workspace.ID)
+		if err != nil {
+			return err
+		}
+		if workspace.LatestStat.ContainerStatus != coder.WorkspaceOn {
+			w.logFail(fmt.Sprintf("workspace is unreachable (status=%s)", workspace.LatestStat.ContainerStatus))
+			return nil
+		}
+		connectStart := time.Now()
+		w.dialer, err = wsnet.DialWebsocket(ctx, wsnet.ConnectEndpoint(&url, w.workspace.ID, w.client.Token()), &wsnet.DialOptions{
+			ICEServers:         filteredServers,
+			TURNProxyAuthToken: w.client.Token(),
+			TURNRemoteProxyURL: &url,
+			TURNLocalProxyURL:  &url,
+		}, &websocket.DialOptions{})
+		if err != nil {
+			w.logFail(fmt.Sprintf("dial workspace: %s", err.Error()))
+			return nil
+		}
+		connectMS := float64(time.Since(connectStart).Microseconds()) / 1000
+
+		candidates, err := w.dialer.Candidates()
+		if err != nil {
+			return err
+		}
+		isRelaying := candidates.Local.Typ == webrtc.ICECandidateTypeRelay
+		w.tunneled = false
+		candidateURLs := []string{}
+
+		for _, server := range filteredServers {
+			if server.Username == wsnet.TURNProxyICECandidate().Username {
+				candidateURLs = append(candidateURLs, fmt.Sprintf("turn:%s", url.Host))
+				if !isRelaying {
+					continue
+				}
+				w.tunneled = true
+				continue
+			}
+
+			candidateURLs = append(candidateURLs, server.URLs...)
+		}
+
+		connectionText := "direct via STUN"
+		if isRelaying {
+			connectionText = "proxied via TURN"
+		}
+		if w.tunneled {
+			connectionText = fmt.Sprintf("proxied via %s", url.Host)
+		}
+		w.logSuccess("——", fmt.Sprintf(
+			"connected in %.2fms (%s) candidates=%s",
+			connectMS,
+			connectionText,
+			strings.Join(candidateURLs, ","),
+		))
+	}
+
+	pingStart := time.Now()
+	err := w.dialer.Ping(ctx)
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			w.dialer = nil
+			w.logFail("connection timed out")
+			return nil
+		}
+		if errors.Is(err, webrtc.ErrConnectionClosed) {
+			w.dialer = nil
+			w.logFail("webrtc connection is closed")
+			return nil
+		}
+		return fmt.Errorf("ping workspace: %w", err)
+	}
+	pingMS := float64(time.Since(pingStart).Microseconds()) / 1000
+	connectionText := "you ↔ workspace"
+	if w.tunneled {
+		connectionText = fmt.Sprintf("you ↔ %s ↔ workspace", url.Host)
+	}
+	w.logSuccess(fmt.Sprintf("%.2fms", pingMS), connectionText)
+	return nil
 }
 
 func stopWorkspacesCmd() *cobra.Command {
