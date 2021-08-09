@@ -12,13 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"nhooyr.io/websocket"
+
 	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/coder-cli/internal/coderutil"
 	"cdr.dev/coder-cli/internal/x/xcobra"
 	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/coder-cli/pkg/tablewriter"
 	"cdr.dev/coder-cli/wsnet"
-	"nhooyr.io/websocket"
 
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
@@ -223,10 +224,10 @@ func (w *wsPinger) ping(ctx context.Context) error {
 		filteredServers := make([]webrtc.ICEServer, 0)
 		for _, server := range servers {
 			good := true
-			for _, rawUrl := range server.URLs {
-				url, err := ice.ParseURL(rawUrl)
+			for _, rawURL := range server.URLs {
+				url, err := ice.ParseURL(rawURL)
 				if err != nil {
-					return fmt.Errorf("parse url %q: %w", rawUrl, err)
+					return fmt.Errorf("parse url %q: %w", rawURL, err)
 				}
 				if _, ok := w.iceSchemes[url.Scheme]; !ok {
 					good = false
