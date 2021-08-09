@@ -145,83 +145,20 @@ func pingWorkspaceCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if workspace.LatestStat.ContainerStatus != coder.WorkspaceOn {
-				return clog.Error("workspace not available",
-					fmt.Sprintf("current status: \"%s\"", workspace.LatestStat.ContainerStatus),
-					clog.BlankLine,
-					clog.Tipf("use \"coder workspaces rebuild %s\" to rebuild this workspace", workspace.Name),
-				)
-			}
-			servers, err := client.ICEServers(ctx)
-			if err != nil {
-				return err
-			}
-			url := client.BaseURL()
-			connectionStart := time.Now()
-			dialer, err := wsnet.DialWebsocket(ctx, wsnet.ConnectEndpoint(&url, workspace.ID, client.Token()), &wsnet.DialOptions{
-				ICEServers:         servers,
-				TURNProxyAuthToken: client.Token(),
-				TURNRemoteProxyURL: &url,
-				TURNLocalProxyURL:  &url,
-			}, &websocket.DialOptions{})
-			if err != nil {
-				return err
-			}
-			connectionMS := float64(time.Since(connectionStart).Microseconds()) / 1000
-			candidates, err := dialer.Candidates()
-			if err != nil {
-				return err
-			}
-			relay := candidates.Local.Typ == webrtc.ICECandidateTypeRelay
-			tunneled := false
-			properties := []string{}
-			candidateURLs := []string{}
 
-			for _, server := range servers {
-				if server.Username == wsnet.TURNProxyICECandidate().Username {
-					candidateURLs = append(candidateURLs, fmt.Sprintf("turns:%s", url.Host))
-					if !relay {
-						continue
-					}
-					tunneled = true
-					continue
-				}
-
-				candidateURLs = append(candidateURLs, server.URLs...)
+			pinger := &wsPinger{
+				client:    client,
+				workspace: workspace,
 			}
-			properties = append(properties, fmt.Sprintf("candidates=%s", strings.Join(candidateURLs, ",")))
-
-			connectionText := "direct via STUN"
-			if relay {
-				connectionText = "proxied via TURN"
-			}
-			if tunneled {
-				connectionText = fmt.Sprintf("proxied via %s", url.Host)
-			}
-
-			fmt.Printf("%s %s %s (%s) %s\n",
-				color.New(color.Bold, color.FgWhite).Sprint("PING"),
-				workspace.Name,
-				color.New(color.Bold, color.FgGreen).Sprintf("connected in %.2fms", connectionMS),
-				connectionText,
-				strings.Join(properties, " "),
-			)
 
 			ticker := time.NewTicker(time.Second)
-			seq := 1
 			for {
 				select {
 				case <-ticker.C:
-					pingMS, connectionText, err := ping(ctx, client, dialer, tunneled, args[0])
+					err := pinger.ping(ctx)
 					if err != nil {
 						return err
 					}
-
-					fmt.Printf("%.2fms (%s) seq=%d\n",
-						pingMS,
-						connectionText,
-						seq)
-					seq++
 				case <-ctx.Done():
 					return nil
 				}
@@ -232,33 +169,111 @@ func pingWorkspaceCommand() *cobra.Command {
 	return cmd
 }
 
-func ping(ctx context.Context, client coder.Client, dialer *wsnet.Dialer, tunneled bool, workspaceName string) (float64, string, error) {
-	start := time.Now()
-	err := dialer.Ping(ctx)
+type wsPinger struct {
+	client    coder.Client
+	workspace *coder.Workspace
+	dialer    *wsnet.Dialer
+	tunneled  bool
+}
+
+// Only return fatal errors
+func (w *wsPinger) ping(ctx context.Context) error {
+	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
+	defer cancelFunc()
+	url := w.client.BaseURL()
+	logFail := func(msg string) {
+		fmt.Printf("%s: %s\n", color.New(color.Bold, color.FgRed).Sprint("——"), msg)
+	}
+	logSuccess := func(timeStr, msg string) {
+		fmt.Printf("%s: %s\n", color.New(color.Bold, color.FgGreen).Sprint(timeStr), msg)
+	}
+
+	// If the dialer is nil we create a new!
+	if w.dialer == nil {
+		servers, err := w.client.ICEServers(ctx)
+		if err != nil {
+			logFail(fmt.Sprintf("list ice servers: %s", err.Error()))
+			return nil
+		}
+		workspace, err := w.client.WorkspaceByID(ctx, w.workspace.ID)
+		if err != nil {
+			return err
+		}
+		if workspace.LatestStat.ContainerStatus != coder.WorkspaceOn {
+			logFail(fmt.Sprintf("workspace is unreachable (status=%s)", workspace.LatestStat.ContainerStatus))
+			return nil
+		}
+		connectStart := time.Now()
+		w.dialer, err = wsnet.DialWebsocket(ctx, wsnet.ConnectEndpoint(&url, w.workspace.ID, w.client.Token()), &wsnet.DialOptions{
+			ICEServers:         servers,
+			TURNProxyAuthToken: w.client.Token(),
+			TURNRemoteProxyURL: &url,
+			TURNLocalProxyURL:  &url,
+		}, &websocket.DialOptions{})
+		if err != nil {
+			logFail(fmt.Sprintf("dial workspace: %s", err.Error()))
+			return nil
+		}
+		connectMS := float64(time.Since(connectStart).Microseconds()) / 1000
+
+		candidates, err := w.dialer.Candidates()
+		if err != nil {
+			return err
+		}
+		isRelaying := candidates.Local.Typ == webrtc.ICECandidateTypeRelay
+		w.tunneled = false
+		candidateURLs := []string{}
+
+		for _, server := range servers {
+			if server.Username == wsnet.TURNProxyICECandidate().Username {
+				candidateURLs = append(candidateURLs, fmt.Sprintf("turns:%s", url.Host))
+				if !isRelaying {
+					continue
+				}
+				w.tunneled = true
+				continue
+			}
+
+			candidateURLs = append(candidateURLs, server.URLs...)
+		}
+
+		connectionText := "direct via STUN"
+		if isRelaying {
+			connectionText = "proxied via TURN"
+		}
+		if w.tunneled {
+			connectionText = fmt.Sprintf("proxied via %s", url.Host)
+		}
+		logSuccess("——", fmt.Sprintf(
+			"connected in %.2fms (%s) candidates=%s",
+			connectMS,
+			connectionText,
+			strings.Join(candidateURLs, ","),
+		))
+	}
+
+	pingStart := time.Now()
+	err := w.dialer.Ping(ctx)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
-			workspace, err := findWorkspace(ctx, client, workspaceName, coder.Me)
-			if err != nil {
-				return -1, "", err
-			}
-			if workspace.LatestStat.ContainerStatus != coder.WorkspaceOn {
-				return -1, "", clog.Error("workspace changed state",
-					fmt.Sprintf("current status: \"%s\"", workspace.LatestStat.ContainerStatus),
-					clog.BlankLine,
-					clog.Tipf("use \"coder workspaces rebuild %s\" to rebuild this workspace", workspace.Name),
-				)
-			}
-			return -1, "", errors.New("connection was closed unexpectedly")
+			w.dialer = nil
+			logFail("connection timed out")
+			return nil
 		}
-		return -1, "", err
+		if errors.Is(err, webrtc.ErrConnectionClosed) {
+			w.dialer = nil
+			logFail("webrtc connection is closed")
+			return nil
+		}
+		return fmt.Errorf("ping workspace: %w", err)
 	}
-	pingMS := float64(time.Since(start).Microseconds()) / 1000
-	url := client.BaseURL()
+	pingMS := float64(time.Since(pingStart).Microseconds()) / 1000
 	connectionText := "you ↔ workspace"
-	if tunneled {
+	if w.tunneled {
 		connectionText = fmt.Sprintf("you ↔ %s ↔ workspace", url.Host)
 	}
-	return pingMS, connectionText, nil
+	logSuccess(fmt.Sprintf("%.2fms", pingMS), connectionText)
+	return nil
 }
 
 func stopWorkspacesCmd() *cobra.Command {
