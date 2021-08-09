@@ -7,7 +7,7 @@ ping Coder workspaces by name
 ping Coder workspaces by name
 
 ```
-coder workspaces ping [workspace_name] [flags]
+coder workspaces ping <workspace_name> [flags]
 ```
 
 ### Examples
