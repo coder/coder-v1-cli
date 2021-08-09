@@ -215,6 +215,7 @@ func (w *wsPinger) ping(ctx context.Context) error {
 	}
 
 	// If the dialer is nil we create a new!
+	// nolint:nestif
 	if w.dialer == nil {
 		servers, err := w.client.ICEServers(ctx)
 		if err != nil {
