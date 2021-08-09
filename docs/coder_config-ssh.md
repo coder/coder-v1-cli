@@ -15,6 +15,7 @@ coder config-ssh [flags]
 ```
       --filepath string   override the default path of your ssh config file (default "~/.ssh/config")
   -h, --help              help for config-ssh
+  -o, --option strings    additional options injected in the ssh config (ex. disable caching with "-o ControlPath=none")
       --remove            remove the auto-generated Coder ssh config
 ```
 
