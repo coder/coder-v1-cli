@@ -202,11 +202,11 @@ type wsPinger struct {
 	tunneled   bool
 }
 
-func (w *wsPinger) logFail(msg string) {
+func (*wsPinger) logFail(msg string) {
 	fmt.Printf("%s: %s\n", color.New(color.Bold, color.FgRed).Sprint("——"), msg)
 }
 
-func (w *wsPinger) logSuccess(timeStr, msg string) {
+func (*wsPinger) logSuccess(timeStr, msg string) {
 	fmt.Printf("%s: %s\n", color.New(color.Bold, color.FgGreen).Sprint(timeStr), msg)
 }
 
