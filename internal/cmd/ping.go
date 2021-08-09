@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -99,6 +101,20 @@ func pingCmd() *cobra.Command {
 					start := time.Now()
 					err := dialer.Ping(ctx)
 					if err != nil {
+						if errors.Is(err, io.EOF) {
+							workspace, err = findWorkspace(ctx, client, args[0], coder.Me)
+							if err != nil {
+								return err
+							}
+							if workspace.LatestStat.ContainerStatus != coder.WorkspaceOn {
+								return clog.Error("workspace changed state",
+									fmt.Sprintf("current status: \"%s\"", workspace.LatestStat.ContainerStatus),
+									clog.BlankLine,
+									clog.Tipf("use \"coder workspaces rebuild %s\" to rebuild this workspace", workspace.Name),
+								)
+							}
+							return errors.New("connection was closed unexpectedly")
+						}
 						return err
 					}
 					pingMS := float64(time.Since(start).Microseconds()) / 1000
