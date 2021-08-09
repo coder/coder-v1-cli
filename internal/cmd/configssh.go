@@ -251,7 +251,14 @@ func makeNewConfigs(binPath string, workspaces []coderutil.WorkspaceWithWorkspac
 
 func makeSSHConfig(binPath, workspaceName, privateKeyFilepath string, additionalOptions []string) string {
 	// Custom user options come first to maximizessh customization.
-	options := additionalOptions
+	options := []string{}
+	if len(additionalOptions) > 0 {
+		options = []string{
+			"# Custom options. Duplicated values will always prefer the first!",
+		}
+		options = append(options, additionalOptions...)
+		options = append(options, "# End custom options.")
+	}
 	options = append(options,
 		fmt.Sprintf("HostName coder.%s", workspaceName),
 		fmt.Sprintf("ProxyCommand %q tunnel %s 12213 stdio", binPath, workspaceName),
