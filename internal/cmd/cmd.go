@@ -30,7 +30,6 @@ func Make() *cobra.Command {
 		imgsCmd(),
 		loginCmd(),
 		logoutCmd(),
-		pingCmd(),
 		providersCmd(),
 		resourceCmd(),
 		satellitesCmd(),
