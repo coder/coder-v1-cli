@@ -5,6 +5,7 @@ go 1.14
 require (
 	cdr.dev/slog v1.4.1
 	cdr.dev/wsep v0.0.0-20200728013649-82316a09813f
+	github.com/blang/semver/v4 v4.0.0
 	github.com/briandowns/spinner v1.16.0
 	github.com/cli/safeexec v1.0.0
 	github.com/fatih/color v1.12.0
@@ -23,6 +24,7 @@ require (
 	github.com/pion/webrtc/v3 v3.0.32
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 	github.com/rjeczalik/notify v0.9.2
+	github.com/spf13/afero v1.6.0
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
