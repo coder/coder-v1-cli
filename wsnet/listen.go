@@ -477,10 +477,7 @@ func (l *listener) Close() error {
 		// really matter if these fail to close.
 		_ = connCloser.Close()
 	}
-	// If this socket was already closed by something wrapping, it
-	// gives a false indication of the listener failing to close.
-	_ = l.ws.Close(websocket.StatusNormalClosure, "")
-	return nil
+	return l.ws.Close(websocket.StatusNormalClosure, "")
 }
 
 // Since this listener is bound to the WebSocket, we could

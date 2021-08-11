@@ -8,7 +8,6 @@ import (
 	"io"
 	"net"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -62,10 +61,7 @@ func TestDial(t *testing.T) {
 		defer cancelFunc()
 		dialer, err := DialWebsocket(ctx, connectAddr, nil, nil)
 		require.True(t, errors.Is(err, context.DeadlineExceeded))
-		require.Error(t, err)
-		err = dialer.conn.Close()
-		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), "already wrote close"))
+		require.Error(t, dialer.conn.Close(), "already wrote close")
 	})
 
 	t.Run("Ping", func(t *testing.T) {
