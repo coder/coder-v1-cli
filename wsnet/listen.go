@@ -143,7 +143,11 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 		defer close(errCh)
 		for {
 			conn, err := session.Accept()
+			if errors.Is(err, io.EOF) {
+				continue
+			}
 			if err != nil {
+				l.log.Error(ctx, "accept session", slog.Error(err))
 				errCh <- err
 				break
 			}
@@ -457,6 +461,10 @@ func (l *listener) Close() error {
 	l.connClosersMut.Lock()
 	defer l.connClosersMut.Unlock()
 
+	if l.acceptError != nil {
+		l.log.Error(context.Background(), "closed with accept error", slog.Error(l.acceptError))
+	}
+
 	select {
 	case _, ok := <-l.closed:
 		if !ok {
@@ -471,7 +479,10 @@ func (l *listener) Close() error {
 		// really matter if these fail to close.
 		_ = connCloser.Close()
 	}
-	return l.ws.Close(websocket.StatusNormalClosure, "")
+	// If this socket was already closed by something wrapping, it
+	// gives a false indication of the listener failing to close.
+	_ = l.ws.Close(websocket.StatusNormalClosure, "")
+	return nil
 }
 
 // Since this listener is bound to the WebSocket, we could
