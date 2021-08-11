@@ -103,7 +103,6 @@ type listener struct {
 	turnProxyAuthToken string
 
 	log            slog.Logger
-	acceptError    error
 	ws             *websocket.Conn
 	connClosers    []io.Closer
 	connClosersMut sync.Mutex
@@ -141,7 +140,6 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 		for {
 			conn, err := session.Accept()
 			if err != nil {
-				l.log.Error(ctx, "accept session", slog.Error(err))
 				errCh <- err
 				break
 			}
@@ -454,10 +452,6 @@ func (l *listener) Close() error {
 
 	l.connClosersMut.Lock()
 	defer l.connClosersMut.Unlock()
-
-	if l.acceptError != nil {
-		l.log.Error(context.Background(), "closed with accept error", slog.Error(l.acceptError))
-	}
 
 	select {
 	case _, ok := <-l.closed:
