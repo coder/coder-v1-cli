@@ -71,7 +71,7 @@ func Listen(ctx context.Context, log slog.Logger, broker string, turnProxyAuthTo
 			default:
 			}
 
-			if errors.Is(err, io.EOF) || errors.Is(err, yamux.ErrKeepAliveTimeout) {
+			if err != nil {
 				l.log.Warn(ctx, "disconnected from broker", slog.Error(err))
 
 				// If we hit an EOF, then the connection to the broker
@@ -88,13 +88,9 @@ func Listen(ctx context.Context, log slog.Logger, broker string, turnProxyAuthTo
 					if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 						break
 					}
+					l.log.Warn(ctx, "connecting to broker failed", slog.Error(err))
 				}
 				ticker.Stop()
-			}
-			if err != nil {
-				l.acceptError = err
-				_ = l.Close()
-				break
 			}
 			l.log.Info(ctx, "connected to broker")
 		}
