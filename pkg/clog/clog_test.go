@@ -25,7 +25,7 @@ func TestError(t *testing.T) {
 		output, err := ioutil.ReadAll(&buf)
 		assert.Success(t, "read all stderr output", err)
 
-		assert.Equal(t, "output is as expected", "error: fake error\n\n", string(output))
+		assert.Equal(t, "output is as expected", "error: fake error\r\n\n", string(output))
 	})
 
 	t.Run("plain-error", func(t *testing.T) {
@@ -41,7 +41,7 @@ func TestError(t *testing.T) {
 		output, err := ioutil.ReadAll(&buf)
 		assert.Success(t, "read all stderr output", err)
 
-		assert.Equal(t, "output is as expected", "fatal: wrap 1: base error\n\n", string(output))
+		assert.Equal(t, "output is as expected", "fatal: wrap 1: base error\r\n\n", string(output))
 	})
 
 	t.Run("message", func(t *testing.T) {
@@ -58,7 +58,7 @@ func TestError(t *testing.T) {
 			output, err := ioutil.ReadAll(&buf)
 			assert.Success(t, "read all stderr output", err)
 
-			assert.Equal(t, "output is as expected", f.level+": testing\n  | hint: maybe do \"this\"\n  | \n  | cause: what happened was \"this\"\n", string(output))
+			assert.Equal(t, "output is as expected", f.level+": testing\r\n  | hint: maybe do \"this\"\r\n  | \r\n  | cause: what happened was \"this\"\r\n", string(output))
 		}
 	})
 
@@ -78,7 +78,7 @@ func TestError(t *testing.T) {
 
 		assert.Equal(t,
 			"output is as expected",
-			"error: fake header\n  | next line\n  | \n  | tip: content of fake tip\n\n",
+			"error: fake header\r\n  | next line\r\n  | \r\n  | tip: content of fake tip\r\n\n",
 			string(output),
 		)
 	})
