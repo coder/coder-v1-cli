@@ -96,6 +96,7 @@ func Listen(ctx context.Context, log slog.Logger, broker string, turnProxyAuthTo
 				_ = l.Close()
 				break
 			}
+			l.log.Info(ctx, "connected to broker")
 		}
 	}()
 	return l, nil
@@ -143,9 +144,6 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 		defer close(errCh)
 		for {
 			conn, err := session.Accept()
-			if errors.Is(err, io.EOF) {
-				continue
-			}
 			if err != nil {
 				l.log.Error(ctx, "accept session", slog.Error(err))
 				errCh <- err

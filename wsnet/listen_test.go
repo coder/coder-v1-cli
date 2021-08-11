@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"cdr.dev/slog/sloggers/slogtest"
-	"github.com/hashicorp/yamux"
 	"github.com/stretchr/testify/require"
 	"nhooyr.io/websocket"
 )
@@ -48,36 +47,5 @@ func TestListen(t *testing.T) {
 		// At least a few retry attempts should be had...
 		time.Sleep(connectionRetryInterval * 5)
 		<-connCh
-	})
-
-	t.Run("No close when yamux ends", func(t *testing.T) {
-		var (
-			connCh = make(chan *websocket.Conn)
-			mux    = http.NewServeMux()
-		)
-		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			ws, err := websocket.Accept(w, r, nil)
-			if err != nil {
-				t.Error(err)
-				return
-			}
-			connCh <- ws
-		})
-
-		s := httptest.NewServer(mux)
-		defer s.Close()
-
-		l, err := Listen(context.Background(), slogtest.Make(t, nil), s.URL, "")
-		require.NoError(t, err)
-		conn := <-connCh
-
-		sess, err := yamux.Client(websocket.NetConn(context.Background(), conn, websocket.MessageBinary), yamux.DefaultConfig())
-		require.NoError(t, err)
-
-		err = sess.Close()
-		require.NoError(t, err)
-
-		err = l.Close()
-		require.NoError(t, err)
 	})
 }
