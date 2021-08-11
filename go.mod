@@ -17,7 +17,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/pion/datachannel v1.4.21
 	github.com/pion/dtls/v2 v2.0.9
-	github.com/pion/ice/v2 v2.1.10
+	github.com/pion/ice/v2 v2.1.11
 	github.com/pion/logging v0.2.2
 	github.com/pion/turn/v2 v2.0.5
 	github.com/pion/webrtc/v3 v3.0.32
@@ -26,7 +26,7 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
-	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
+	golang.org/x/net v0.0.0-20210716203947-853a461950ff
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
