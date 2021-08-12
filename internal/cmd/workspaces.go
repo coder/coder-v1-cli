@@ -132,7 +132,7 @@ func lsWorkspacesCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&all, "all", false, "Get workspaces for all users")
+	cmd.Flags().BoolVar(&all, "all", false, "Get workspaces for all users (admin only)")
 	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	cmd.Flags().StringVarP(&outputFmt, "output", "o", humanOutput, "human | json")
 	cmd.Flags().StringVarP(&provider, "provider", "p", "", "Filter workspaces by a particular workspace provider name.")
