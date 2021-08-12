@@ -70,6 +70,7 @@ const (
 
 func lsWorkspacesCommand() *cobra.Command {
 	var (
+		all       bool
 		outputFmt string
 		user      string
 		provider  string
@@ -85,11 +86,18 @@ func lsWorkspacesCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			workspaces, err := getWorkspaces(ctx, client, user)
-			if err != nil {
-				return err
+			var workspaces []coder.Workspace
+			if !all {
+				var err error
+				workspaces, err = getWorkspaces(ctx, client, user)
+				if err != nil {
+					return err
+				}
+			} else {
+				// If the user gave the all flag, then filtering by user doesn't make sense.
+				user = ""
 			}
-			if provider != "" {
+			if provider != "" || all {
 				workspaces, err = getWorkspacesByProvider(ctx, client, provider, user)
 				if err != nil {
 					return err
@@ -124,6 +132,7 @@ func lsWorkspacesCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&all, "all", false, "Get workspaces for all users")
 	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	cmd.Flags().StringVarP(&outputFmt, "output", "o", humanOutput, "human | json")
 	cmd.Flags().StringVarP(&provider, "provider", "p", "", "Filter workspaces by a particular workspace provider name.")

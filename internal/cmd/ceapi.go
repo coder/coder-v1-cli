@@ -215,10 +215,13 @@ func getWorkspacesByProvider(ctx context.Context, client coder.Client, wpName, u
 		return nil, err
 	}
 
-	workspaces, err = filterWorkspacesByUser(ctx, client, userEmail, workspaces)
-	if err != nil {
-		return nil, err
+	if userEmail != "" {
+		workspaces, err = filterWorkspacesByUser(ctx, client, userEmail, workspaces)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	return workspaces, nil
 }
 

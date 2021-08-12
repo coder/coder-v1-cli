@@ -29,6 +29,34 @@ func Test_workspaces_ls(t *testing.T) {
 	res.stdoutUnmarshals(t, &workspaces)
 }
 
+func Test_workspaces_ls_all(t *testing.T) {
+	skipIfNoAuth(t)
+	for _, test := range []struct {
+		name    string
+		command []string
+		assert  func(r result)
+	}{
+		{
+			name:    "simple list",
+			command: []string{"workspaces", "ls", "--all"},
+			assert:  func(r result) { r.success(t) },
+		},
+		{
+			name:    "list as json",
+			command: []string{"workspaces", "ls", "--all", "--output", "json"},
+			assert: func(r result) {
+				var workspaces []coder.Workspace
+				r.stdoutUnmarshals(t, &workspaces)
+			},
+		},
+	} {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			test.assert(execute(t, nil, test.command...))
+		})
+	}
+}
+
 func Test_workspaces_ls_by_provider(t *testing.T) {
 	skipIfNoAuth(t)
 	for _, test := range []struct {
