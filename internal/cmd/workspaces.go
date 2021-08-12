@@ -86,12 +86,14 @@ func lsWorkspacesCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
 			var workspaces []coder.Workspace
-			if all {
+			switch {
+			case all:
 				workspaces, err = getAllWorkspaces(ctx, client)
-			} else if provider != "" {
+			case provider != "":
 				workspaces, err = getWorkspacesByProvider(ctx, client, provider, user)
-			} else {
+			default:
 				workspaces, err = getWorkspaces(ctx, client, user)
 			}
 			if err != nil {
@@ -213,7 +215,7 @@ func (*wsPinger) logSuccess(timeStr, msg string) {
 	fmt.Printf("%s: %s\n", color.New(color.Bold, color.FgGreen).Sprint(timeStr), msg)
 }
 
-// Only return fatal errors
+// Only return fatal errors.
 func (w *wsPinger) ping(ctx context.Context) error {
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
 	defer cancelFunc()
