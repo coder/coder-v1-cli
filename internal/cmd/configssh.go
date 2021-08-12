@@ -45,6 +45,7 @@ func configSSHCmd() *cobra.Command {
 		RunE:  configSSH(&configpath, &remove, &additionalOptions),
 	}
 	cmd.Flags().StringVar(&configpath, "filepath", filepath.Join("~", ".ssh", "config"), "override the default path of your ssh config file")
+	cmd.Flags().StringSliceVarP(&additionalOptions, "option", "o", []string{}, "additional options injected in the ssh config (ex. disable caching with \"-o ControlPath=none\")")
 	cmd.Flags().BoolVar(&remove, "remove", false, "remove the auto-generated Coder ssh config")
 
 	return cmd
