@@ -87,18 +87,21 @@ func lsWorkspacesCommand() *cobra.Command {
 				return err
 			}
 			var workspaces []coder.Workspace
-			if !all {
+			if all {
 				var err error
-				workspaces, err = getWorkspaces(ctx, client, user)
+				workspaces, err = getAllWorkspaces(ctx, client)
+				if err != nil {
+					return err
+				}
+			} else if provider != "" {
+				var err error
+				workspaces, err = getWorkspacesByProvider(ctx, client, provider, user)
 				if err != nil {
 					return err
 				}
 			} else {
-				// If the user gave the all flag, then filtering by user doesn't make sense.
-				user = ""
-			}
-			if provider != "" || all {
-				workspaces, err = getWorkspacesByProvider(ctx, client, provider, user)
+				var err error
+				workspaces, err = getWorkspaces(ctx, client, user)
 				if err != nil {
 					return err
 				}

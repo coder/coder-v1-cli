@@ -32,6 +32,11 @@ func lookupUserOrgs(user *coder.User, orgs []coder.Organization) []coder.Organiz
 	return userOrgs
 }
 
+// getAllWorkspaces gets all workspaces for all users, on all providers.
+func getAllWorkspaces(ctx context.Context, client coder.Client) ([]coder.Workspace, error) {
+	return client.Workspaces(ctx)
+}
+
 // getWorkspaces returns all workspaces for the user.
 func getWorkspaces(ctx context.Context, client coder.Client, email string) ([]coder.Workspace, error) {
 	user, err := client.UserByEmail(ctx, email)
@@ -215,13 +220,10 @@ func getWorkspacesByProvider(ctx context.Context, client coder.Client, wpName, u
 		return nil, err
 	}
 
-	if userEmail != "" {
-		workspaces, err = filterWorkspacesByUser(ctx, client, userEmail, workspaces)
-		if err != nil {
-			return nil, err
-		}
+	workspaces, err = filterWorkspacesByUser(ctx, client, userEmail, workspaces)
+	if err != nil {
+		return nil, err
 	}
-
 	return workspaces, nil
 }
 
