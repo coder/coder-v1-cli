@@ -37,7 +37,7 @@ func TestErrGroup(t *testing.T) {
 
 		err := egroup.Wait()
 		assert.ErrorContains(t, "error group wait", err, "2 failures emitted")
-		assert.True(t, "log buf contains", strings.Contains(buf.String(), "fatal: whoops\n\n"))
-		assert.True(t, "log buf contains", strings.Contains(buf.String(), "error: rich error\n  | second line\n\n"))
+		assert.True(t, "log buf contains", strings.Contains(buf.String(), "fatal: whoops\r\n\n"))
+		assert.True(t, "log buf contains", strings.Contains(buf.String(), "error: rich error\r\n  | second line\r\n\n"))
 	})
 }

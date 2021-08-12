@@ -35,12 +35,11 @@ type CLIError struct {
 // String formats the CLI message for consumption by a human.
 func (m CLIMessage) String() string {
 	var str strings.Builder
-	str.WriteString(fmt.Sprintf("%s: %s\n",
+	fmt.Fprintf(&str, "%s: %s\r\n",
 		color.New(m.Color).Sprint(m.Level),
-		color.New(color.Bold).Sprint(m.Header)),
-	)
+		color.New(color.Bold).Sprint(m.Header))
 	for _, line := range m.Lines {
-		str.WriteString(fmt.Sprintf("  %s %s\n", color.New(m.Color).Sprint("|"), line))
+		fmt.Fprintf(&str, "  %s %s\r\n", color.New(m.Color).Sprint("|"), line)
 	}
 	return str.String()
 }
