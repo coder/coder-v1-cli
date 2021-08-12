@@ -88,23 +88,14 @@ func lsWorkspacesCommand() *cobra.Command {
 			}
 			var workspaces []coder.Workspace
 			if all {
-				var err error
 				workspaces, err = getAllWorkspaces(ctx, client)
-				if err != nil {
-					return err
-				}
 			} else if provider != "" {
-				var err error
 				workspaces, err = getWorkspacesByProvider(ctx, client, provider, user)
-				if err != nil {
-					return err
-				}
 			} else {
-				var err error
 				workspaces, err = getWorkspaces(ctx, client, user)
-				if err != nil {
-					return err
-				}
+			}
+			if err != nil {
+				return err
 			}
 			if len(workspaces) < 1 {
 				clog.LogInfo("no workspaces found")
