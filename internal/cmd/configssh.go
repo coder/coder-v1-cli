@@ -33,15 +33,16 @@ const sshEndToken = "# ------------END-CODER-ENTERPRISE------------"
 
 func configSSHCmd() *cobra.Command {
 	var (
-		configpath string
-		remove     = false
+		configpath        string
+		remove            = false
+		additionalOptions []string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "config-ssh",
 		Short: "Configure SSH to access Coder workspaces",
 		Long:  "Inject the proper OpenSSH configuration into your local SSH config file.",
-		RunE:  configSSH(&configpath, &remove),
+		RunE:  configSSH(&configpath, &remove, &additionalOptions),
 	}
 	cmd.Flags().StringVar(&configpath, "filepath", filepath.Join("~", ".ssh", "config"), "override the default path of your ssh config file")
 	cmd.Flags().BoolVar(&remove, "remove", false, "remove the auto-generated Coder ssh config")
@@ -49,7 +50,7 @@ func configSSHCmd() *cobra.Command {
 	return cmd
 }
 
-func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []string) error {
+func configSSH(configpath *string, remove *bool, additionalOptions *[]string) func(cmd *cobra.Command, _ []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
 		usr, err := user.Current()
@@ -118,7 +119,7 @@ func configSSH(configpath *string, remove *bool) func(cmd *cobra.Command, _ []st
 			return xerrors.Errorf("Failed to get executable path: %w", err)
 		}
 
-		newConfig := makeNewConfigs(binPath, workspacesWithProviders, privateKeyFilepath)
+		newConfig := makeNewConfigs(binPath, workspacesWithProviders, privateKeyFilepath, *additionalOptions)
 
 		err = os.MkdirAll(filepath.Dir(*configpath), os.ModePerm)
 		if err != nil {
@@ -226,7 +227,7 @@ func writeSSHKey(ctx context.Context, client coder.Client, privateKeyPath string
 	return ioutil.WriteFile(privateKeyPath, []byte(key.PrivateKey), 0600)
 }
 
-func makeNewConfigs(binPath string, workspaces []coderutil.WorkspaceWithWorkspaceProvider, privateKeyFilepath string) string {
+func makeNewConfigs(binPath string, workspaces []coderutil.WorkspaceWithWorkspaceProvider, privateKeyFilepath string, additionalOptions []string) string {
 	newConfig := fmt.Sprintf("\n%s\n%s\n\n", sshStartToken, sshStartMessage)
 
 	sort.Slice(workspaces, func(i, j int) bool { return workspaces[i].Workspace.Name < workspaces[j].Workspace.Name })
@@ -240,32 +241,41 @@ func makeNewConfigs(binPath string, workspaces []coderutil.WorkspaceWithWorkspac
 			continue
 		}
 
-		newConfig += makeSSHConfig(binPath, workspace.Workspace.Name, privateKeyFilepath)
+		newConfig += makeSSHConfig(binPath, workspace.Workspace.Name, privateKeyFilepath, additionalOptions)
 	}
 	newConfig += fmt.Sprintf("\n%s\n", sshEndToken)
 
 	return newConfig
 }
 
-func makeSSHConfig(binPath, workspaceName, privateKeyFilepath string) string {
-	entry := fmt.Sprintf(
-		`Host coder.%s
-   HostName coder.%s
-   ProxyCommand %s
-   StrictHostKeyChecking no
-   ConnectTimeout=0
-   IdentitiesOnly yes
-   IdentityFile="%s"
-`, workspaceName, workspaceName, proxyCommand(binPath, workspaceName, true), privateKeyFilepath)
+func makeSSHConfig(binPath, workspaceName, privateKeyFilepath string, additionalOptions []string) string {
+	// Custom user options come first to maximizessh customization.
+	options := []string{}
+	if len(additionalOptions) > 0 {
+		options = []string{
+			"# Custom options. Duplicated values will always prefer the first!",
+		}
+		options = append(options, additionalOptions...)
+		options = append(options, "# End custom options.")
+	}
+	options = append(options,
+		fmt.Sprintf("HostName coder.%s", workspaceName),
+		fmt.Sprintf("ProxyCommand %s", proxyCommand(binPath, workspaceName, true)),
+		"StrictHostKeyChecking no",
+		"ConnectTimeout=0",
+		"IdentitiesOnly yes",
+		fmt.Sprintf("IdentityFile=%q", privateKeyFilepath),
+	)
 
 	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
-		entry += `   ControlMaster auto
-   ControlPath ~/.ssh/.connection-%r@%h:%p
-   ControlPersist 600
-`
+		options = append(options,
+			"ControlMaster auto",
+			"ControlPath ~/.ssh/.connection-%r@%h:%p",
+			"ControlPersist 600",
+		)
 	}
 
-	return entry
+	return fmt.Sprintf("Host coder.%s\n\t%s\n\n", workspaceName, strings.Join(options, "\n\t"))
 }
 
 func proxyCommand(binPath, workspaceName string, quoted bool) string {

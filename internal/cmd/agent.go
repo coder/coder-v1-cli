@@ -84,6 +84,7 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 				return xerrors.Errorf("listen: %w", err)
 			}
 			defer func() {
+				log.Info(ctx, "closing wsnet listener")
 				err := listener.Close()
 				if err != nil {
 					log.Error(ctx, "close listener", slog.Error(err))
