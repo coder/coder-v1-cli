@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -18,11 +19,11 @@ import (
 )
 
 const (
-	fakeExePath    = "/coder"
-	fakeCoderURL   = "https://my.cdr.dev"
-	fakeNewVersion = "1.23.4-rc.5+678-gabcdef-12345678"
-	fakeOldVersion = "1.22.4-rc.5+678-gabcdef-12345678"
-	fakeReleaseURL = "https://github.com/cdr/coder-cli/releases/download/v1.23.4/coder-cli-linux-amd64.tar.gz"
+	fakeExePathLinux = "/home/user/bin/coder"
+	fakeCoderURL     = "https://my.cdr.dev"
+	fakeNewVersion   = "1.23.4-rc.5+678-gabcdef-12345678"
+	fakeOldVersion   = "1.22.4-rc.5+678-gabcdef-12345678"
+	fakeReleaseURL   = "https://github.com/cdr/coder-cli/releases/download/v1.23.4/coder-cli-linux-amd64.tar.gz"
 )
 
 func Test_updater_run(t *testing.T) {
@@ -61,7 +62,7 @@ func Test_updater_run(t *testing.T) {
 				return "", nil
 			},
 			Ctx:            ctx,
-			ExecutablePath: fakeExePath,
+			ExecutablePath: fakeExePathLinux,
 			Fakefs:         fakefs,
 			HttpClient:     newFakeGetter(t),
 			// This must be overridden inside run()
@@ -76,51 +77,51 @@ func Test_updater_run(t *testing.T) {
 	}
 
 	run(t, "update coder - noop", func(t *testing.T, p *params) {
-		fakeFile(t, p.Fakefs, fakeExePath, 0755, fakeNewVersion)
+		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeNewVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
 		p.VersionF = func() string { return fakeNewVersion }
 		u := fromParams(p)
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeNewVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeNewVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
 		assert.Success(t, "update coder - noop", err)
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeNewVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeNewVersion)
 	})
 
 	run(t, "update coder - old to new", func(t *testing.T, p *params) {
-		fakeFile(t, p.Fakefs, fakeExePath, 0755, fakeOldVersion)
+		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
 		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
 		u := fromParams(p)
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
 		assert.Success(t, "update coder - old to new", err)
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeNewVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeNewVersion)
 	})
 
 	run(t, "update coder - old to new forced", func(t *testing.T, p *params) {
-		fakeFile(t, p.Fakefs, fakeExePath, 0755, fakeOldVersion)
+		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
 		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		u := fromParams(p)
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, true, fakeCoderURL)
 		assert.Success(t, "update coder - old to new forced", err)
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeNewVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeNewVersion)
 	})
 
 	run(t, "update coder - user cancelled", func(t *testing.T, p *params) {
-		fakeFile(t, p.Fakefs, fakeExePath, 0755, fakeOldVersion)
+		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmNo
 		u := fromParams(p)
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
 		assert.ErrorContains(t, "update coder - user cancelled", err, "failed to confirm update")
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
 	run(t, "update coder - cannot stat", func(t *testing.T, p *params) {
@@ -130,87 +131,87 @@ func Test_updater_run(t *testing.T) {
 	})
 
 	run(t, "update coder - no permission", func(t *testing.T, p *params) {
-		fakeFile(t, p.Fakefs, fakeExePath, 0400, fakeOldVersion)
+		fakeFile(t, p.Fakefs, fakeExePathLinux, 0400, fakeOldVersion)
 		u := fromParams(p)
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
 		assert.ErrorContains(t, "update coder - no permission", err, "missing write permission")
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
 	run(t, "update coder - invalid url", func(t *testing.T, p *params) {
-		fakeFile(t, p.Fakefs, fakeExePath, 0755, fakeOldVersion)
+		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.VersionF = func() string { return fakeOldVersion }
 		u := fromParams(p)
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, "h$$p://invalid.url")
 		assert.ErrorContains(t, "update coder - invalid url", err, "invalid coder URL")
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
 	run(t, "update coder - fetch api version failure", func(t *testing.T, p *params) {
-		fakeFile(t, p.Fakefs, fakeExePath, 0755, fakeOldVersion)
+		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS(), net.ErrClosed)
 		p.VersionF = func() string { return fakeOldVersion }
 		u := fromParams(p)
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
 		assert.ErrorContains(t, "update coder - fetch api version failure", err, "fetch api version")
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
 	run(t, "update coder - failed to fetch URL", func(t *testing.T, p *params) {
-		fakeFile(t, p.Fakefs, fakeExePath, 0755, fakeOldVersion)
+		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
 		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse([]byte{}, 0, variadicS(), net.ErrClosed)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
 		u := fromParams(p)
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
 		assert.ErrorContains(t, "update coder - release URL 404", err, "failed to fetch URL")
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
 	run(t, "update coder - release URL 404", func(t *testing.T, p *params) {
-		fakeFile(t, p.Fakefs, fakeExePath, 0755, fakeOldVersion)
+		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
 		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse([]byte{}, 404, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
 		u := fromParams(p)
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
 		assert.ErrorContains(t, "update coder - release URL 404", err, "failed to fetch release")
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
 	run(t, "update coder - invalid archive", func(t *testing.T, p *params) {
-		fakeFile(t, p.Fakefs, fakeExePath, 0755, fakeOldVersion)
+		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
 		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse([]byte{}, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
 		u := fromParams(p)
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
 		assert.ErrorContains(t, "update coder - invalid archive", err, "failed to extract coder binary from archive")
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
 	run(t, "update coder - read-only fs", func(t *testing.T, p *params) {
 		rwfs := p.Fakefs
 		p.Fakefs = afero.NewReadOnlyFs(rwfs)
-		fakeFile(t, rwfs, fakeExePath, 0755, fakeOldVersion)
+		fakeFile(t, rwfs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
 		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
 		u := fromParams(p)
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
 		assert.ErrorContains(t, "update coder - read-only fs", err, "failed to create file")
-		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 }
 
@@ -278,6 +279,10 @@ func fakeConfirmNo(_ string) (string, error) {
 //nolint:unparam
 func fakeFile(t *testing.T, fs afero.Fs, name string, perm fs.FileMode, content string) {
 	t.Helper()
+	err := fs.MkdirAll(filepath.Dir(name), 0750)
+	if err != nil {
+		panic(err)
+	}
 	f, err := fs.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, perm)
 	if err != nil {
 		panic(err)
