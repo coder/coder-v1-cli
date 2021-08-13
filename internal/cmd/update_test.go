@@ -27,6 +27,7 @@ const (
 func Test_updater_run(t *testing.T) {
 	t.Parallel()
 
+	//  params holds parameters for each test case
 	type params struct {
 		ConfirmF       func(string) (string, error)
 		Ctx            context.Context
@@ -36,6 +37,7 @@ func Test_updater_run(t *testing.T) {
 		VersionF       func() string
 	}
 
+	// fromParams creates a new updater from params
 	fromParams := func(p *params) *updater {
 		return &updater{
 			confirmF:       p.ConfirmF,
@@ -73,21 +75,22 @@ func Test_updater_run(t *testing.T) {
 	}
 
 	run(t, "update coder - noop", func(t *testing.T, p *params) {
-		fakeFile(p.Fakefs, fakeExePath, 0755, fakeNewVersion)
+		fakeFile(t, p.Fakefs, fakeExePath, 0755, fakeNewVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
 		p.VersionF = func() string { return fakeNewVersion }
 		u := fromParams(p)
+		assertFileContent(t, p.Fakefs, fakeExePath, fakeNewVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
 		assert.Success(t, "update coder - noop", err)
 		assertFileContent(t, p.Fakefs, fakeExePath, fakeNewVersion)
 	})
 
 	run(t, "update coder - old to new", func(t *testing.T, p *params) {
-		fakeFile(p.Fakefs, fakeExePath, 0755, fakeOldVersion)
+		fakeFile(t, p.Fakefs, fakeExePath, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
 		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
-		p.ConfirmF = func(string) (string, error) { return "", nil }
+		p.ConfirmF = fakeConfirmYes
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
@@ -96,22 +99,22 @@ func Test_updater_run(t *testing.T) {
 	})
 
 	run(t, "update coder - old to new forced", func(t *testing.T, p *params) {
-		fakeFile(p.Fakefs, fakeExePath, 0755, fakeOldVersion)
+		fakeFile(t, p.Fakefs, fakeExePath, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
 		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
 		err := u.Run(p.Ctx, true, fakeCoderURL)
-		assert.Success(t, "update coder - old to new", err)
+		assert.Success(t, "update coder - old to new forced", err)
 		assertFileContent(t, p.Fakefs, fakeExePath, fakeNewVersion)
 	})
 
 	run(t, "update coder - user cancelled", func(t *testing.T, p *params) {
-		fakeFile(p.Fakefs, fakeExePath, 0755, fakeOldVersion)
+		fakeFile(t, p.Fakefs, fakeExePath, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
 		p.VersionF = func() string { return fakeOldVersion }
-		p.ConfirmF = func(string) (string, error) { return "", promptui.ErrAbort }
+		p.ConfirmF = fakeConfirmNo
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
@@ -120,6 +123,7 @@ func Test_updater_run(t *testing.T) {
 	})
 }
 
+// fakeGetter mocks HTTP requests
 type fakeGetter struct {
 	M map[string]*fakeGetterResponse
 	T *testing.T
@@ -131,6 +135,7 @@ func newFakeGetter(t *testing.T) *fakeGetter {
 	}
 }
 
+// Get returns the configured response for url. If no response configured, test fails immediately.
 func (f *fakeGetter) Get(url string) (*http.Response, error) {
 	val, ok := f.M[url]
 	if !ok {
@@ -146,6 +151,7 @@ type fakeGetterResponse struct {
 	Err  error
 }
 
+// newFakeGetterResponse is a convenience function for mocking HTTP requests
 func newFakeGetterResponse(body []byte, code int, headers []string, err error) *fakeGetterResponse {
 	resp := &http.Response{}
 	resp.Body = ioutil.NopCloser(bytes.NewReader(body))
@@ -169,10 +175,6 @@ func variadicS(s ...string) []string {
 	return s
 }
 
-// func (f *fakeGetter) Get(url string) (*http.Response, error) {
-// 	return f.GetF(url)
-// }
-
 func fakeConfirmYes(_ string) (string, error) {
 	return "y", nil
 }
@@ -181,24 +183,9 @@ func fakeConfirmNo(_ string) (string, error) {
 	return "", promptui.ErrAbort
 }
 
-func fakeResponse(body []byte, code int, headers ...string) *http.Response {
-	resp := &http.Response{}
-	resp.Body = ioutil.NopCloser(bytes.NewReader(body))
-	resp.StatusCode = code
-	resp.Header = http.Header{}
-
-	for _, e := range headers {
-		parts := strings.Split(e, ":")
-		k := strings.ToLower(strings.TrimSpace(parts[0]))
-		v := strings.ToLower(strings.TrimSpace(strings.Join(parts[1:], ":")))
-		resp.Header.Set(k, v)
-	}
-
-	return resp
-}
-
 //nolint:unparam
-func fakeFile(fs afero.Fs, name string, perm fs.FileMode, content string) {
+func fakeFile(t *testing.T, fs afero.Fs, name string, perm fs.FileMode, content string) {
+	t.Helper()
 	f, err := fs.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, perm)
 	if err != nil {
 		panic(err)
@@ -213,6 +200,7 @@ func fakeFile(fs afero.Fs, name string, perm fs.FileMode, content string) {
 
 //nolint:unparam
 func assertFileContent(t *testing.T, fs afero.Fs, name string, content string) {
+	t.Helper()
 	f, err := fs.OpenFile(name, os.O_RDONLY, 0)
 	assert.Success(t, "open file "+name, err)
 	defer f.Close()
