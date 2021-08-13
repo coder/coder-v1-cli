@@ -154,7 +154,7 @@ type ConfigWorkspaces struct {
 // SiteConfigWorkspaces fetches the workspace configuration.
 func (c *DefaultClient) SiteConfigWorkspaces(ctx context.Context) (*ConfigWorkspaces, error) {
 	var conf ConfigWorkspaces
-	if err := c.requestBody(ctx, http.MethodGet, "/v0/workspaces/config", nil, &conf); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/workspaces/config", nil, &conf); err != nil {
 		return nil, err
 	}
 	return &conf, nil
@@ -162,7 +162,7 @@ func (c *DefaultClient) SiteConfigWorkspaces(ctx context.Context) (*ConfigWorksp
 
 // PutSiteConfigWorkspaces sets the workspace configuration.
 func (c *DefaultClient) PutSiteConfigWorkspaces(ctx context.Context, req ConfigWorkspaces) error {
-	return c.requestBody(ctx, http.MethodPut, "/v0/workspaces/config", req, nil)
+	return c.requestBody(ctx, http.MethodPut, "/api/v0/workspaces/config", req, nil)
 }
 
 type ConfigDormancy struct {
@@ -174,7 +174,7 @@ type ConfigDormancy struct {
 // SiteConfigDormancy fetches the dormancy configuration.
 func (c *DefaultClient) SiteConfigDormancy(ctx context.Context) (*ConfigDormancy, error) {
 	var conf ConfigDormancy
-	if err := c.requestBody(ctx, http.MethodGet, "/private/dormancy/config", nil, &conf); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/dormancy/config", nil, &conf); err != nil {
 		return nil, err
 	}
 	return &conf, nil
@@ -182,7 +182,7 @@ func (c *DefaultClient) SiteConfigDormancy(ctx context.Context) (*ConfigDormancy
 
 // PutSiteConfigDormancy sets the dormancy configuration.
 func (c *DefaultClient) PutSiteConfigDormancy(ctx context.Context, req ConfigDormancy) error {
-	return c.requestBody(ctx, http.MethodPut, "/private/dormancy/config", req, nil)
+	return c.requestBody(ctx, http.MethodPut, "/api/private/dormancy/config", req, nil)
 }
 
 type ConfigDevURLAccess struct {
@@ -195,7 +195,7 @@ type ConfigDevURLAccess struct {
 // SiteConfigDevURLAccess fetches the DevURL access configuration.
 func (c *DefaultClient) SiteConfigDevURLAccess(ctx context.Context) (*ConfigDevURLAccess, error) {
 	var conf ConfigDevURLAccess
-	if err := c.requestBody(ctx, http.MethodGet, "/private/devurls/config", nil, &conf); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/devurls/config", nil, &conf); err != nil {
 		return nil, err
 	}
 	return &conf, nil
@@ -203,7 +203,7 @@ func (c *DefaultClient) SiteConfigDevURLAccess(ctx context.Context) (*ConfigDevU
 
 // PutSiteConfigDevURLAccess sets the DevURL access configuration.
 func (c *DefaultClient) PutSiteConfigDevURLAccess(ctx context.Context, req ConfigDevURLAccess) error {
-	return c.requestBody(ctx, http.MethodPut, "/private/devurls/config", req, nil)
+	return c.requestBody(ctx, http.MethodPut, "/api/private/devurls/config", req, nil)
 }
 
 // ConfigSSHSettings is the site configuration for SSH.
@@ -211,16 +211,16 @@ type ConfigSSHSettings struct {
 	KeygenAlgorithm string `json:"keygen_algorithm"`
 }
 
-// SiteConfigSSHSettings fetches the workspace configuration.
+// SiteConfigSSHSettings fetches the SSH configuration.
 func (c *DefaultClient) SiteConfigSSHSettings(ctx context.Context) (*ConfigSSHSettings, error) {
 	var conf ConfigSSHSettings
-	if err := c.requestBody(ctx, http.MethodGet, "/private/ssh/config", nil, &conf); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/ssh/config", nil, &conf); err != nil {
 		return nil, err
 	}
 	return &conf, nil
 }
 
-// PutSiteConfigSSHSettings sets the workspace configuration.
+// PutSiteConfigSSHSettings sets the SSH configuration.
 func (c *DefaultClient) PutSiteConfigSSHSettings(ctx context.Context, req ConfigSSHSettings) error {
-	return c.requestBody(ctx, http.MethodPut, "/private/ssh/config", req, nil)
+	return c.requestBody(ctx, http.MethodPut, "/api/private/ssh/config", req, nil)
 }
