@@ -7,8 +7,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -307,21 +309,29 @@ func getCoderConfigURL() (*url.URL, error) {
 // XXX: coder.Client requires an API key, but we may not be logged into the coder instance for which we
 // want to determine the version. We don't need an API key to sniff the version header.
 func getAPIVersionUnauthed(client getter, baseURL url.URL) (*semver.Version, error) {
-	baseURL.Path = path.Join(baseURL.Path, "/api")
+	baseURL.Path = path.Join(baseURL.Path, "/api/private/version")
 	resp, err := client.Get(baseURL.String())
 	if err != nil {
 		return nil, xerrors.Errorf("get %s: %w", baseURL.String(), err)
 	}
 	defer resp.Body.Close()
 
-	versionHdr := resp.Header.Get("coder-version")
-	if versionHdr == "" {
-		return nil, xerrors.Errorf("URL %s response missing coder-version header", baseURL.String())
+	ver := struct {
+		Version string `json:"version"`
+	}{}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, xerrors.Errorf("read response body: %w", err)
 	}
 
-	version, err := semver.StrictNewVersion(versionHdr)
+	if err := json.Unmarshal(body, &ver); err != nil {
+		return nil, xerrors.Errorf("parse version response: %w", err)
+	}
+
+	version, err := semver.StrictNewVersion(ver.Version)
 	if err != nil {
-		return nil, xerrors.Errorf("parsing coder-version header: %w", err)
+		return nil, xerrors.Errorf("parsing coder version: %w", err)
 	}
 
 	return version, nil
