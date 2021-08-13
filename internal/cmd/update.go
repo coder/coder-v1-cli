@@ -56,9 +56,14 @@ func updateCmd() *cobra.Command {
 				Timeout: 10 * time.Second,
 			}
 
+			currExe, err := os.Executable()
+			if err != nil {
+				return clog.Fatal("init: get current executable", clog.Causef(err.Error()))
+			}
+
 			updater := &updater{
 				confirmF:       defaultConfirm,
-				executablePath: os.Args[0],
+				executablePath: currExe,
 				httpClient:     httpClient,
 				fs:             afero.NewOsFs(),
 				osF:            func() string { return runtime.GOOS },
@@ -85,7 +90,7 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLString string) er
 
 	currentBinaryStat, err := u.fs.Stat(u.executablePath)
 	if err != nil {
-		return clog.Fatal("preflight: cannot stat current binary", clog.Causef("%s", err))
+		return clog.Fatal("preflight: cannot stat current binary", clog.Causef(err.Error()))
 	}
 
 	if currentBinaryStat.Mode().Perm()&0222 == 0 {
