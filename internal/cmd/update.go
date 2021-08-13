@@ -14,7 +14,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -32,7 +34,8 @@ import (
 
 // updater updates coder-cli.
 type updater struct {
-	confirmF       func(label string) (string, error)
+	confirmF       func(string) (string, error)
+	execF          func(context.Context, string, ...string) ([]byte, error)
 	executablePath string
 	fs             afero.Fs
 	httpClient     getter
@@ -63,6 +66,7 @@ func updateCmd() *cobra.Command {
 
 			updater := &updater{
 				confirmF:       defaultConfirm,
+				execF:          defaultExec,
 				executablePath: currExe,
 				httpClient:     httpClient,
 				fs:             afero.NewOsFs(),
@@ -84,9 +88,27 @@ type getter interface {
 }
 
 func (u *updater) Run(ctx context.Context, force bool, coderURLString string) error {
-	// TODO: check under following directories and warn if coder binary is under them:
+	// Check under following directories and warn if coder binary is under them:
+	//   * C:\Windows\
 	//   * homebrew prefix
-	//   * coder assets root (env CODER_ASSETS_ROOT)
+	//   * coder assets root (/var/tmp/coder)
+	var pathBlockList = []string{
+		`C:\Windows\`,
+		`/var/tmp/coder`,
+	}
+	brewPrefixCmd, err := u.execF(ctx, "brew", "--prefix")
+	if err == nil { // ignore errors if homebrew not installed
+		pathBlockList = append(pathBlockList, strings.TrimSpace(string(brewPrefixCmd)))
+	}
+
+	for _, prefix := range pathBlockList {
+		if HasFilePathPrefix(u.executablePath, prefix) {
+			return clog.Fatal(
+				"cowardly refusing to update coder binary",
+				clog.BlankLine,
+				clog.Causef("executable path %q is under blocklisted prefix %q", u.executablePath, prefix))
+		}
+	}
 
 	currentBinaryStat, err := u.fs.Stat(u.executablePath)
 	if err != nil {
@@ -312,7 +334,7 @@ func getCoderConfigURL() (*url.URL, error) {
 }
 
 // XXX: coder.Client requires an API key, but we may not be logged into the coder instance for which we
-// want to determine the version. We don't need an API key to sniff the version header.
+// want to determine the version. We don't need an API key to hit /api/private/version though.
 func getAPIVersionUnauthed(client getter, baseURL url.URL) (*semver.Version, error) {
 	baseURL.Path = path.Join(baseURL.Path, "/api/private/version")
 	resp, err := client.Get(baseURL.String())
@@ -340,4 +362,34 @@ func getAPIVersionUnauthed(client getter, baseURL url.URL) (*semver.Version, err
 	}
 
 	return version, nil
+}
+
+// HasFilePathPrefix reports whether the filesystem path s
+// begins with the elements in prefix.
+// Lifted from github.com/golang/go/blob/master/src/cmd/internal/str/path.go
+func HasFilePathPrefix(s, prefix string) bool {
+	sv := strings.ToUpper(filepath.VolumeName(s))
+	pv := strings.ToUpper(filepath.VolumeName(prefix))
+	s = s[len(sv):]
+	prefix = prefix[len(pv):]
+	switch {
+	default:
+		return false
+	case sv != pv:
+		return false
+	case len(s) == len(prefix):
+		return s == prefix
+	case prefix == "":
+		return true
+	case len(s) > len(prefix):
+		if prefix[len(prefix)-1] == filepath.Separator {
+			return strings.HasPrefix(s, prefix)
+		}
+		return s[len(prefix)] == filepath.Separator && s[:len(prefix)] == prefix
+	}
+}
+
+// defaultExec wraps exec.CommandContext
+func defaultExec(ctx context.Context, cmd string, args ...string) ([]byte, error) {
+	return exec.CommandContext(ctx, cmd, args...).CombinedOutput()
 }

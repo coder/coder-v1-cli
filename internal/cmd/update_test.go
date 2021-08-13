@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -32,7 +33,6 @@ const (
 var (
 	apiPrivateVersionURL = fakeCoderURL + "/api/private/version"
 	fakeNewVersionJson   = fmt.Sprintf(`{"version":%q}`, fakeNewVersion)
-	fakeOldVersionJson   = fmt.Sprintf(`{"version":%q}`, fakeOldVersion)
 )
 
 func Test_updater_run(t *testing.T) {
@@ -42,6 +42,7 @@ func Test_updater_run(t *testing.T) {
 	type params struct {
 		ConfirmF       func(string) (string, error)
 		Ctx            context.Context
+		Execer         *fakeExecer
 		ExecutablePath string
 		Fakefs         afero.Fs
 		HttpClient     *fakeGetter
@@ -53,6 +54,7 @@ func Test_updater_run(t *testing.T) {
 	fromParams := func(p *params) *updater {
 		return &updater{
 			confirmF:       p.ConfirmF,
+			execF:          p.Execer.ExecF,
 			executablePath: p.ExecutablePath,
 			fs:             p.Fakefs,
 			httpClient:     p.HttpClient,
@@ -65,6 +67,8 @@ func Test_updater_run(t *testing.T) {
 		t.Logf("running %s", name)
 		ctx := context.Background()
 		fakefs := afero.NewMemMapFs()
+		execer := newFakeExecer(t)
+		execer.M["brew --prefix"] = fakeExecerResult{[]byte{}, os.ErrNotExist}
 		params := &params{
 			// This must be overridden inside run()
 			ConfirmF: func(string) (string, error) {
@@ -72,6 +76,7 @@ func Test_updater_run(t *testing.T) {
 				t.FailNow()
 				return "", nil
 			},
+			Execer:         execer,
 			Ctx:            ctx,
 			ExecutablePath: fakeExePathLinux,
 			Fakefs:         fakefs,
@@ -270,6 +275,43 @@ func Test_updater_run(t *testing.T) {
 		assert.ErrorContains(t, "update coder - read-only fs", err, "failed to create file")
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
+
+	if runtime.GOOS == "windows" {
+		run(t, "update coder - path blocklist - windows", func(t *testing.T, p *params) {
+			p.ExecutablePath = `C:\Windows\system32\coder.exe`
+			u := fromParams(p)
+			err := u.Run(p.Ctx, false, fakeCoderURL)
+			assert.ErrorContains(t, "update coder - path blocklist - windows", err, "cowardly refusing to update coder binary")
+		})
+	} else {
+		run(t, "update coder - path blocklist - coder assets dir", func(t *testing.T, p *params) {
+			p.ExecutablePath = `/var/tmp/coder/coder`
+			u := fromParams(p)
+			err := u.Run(p.Ctx, false, fakeCoderURL)
+			assert.ErrorContains(t, "update coder - path blocklist - windows", err, "cowardly refusing to update coder binary")
+		})
+		run(t, "update coder - path blocklist - old homebrew prefix", func(t *testing.T, p *params) {
+			p.Execer.M["brew --prefix"] = fakeExecerResult{[]byte("/usr/local"), nil}
+			p.ExecutablePath = `/usr/local/bin/coder`
+			u := fromParams(p)
+			err := u.Run(p.Ctx, false, fakeCoderURL)
+			assert.ErrorContains(t, "update coder - path blocklist - old homebrew prefix", err, "cowardly refusing to update coder binary")
+		})
+		run(t, "update coder - path blocklist - new homebrew prefix", func(t *testing.T, p *params) {
+			p.Execer.M["brew --prefix"] = fakeExecerResult{[]byte("/opt/homebrew"), nil}
+			p.ExecutablePath = `/opt/homebrew/bin/coder`
+			u := fromParams(p)
+			err := u.Run(p.Ctx, false, fakeCoderURL)
+			assert.ErrorContains(t, "update coder - path blocklist - new homebrew prefix", err, "cowardly refusing to update coder binary")
+		})
+		run(t, "update coder - path blocklist - linuxbrew", func(t *testing.T, p *params) {
+			p.Execer.M["brew --prefix"] = fakeExecerResult{[]byte("/home/user/.linuxbrew"), nil}
+			p.ExecutablePath = `/home/user/.linuxbrew/bin/coder`
+			u := fromParams(p)
+			err := u.Run(p.Ctx, false, fakeCoderURL)
+			assert.ErrorContains(t, "update coder - path blocklist - linuxbrew", err, "cowardly refusing to update coder binary")
+		})
+	}
 }
 
 // fakeGetter mocks HTTP requests
@@ -378,3 +420,31 @@ var fakeValidZipBytes, _ = base64.StdEncoding.DecodeString(`UEsDBAoAAAAAAAtfDVNC
 BOgDAAAE6AMAADEuMjMuNC1yYy41KzY3OC1nYWJjZGVmLTEyMzQ1Njc4UEsBAh4DCgAAAAAAC18N
 U0Ic0MIgAAAAIAAAAAkAGAAAAAAAAQAAAO2BAAAAAGNvZGVyLmV4ZVVUBQAD5l0WYXV4CwABBOgD
 AAAE6AMAAFBLBQYAAAAAAQABAE8AAABjAAAAAAA=`)
+
+type fakeExecer struct {
+	M map[string]fakeExecerResult
+	T *testing.T
+}
+
+func (f *fakeExecer) ExecF(_ context.Context, cmd string, args ...string) ([]byte, error) {
+	cmdAndArgs := strings.Join(append([]string{cmd}, args...), " ")
+	val, ok := f.M[cmdAndArgs]
+	if !ok {
+		f.T.Errorf("unhandled cmd %q", cmd)
+		f.T.FailNow()
+		return nil, nil // will never happen
+	}
+	return val.Output, val.Err
+}
+
+func newFakeExecer(t *testing.T) *fakeExecer {
+	return &fakeExecer{
+		M: make(map[string]fakeExecerResult),
+		T: t,
+	}
+}
+
+type fakeExecerResult struct {
+	Output []byte
+	Err    error
+}
