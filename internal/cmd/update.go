@@ -130,7 +130,7 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLString string) er
 		}
 	}
 
-	downloadURL := makeDownloadURL(desiredVersion.FinalizeVersion(), runtime.GOOS, runtime.GOARCH)
+	downloadURL := makeDownloadURL(desiredVersion, u.osF(), runtime.GOARCH)
 
 	var downloadBuf bytes.Buffer
 	memWriter := bufio.NewWriter(&downloadBuf)
@@ -197,14 +197,14 @@ func defaultConfirm(label string) (string, error) {
 	return p.Run()
 }
 
-func makeDownloadURL(version, ostype, archetype string) string {
+func makeDownloadURL(version *semver.Version, ostype, archtype string) string {
 	const template = "https://github.com/cdr/coder-cli/releases/download/v%s/coder-cli-%s-%s.%s"
 	var ext string
 	switch ostype {
 	case "linux":
 		ext = "tar.gz"
 	default:
-		ext = ".zip"
+		ext = "zip"
 	}
 	return fmt.Sprintf(template, version, ostype, archetype, ext)
 }

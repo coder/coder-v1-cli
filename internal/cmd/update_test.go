@@ -19,12 +19,13 @@ import (
 )
 
 const (
-	fakeExePathLinux   = "/home/user/bin/coder"
-	fakeExePathWindows = `C:\Users\user\bin\coder.exe`
-	fakeCoderURL       = "https://my.cdr.dev"
-	fakeNewVersion     = "1.23.4-rc.5+678-gabcdef-12345678"
-	fakeOldVersion     = "1.22.4-rc.5+678-gabcdef-12345678"
-	fakeReleaseURL     = "https://github.com/cdr/coder-cli/releases/download/v1.23.4/coder-cli-linux-amd64.tar.gz"
+	fakeExePathLinux      = "/home/user/bin/coder"
+	fakeExePathWindows    = `C:\Users\user\bin\coder.exe`
+	fakeCoderURL          = "https://my.cdr.dev"
+	fakeNewVersion        = "1.23.4-rc.5+678-gabcdef-12345678"
+	fakeOldVersion        = "1.22.4-rc.5+678-gabcdef-12345678"
+	fakeReleaseURLLinux   = "https://github.com/cdr/coder-cli/releases/download/v1.23.4/coder-cli-linux-amd64.tar.gz"
+	fakeReleaseURLWindows = "https://github.com/cdr/coder-cli/releases/download/v1.23.4/coder-cli-windows-amd64.zip"
 )
 
 func Test_updater_run(t *testing.T) {
@@ -95,7 +96,7 @@ func Test_updater_run(t *testing.T) {
 	run(t, "update coder - old to new", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
-		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
+		p.HttpClient.M[fakeReleaseURLLinux] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
 		u := fromParams(p)
@@ -109,7 +110,7 @@ func Test_updater_run(t *testing.T) {
 		p.ExecutablePath = "/home/user/bin/coder-cli"
 		fakeFile(t, p.Fakefs, p.ExecutablePath, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
-		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
+		p.HttpClient.M[fakeReleaseURLLinux] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
 		u := fromParams(p)
@@ -124,7 +125,7 @@ func Test_updater_run(t *testing.T) {
 		p.ExecutablePath = fakeExePathWindows
 		fakeFile(t, p.Fakefs, fakeExePathWindows, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
-		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse(fakeValidZipBytes, 200, variadicS(), nil)
+		p.HttpClient.M[fakeReleaseURLWindows] = newFakeGetterResponse(fakeValidZipBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
 		u := fromParams(p)
@@ -137,7 +138,7 @@ func Test_updater_run(t *testing.T) {
 	run(t, "update coder - old to new forced", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
-		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
+		p.HttpClient.M[fakeReleaseURLLinux] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
@@ -197,7 +198,7 @@ func Test_updater_run(t *testing.T) {
 	run(t, "update coder - failed to fetch URL", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
-		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse([]byte{}, 0, variadicS(), net.ErrClosed)
+		p.HttpClient.M[fakeReleaseURLLinux] = newFakeGetterResponse([]byte{}, 0, variadicS(), net.ErrClosed)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
 		u := fromParams(p)
@@ -210,7 +211,7 @@ func Test_updater_run(t *testing.T) {
 	run(t, "update coder - release URL 404", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
-		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse([]byte{}, 404, variadicS(), nil)
+		p.HttpClient.M[fakeReleaseURLLinux] = newFakeGetterResponse([]byte{}, 404, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
 		u := fromParams(p)
@@ -223,7 +224,7 @@ func Test_updater_run(t *testing.T) {
 	run(t, "update coder - invalid archive", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
-		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse([]byte{}, 200, variadicS(), nil)
+		p.HttpClient.M[fakeReleaseURLLinux] = newFakeGetterResponse([]byte{}, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
 		u := fromParams(p)
@@ -238,7 +239,7 @@ func Test_updater_run(t *testing.T) {
 		p.Fakefs = afero.NewReadOnlyFs(rwfs)
 		fakeFile(t, rwfs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
-		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
+		p.HttpClient.M[fakeReleaseURLLinux] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
 		u := fromParams(p)
