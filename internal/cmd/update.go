@@ -226,7 +226,7 @@ func defaultConfirm(label string) (string, error) {
 	return p.Run()
 }
 
-func makeDownloadURL(version *semver.Version, ostype, archtype string) string {
+func makeDownloadURL(version *semver.Version, ostype, arch string) string {
 	const template = "https://github.com/cdr/coder-cli/releases/download/v%s/coder-cli-%s-%s.%s"
 	var ext string
 	switch ostype {
@@ -246,7 +246,7 @@ func makeDownloadURL(version *semver.Version, ostype, archtype string) string {
 		fmt.Fprint(&b, version.Prerelease())
 	}
 
-	return fmt.Sprintf(template, b.String(), ostype, archtype, ext)
+	return fmt.Sprintf(template, b.String(), ostype, arch, ext)
 }
 
 func extractFromArchive(path string, archive []byte) ([]byte, error) {
@@ -366,7 +366,7 @@ func getAPIVersionUnauthed(client getter, baseURL url.URL) (*semver.Version, err
 
 // HasFilePathPrefix reports whether the filesystem path s
 // begins with the elements in prefix.
-// Lifted from github.com/golang/go/blob/master/src/cmd/internal/str/path.go
+// Lifted from github.com/golang/go/blob/master/src/cmd/internal/str/path.go.
 func HasFilePathPrefix(s, prefix string) bool {
 	sv := strings.ToUpper(filepath.VolumeName(s))
 	pv := strings.ToUpper(filepath.VolumeName(prefix))
@@ -389,7 +389,7 @@ func HasFilePathPrefix(s, prefix string) bool {
 	}
 }
 
-// defaultExec wraps exec.CommandContext
+// defaultExec wraps exec.CommandContext.
 func defaultExec(ctx context.Context, cmd string, args ...string) ([]byte, error) {
 	return exec.CommandContext(ctx, cmd, args...).CombinedOutput()
 }
