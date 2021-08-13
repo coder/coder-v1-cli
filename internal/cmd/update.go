@@ -22,7 +22,7 @@ import (
 	"cdr.dev/coder-cli/pkg/clog"
 	"golang.org/x/xerrors"
 
-	"github.com/blang/semver/v4"
+	"github.com/Masterminds/semver/v3"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -116,7 +116,7 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLString string) er
 	clog.LogInfo(fmt.Sprintf("Coder instance at %q reports version %s", coderURL.String(), desiredVersion.String()))
 	clog.LogInfo(fmt.Sprintf("Current version of coder-cli is %s", version.Version))
 
-	if currentVersion, err := semver.Make(u.versionF()); err == nil {
+	if currentVersion, err := semver.StrictNewVersion(u.versionF()); err == nil {
 		if desiredVersion.Compare(currentVersion) == 0 {
 			clog.LogInfo("Up to date!")
 			return nil
@@ -124,7 +124,7 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLString string) er
 	}
 
 	if !force {
-		label := fmt.Sprintf("Update coder-cli to version %s", desiredVersion.FinalizeVersion())
+		label := fmt.Sprintf("Do you want to download version %s instead", desiredVersion)
 		if _, err := u.confirmF(label); err != nil {
 			return clog.Fatal("failed to confirm update", clog.Tipf(`use "--force" to update without confirmation`))
 		}
@@ -188,7 +188,7 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLString string) er
 		return clog.Fatal("failed to update coder binary in-place", clog.Causef(err.Error()))
 	}
 
-	clog.LogSuccess("Updated coder CLI to version " + desiredVersion.FinalizeVersion())
+	clog.LogSuccess("Updated coder CLI to version " + desiredVersion.String())
 	return nil
 }
 
@@ -206,7 +206,18 @@ func makeDownloadURL(version *semver.Version, ostype, archtype string) string {
 	default:
 		ext = "zip"
 	}
-	return fmt.Sprintf(template, version, ostype, archetype, ext)
+	var b bytes.Buffer
+	fmt.Fprintf(&b, "%d", version.Major())
+	fmt.Fprint(&b, ".")
+	fmt.Fprintf(&b, "%d", version.Minor())
+	fmt.Fprint(&b, ".")
+	fmt.Fprintf(&b, "%d", version.Patch())
+	if version.Prerelease() != "" {
+		fmt.Fprint(&b, "-")
+		fmt.Fprint(&b, version.Prerelease())
+	}
+
+	return fmt.Sprintf(template, b.String(), ostype, archtype, ext)
 }
 
 func extractFromArchive(path string, archive []byte) ([]byte, error) {
@@ -295,22 +306,22 @@ func getCoderConfigURL() (*url.URL, error) {
 
 // XXX: coder.Client requires an API key, but we may not be logged into the coder instance for which we
 // want to determine the version. We don't need an API key to sniff the version header.
-func getAPIVersionUnauthed(client getter, baseURL url.URL) (semver.Version, error) {
+func getAPIVersionUnauthed(client getter, baseURL url.URL) (*semver.Version, error) {
 	baseURL.Path = path.Join(baseURL.Path, "/api")
 	resp, err := client.Get(baseURL.String())
 	if err != nil {
-		return semver.Version{}, xerrors.Errorf("get %s: %w", baseURL.String(), err)
+		return nil, xerrors.Errorf("get %s: %w", baseURL.String(), err)
 	}
 	defer resp.Body.Close()
 
 	versionHdr := resp.Header.Get("coder-version")
 	if versionHdr == "" {
-		return semver.Version{}, xerrors.Errorf("URL %s response missing coder-version header", baseURL.String())
+		return nil, xerrors.Errorf("URL %s response missing coder-version header", baseURL.String())
 	}
 
-	version, err := semver.Parse(versionHdr)
+	version, err := semver.StrictNewVersion(versionHdr)
 	if err != nil {
-		return semver.Version{}, xerrors.Errorf("parsing coder-version header: %w", err)
+		return nil, xerrors.Errorf("parsing coder-version header: %w", err)
 	}
 
 	return version, nil

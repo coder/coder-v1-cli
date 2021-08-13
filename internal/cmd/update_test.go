@@ -24,8 +24,8 @@ const (
 	fakeCoderURL          = "https://my.cdr.dev"
 	fakeNewVersion        = "1.23.4-rc.5+678-gabcdef-12345678"
 	fakeOldVersion        = "1.22.4-rc.5+678-gabcdef-12345678"
-	fakeReleaseURLLinux   = "https://github.com/cdr/coder-cli/releases/download/v1.23.4/coder-cli-linux-amd64.tar.gz"
-	fakeReleaseURLWindows = "https://github.com/cdr/coder-cli/releases/download/v1.23.4/coder-cli-windows-amd64.zip"
+	fakeReleaseURLLinux   = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/coder-cli-linux-amd64.tar.gz"
+	fakeReleaseURLWindows = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/coder-cli-windows-amd64.zip"
 )
 
 func Test_updater_run(t *testing.T) {
@@ -221,7 +221,7 @@ func Test_updater_run(t *testing.T) {
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
-	run(t, "update coder - invalid archive", func(t *testing.T, p *params) {
+	run(t, "update coder - invalid tgz archive", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
 		p.HttpClient.M[fakeReleaseURLLinux] = newFakeGetterResponse([]byte{}, 200, variadicS(), nil)
@@ -232,6 +232,21 @@ func Test_updater_run(t *testing.T) {
 		err := u.Run(p.Ctx, false, fakeCoderURL)
 		assert.ErrorContains(t, "update coder - invalid archive", err, "failed to extract coder binary from archive")
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
+	})
+
+	run(t, "update coder - invalid zip archive", func(t *testing.T, p *params) {
+		p.OsF = func() string { return "windows" }
+		p.ExecutablePath = fakeExePathWindows
+		fakeFile(t, p.Fakefs, fakeExePathWindows, 0755, fakeOldVersion)
+		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
+		p.HttpClient.M[fakeReleaseURLWindows] = newFakeGetterResponse([]byte{}, 200, variadicS(), nil)
+		p.VersionF = func() string { return fakeOldVersion }
+		p.ConfirmF = fakeConfirmYes
+		u := fromParams(p)
+		assertFileContent(t, p.Fakefs, p.ExecutablePath, fakeOldVersion)
+		err := u.Run(p.Ctx, false, fakeCoderURL)
+		assert.ErrorContains(t, "update coder - invalid archive", err, "failed to extract coder binary from archive")
+		assertFileContent(t, p.Fakefs, p.ExecutablePath, fakeOldVersion)
 	})
 
 	run(t, "update coder - read-only fs", func(t *testing.T, p *params) {
