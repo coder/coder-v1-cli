@@ -24,139 +24,154 @@ const (
 	fakeReleaseURL = "https://github.com/cdr/coder-cli/releases/download/v1.23.4/coder-cli-linux-amd64.tar.gz"
 )
 
-func Test_updater_run_noop(t *testing.T) {
-	fakefs := afero.NewMemMapFs()
-	httpClient := &fakeGetter{
-		GetF: func(url string) (*http.Response, error) {
-			switch url {
-			case fakeCoderURL + "/api":
-				return fakeResponse([]byte{}, 401, "coder-version: "+fakeNewVersion), nil
-			default:
-				t.Errorf("unhandled url: %s", url)
+func Test_updater_run(t *testing.T) {
+	t.Parallel()
+
+	type params struct {
+		ConfirmF       func(string) (string, error)
+		Ctx            context.Context
+		ExecutablePath string
+		Fakefs         afero.Fs
+		HttpClient     *fakeGetter
+		VersionF       func() string
+	}
+
+	fromParams := func(p *params) *updater {
+		return &updater{
+			confirmF:       p.ConfirmF,
+			executablePath: p.ExecutablePath,
+			fs:             p.Fakefs,
+			httpClient:     p.HttpClient,
+			versionF:       p.VersionF,
+		}
+	}
+
+	run := func(t *testing.T, name string, fn func(t *testing.T, p *params)) {
+		t.Logf("running %s", name)
+		ctx := context.Background()
+		fakefs := afero.NewMemMapFs()
+		params := &params{
+			// This must be overridden inside run()
+			ConfirmF: func(string) (string, error) {
+				t.Errorf("unhandled ConfirmF")
 				t.FailNow()
-				return nil, nil // this will never happen
-			}
-		},
-	}
-	ctx := context.Background()
-	u := &updater{
-		confirmF:       nil, // should not be required
-		executablePath: fakeExePath,
-		fs:             fakefs,
-		httpClient:     httpClient,
-		versionF:       func() string { return fakeNewVersion },
-	}
-
-	// write fake executable
-	fakeFile(fakefs, fakeExePath, 0755, fakeNewVersion)
-	err := u.Run(ctx, false, fakeCoderURL)
-	assertFileContent(t, fakefs, fakeExePath, fakeNewVersion)
-	assert.Success(t, "update coder - noop", err)
-}
-
-func Test_updater_run_changed(t *testing.T) {
-	fakefs := afero.NewMemMapFs()
-	httpClient := &fakeGetter{
-		GetF: func(url string) (*http.Response, error) {
-			switch url {
-			case fakeCoderURL + "/api":
-				return fakeResponse([]byte{}, 401, "coder-version: "+fakeNewVersion), nil
-			case fakeReleaseURL:
-				return fakeResponse(fakeValidTgzBytes, 200), nil
-			default:
-				t.Errorf("unhandled url: %s", url)
+				return "", nil
+			},
+			Ctx:            ctx,
+			ExecutablePath: fakeExePath,
+			Fakefs:         fakefs,
+			HttpClient:     newFakeGetter(t),
+			// This must be overridden inside run()
+			VersionF: func() string {
+				t.Errorf("unhandled VersionF")
 				t.FailNow()
-				return nil, nil // this will never happen
-			}
-		},
-	}
-	ctx := context.Background()
-	u := &updater{
-		confirmF:       fakeConfirmYes,
-		executablePath: fakeExePath,
-		fs:             fakefs,
-		httpClient:     httpClient,
-		versionF:       func() string { return fakeOldVersion },
+				return ""
+			},
+		}
+
+		fn(t, params)
 	}
 
-	// write fake executable
-	fakeFile(fakefs, fakeExePath, 0644, fakeOldVersion)
-	err := u.Run(ctx, false, fakeCoderURL)
-	assertFileContent(t, fakefs, fakeExePath, fakeNewVersion)
-	assert.Success(t, "update coder - new version", err)
-}
+	run(t, "update coder - noop", func(t *testing.T, p *params) {
+		fakeFile(p.Fakefs, fakeExePath, 0755, fakeNewVersion)
+		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
+		p.VersionF = func() string { return fakeNewVersion }
+		u := fromParams(p)
+		err := u.Run(p.Ctx, false, fakeCoderURL)
+		assert.Success(t, "update coder - noop", err)
+		assertFileContent(t, p.Fakefs, fakeExePath, fakeNewVersion)
+	})
 
-func Test_updater_run_changed_force(t *testing.T) {
-	fakefs := afero.NewMemMapFs()
-	fakeCoderURL := "https://my.cdr.dev"
-	httpClient := &fakeGetter{
-		GetF: func(url string) (*http.Response, error) {
-			switch url {
-			case fakeCoderURL + "/api":
-				return fakeResponse([]byte{}, 401, "coder-version: "+fakeNewVersion), nil
-			case fakeReleaseURL:
-				return fakeResponse(fakeValidTgzBytes, 200), nil
-			default:
-				t.Errorf("unhandled url: %s", url)
-				t.FailNow()
-				return nil, nil // this will never happen
-			}
-		},
-	}
-	ctx := context.Background()
-	u := &updater{
-		confirmF:       nil, // should not be required
-		executablePath: fakeExePath,
-		fs:             fakefs,
-		httpClient:     httpClient,
-		versionF:       func() string { return fakeOldVersion },
-	}
+	run(t, "update coder - old to new", func(t *testing.T, p *params) {
+		fakeFile(p.Fakefs, fakeExePath, 0755, fakeOldVersion)
+		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
+		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
+		p.VersionF = func() string { return fakeOldVersion }
+		p.ConfirmF = func(string) (string, error) { return "", nil }
+		u := fromParams(p)
+		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		err := u.Run(p.Ctx, false, fakeCoderURL)
+		assert.Success(t, "update coder - old to new", err)
+		assertFileContent(t, p.Fakefs, fakeExePath, fakeNewVersion)
+	})
 
-	// write fake executable
-	fakeFile(fakefs, fakeExePath, 0644, fakeOldVersion)
-	err := u.Run(ctx, true, fakeCoderURL)
-	assertFileContent(t, fakefs, fakeExePath, fakeNewVersion)
-	assert.Success(t, "update coder - new version", err)
-}
+	run(t, "update coder - old to new forced", func(t *testing.T, p *params) {
+		fakeFile(p.Fakefs, fakeExePath, 0755, fakeOldVersion)
+		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
+		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
+		p.VersionF = func() string { return fakeOldVersion }
+		u := fromParams(p)
+		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		err := u.Run(p.Ctx, true, fakeCoderURL)
+		assert.Success(t, "update coder - old to new", err)
+		assertFileContent(t, p.Fakefs, fakeExePath, fakeNewVersion)
+	})
 
-func Test_updater_run_notconfirmed(t *testing.T) {
-	fakefs := afero.NewMemMapFs()
-	fakeCoderURL := "https://my.cdr.dev"
-	httpClient := &fakeGetter{
-		GetF: func(url string) (*http.Response, error) {
-			switch url {
-			case fakeCoderURL + "/api":
-				return fakeResponse([]byte{}, 401, "coder-version: "+fakeNewVersion), nil
-			default:
-				t.Errorf("unhandled url: %s", url)
-				t.FailNow()
-				return nil, nil // this will never happen
-			}
-		},
-	}
-	ctx := context.Background()
-	u := &updater{
-		confirmF:       fakeConfirmNo,
-		executablePath: fakeExePath,
-		fs:             fakefs,
-		httpClient:     httpClient,
-		versionF:       func() string { return fakeOldVersion },
-	}
-
-	// write fake executable
-	fakeFile(fakefs, fakeExePath, 0644, fakeOldVersion)
-	err := u.Run(ctx, false, fakeCoderURL)
-	assertFileContent(t, fakefs, fakeExePath, fakeOldVersion)
-	assert.ErrorContains(t, "update coder - new version", err, "failed to confirm update")
+	run(t, "update coder - user cancelled", func(t *testing.T, p *params) {
+		fakeFile(p.Fakefs, fakeExePath, 0755, fakeOldVersion)
+		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
+		p.VersionF = func() string { return fakeOldVersion }
+		p.ConfirmF = func(string) (string, error) { return "", promptui.ErrAbort }
+		u := fromParams(p)
+		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+		err := u.Run(p.Ctx, false, fakeCoderURL)
+		assert.ErrorContains(t, "update coder - user cancelled", err, "failed to confirm update")
+		assertFileContent(t, p.Fakefs, fakeExePath, fakeOldVersion)
+	})
 }
 
 type fakeGetter struct {
-	GetF func(url string) (*http.Response, error)
+	M map[string]*fakeGetterResponse
+	T *testing.T
+}
+
+func newFakeGetter(t *testing.T) *fakeGetter {
+	return &fakeGetter{
+		M: make(map[string]*fakeGetterResponse),
+	}
 }
 
 func (f *fakeGetter) Get(url string) (*http.Response, error) {
-	return f.GetF(url)
+	val, ok := f.M[url]
+	if !ok {
+		f.T.Errorf("unhandled url: %s", url)
+		f.T.FailNow()
+		return nil, nil // this will never happen
+	}
+	return val.Resp, val.Err
 }
+
+type fakeGetterResponse struct {
+	Resp *http.Response
+	Err  error
+}
+
+func newFakeGetterResponse(body []byte, code int, headers []string, err error) *fakeGetterResponse {
+	resp := &http.Response{}
+	resp.Body = ioutil.NopCloser(bytes.NewReader(body))
+	resp.StatusCode = code
+	resp.Header = http.Header{}
+
+	for _, e := range headers {
+		parts := strings.Split(e, ":")
+		k := strings.ToLower(strings.TrimSpace(parts[0]))
+		v := strings.ToLower(strings.TrimSpace(strings.Join(parts[1:], ":")))
+		resp.Header.Set(k, v)
+	}
+
+	return &fakeGetterResponse{
+		Resp: resp,
+		Err:  err,
+	}
+}
+
+func variadicS(s ...string) []string {
+	return s
+}
+
+// func (f *fakeGetter) Get(url string) (*http.Response, error) {
+// 	return f.GetF(url)
+// }
 
 func fakeConfirmYes(_ string) (string, error) {
 	return "y", nil
