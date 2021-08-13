@@ -20,6 +20,7 @@ coder provides a CLI for working with an existing Coder installation
 * [coder ssh](coder_ssh.md)	 - Enter a shell of execute a command over SSH into a Coder workspace
 * [coder sync](coder_sync.md)	 - Establish a one way directory sync to a Coder workspace
 * [coder tokens](coder_tokens.md)	 - manage Coder API tokens for the active user
+* [coder update](coder_update.md)	 - Update coder binary
 * [coder urls](coder_urls.md)	 - Interact with workspace DevURLs
 * [coder users](coder_users.md)	 - Interact with Coder user accounts
 * [coder workspaces](coder_workspaces.md)	 - Interact with Coder workspaces
