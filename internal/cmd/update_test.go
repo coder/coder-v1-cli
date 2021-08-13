@@ -19,11 +19,12 @@ import (
 )
 
 const (
-	fakeExePathLinux = "/home/user/bin/coder"
-	fakeCoderURL     = "https://my.cdr.dev"
-	fakeNewVersion   = "1.23.4-rc.5+678-gabcdef-12345678"
-	fakeOldVersion   = "1.22.4-rc.5+678-gabcdef-12345678"
-	fakeReleaseURL   = "https://github.com/cdr/coder-cli/releases/download/v1.23.4/coder-cli-linux-amd64.tar.gz"
+	fakeExePathLinux   = "/home/user/bin/coder"
+	fakeExePathWindows = `C:\Users\user\bin\coder.exe`
+	fakeCoderURL       = "https://my.cdr.dev"
+	fakeNewVersion     = "1.23.4-rc.5+678-gabcdef-12345678"
+	fakeOldVersion     = "1.22.4-rc.5+678-gabcdef-12345678"
+	fakeReleaseURL     = "https://github.com/cdr/coder-cli/releases/download/v1.23.4/coder-cli-linux-amd64.tar.gz"
 )
 
 func Test_updater_run(t *testing.T) {
@@ -36,6 +37,7 @@ func Test_updater_run(t *testing.T) {
 		ExecutablePath string
 		Fakefs         afero.Fs
 		HttpClient     *fakeGetter
+		OsF            func() string
 		VersionF       func() string
 	}
 
@@ -46,6 +48,7 @@ func Test_updater_run(t *testing.T) {
 			executablePath: p.ExecutablePath,
 			fs:             p.Fakefs,
 			httpClient:     p.HttpClient,
+			osF:            p.OsF,
 			versionF:       p.VersionF,
 		}
 	}
@@ -65,6 +68,8 @@ func Test_updater_run(t *testing.T) {
 			ExecutablePath: fakeExePathLinux,
 			Fakefs:         fakefs,
 			HttpClient:     newFakeGetter(t),
+			// Default to GOOS=linux
+			OsF: func() string { return "linux" },
 			// This must be overridden inside run()
 			VersionF: func() string {
 				t.Errorf("unhandled VersionF")
@@ -98,6 +103,35 @@ func Test_updater_run(t *testing.T) {
 		err := u.Run(p.Ctx, false, fakeCoderURL)
 		assert.Success(t, "update coder - old to new", err)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeNewVersion)
+	})
+
+	run(t, "update coder - old to new - binary renamed", func(t *testing.T, p *params) {
+		p.ExecutablePath = "/home/user/bin/coder-cli"
+		fakeFile(t, p.Fakefs, p.ExecutablePath, 0755, fakeOldVersion)
+		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
+		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
+		p.VersionF = func() string { return fakeOldVersion }
+		p.ConfirmF = fakeConfirmYes
+		u := fromParams(p)
+		assertFileContent(t, p.Fakefs, p.ExecutablePath, fakeOldVersion)
+		err := u.Run(p.Ctx, false, fakeCoderURL)
+		assert.Success(t, "update coder - old to new - binary renamed", err)
+		assertFileContent(t, p.Fakefs, p.ExecutablePath, fakeNewVersion)
+	})
+
+	run(t, "update coder - old to new - windows", func(t *testing.T, p *params) {
+		p.OsF = func() string { return "windows" }
+		p.ExecutablePath = fakeExePathWindows
+		fakeFile(t, p.Fakefs, fakeExePathWindows, 0755, fakeOldVersion)
+		p.HttpClient.M[fakeCoderURL+"/api"] = newFakeGetterResponse([]byte{}, 401, variadicS("coder-version: "+fakeNewVersion), nil)
+		p.HttpClient.M[fakeReleaseURL] = newFakeGetterResponse(fakeValidZipBytes, 200, variadicS(), nil)
+		p.VersionF = func() string { return fakeOldVersion }
+		p.ConfirmF = fakeConfirmYes
+		u := fromParams(p)
+		assertFileContent(t, p.Fakefs, fakeExePathWindows, fakeOldVersion)
+		err := u.Run(p.Ctx, false, fakeCoderURL)
+		assert.Success(t, "update coder - old to new - windows", err)
+		assertFileContent(t, p.Fakefs, fakeExePathWindows, fakeNewVersion)
 	})
 
 	run(t, "update coder - old to new forced", func(t *testing.T, p *params) {
@@ -308,8 +342,15 @@ func assertFileContent(t *testing.T, fs afero.Fs, name string, content string) {
 	assert.Equal(t, "assert content equal", content, string(b))
 }
 
-// this is a valid tgz file containing a single file named 'coder' with permissions 0751
+// this is a valid tgz archive containing a single file named 'coder' with permissions 0751
 // containing the string "1.23.4-rc.5+678-gabcdef-12345678".
 var fakeValidTgzBytes, _ = base64.StdEncoding.DecodeString(`H4sIAAAAAAAAA+3QsQ4CIRCEYR6F3oC7wIqvc3KnpQnq+3tGCwsTK3LN/zWTTDWZuG/XeeluJFlV
 s1dqNfnOtyJOi4qllHOuTlSTqPMydNXH43afuvfu3w3jb9qExpRjCb1F2x3qMVymU5uXc9CUi63F
 1vsAAAAAAAAAAAAAAAAAAL89AYuL424AKAAA`)
+
+// this is a valid zip archive containing a single file named 'coder.exe' with permissions 0751
+// containing the string "1.23.4-rc.5+678-gabcdef-12345678".
+var fakeValidZipBytes, _ = base64.StdEncoding.DecodeString(`UEsDBAoAAAAAAAtfDVNCHNDCIAAAACAAAAAJABwAY29kZXIuZXhlVVQJAAPmXRZh/10WYXV4CwAB
+BOgDAAAE6AMAADEuMjMuNC1yYy41KzY3OC1nYWJjZGVmLTEyMzQ1Njc4UEsBAh4DCgAAAAAAC18N
+U0Ic0MIgAAAAIAAAAAkAGAAAAAAAAQAAAO2BAAAAAGNvZGVyLmV4ZVVUBQAD5l0WYXV4CwABBOgD
+AAAE6AMAAFBLBQYAAAAAAQABAE8AAABjAAAAAAA=`)

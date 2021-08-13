@@ -34,6 +34,7 @@ type updater struct {
 	executablePath string
 	fs             afero.Fs
 	httpClient     getter
+	osF            func() string
 	versionF       func() string
 }
 
@@ -54,11 +55,12 @@ func updateCmd() *cobra.Command {
 			}
 
 			updater := &updater{
+				confirmF:       defaultConfirm,
+				executablePath: os.Args[0],
 				httpClient:     httpClient,
 				fs:             afero.NewOsFs(),
-				confirmF:       defaultConfirm,
+				osF:            func() string { return runtime.GOOS },
 				versionF:       func() string { return version.Version },
-				executablePath: os.Args[0],
 			}
 			return updater.Run(ctx, force, coderURL)
 		},
@@ -155,7 +157,13 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLString string) er
 
 	// TODO: validate the checksum of the downloaded file. GitHub does not currently provide this information
 	// and we do not generate them yet.
-	updatedBinary, err := extractFromArchive("coder", downloadBuf.Bytes())
+	var updatedBinaryName string
+	if u.osF() == "windows" {
+		updatedBinaryName = "coder.exe"
+	} else {
+		updatedBinaryName = "coder"
+	}
+	updatedBinary, err := extractFromArchive(updatedBinaryName, downloadBuf.Bytes())
 	if err != nil {
 		return clog.Fatal("failed to extract coder binary from archive", clog.Causef(err.Error()))
 	}
