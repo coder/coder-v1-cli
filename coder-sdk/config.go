@@ -15,14 +15,16 @@ const (
 	AuthProviderOIDC    AuthProviderType = "oidc"
 )
 
-// ConfigAuth describes the authentication configuration for a Coder deployment.
+// ConfigAuth describes the authentication configuration for a Coder
+// deployment.
 type ConfigAuth struct {
 	ProviderType *AuthProviderType `json:"provider_type"`
 	OIDC         *ConfigOIDC       `json:"oidc"`
 	SAML         *ConfigSAML       `json:"saml"`
 }
 
-// ConfigOIDC describes the OIDC configuration for single-signon support in Coder.
+// ConfigOIDC describes the OIDC configuration for single-signon support in
+// Coder.
 type ConfigOIDC struct {
 	ClientID     *string `json:"client_id"`
 	ClientSecret *string `json:"client_secret"`
@@ -38,26 +40,30 @@ type ConfigSAML struct {
 	PublicKeyCertificate        *string `json:"public_key_certificate"`
 }
 
-// ConfigOAuthBitbucketServer describes the Bitbucket integration configuration for a Coder deployment.
+// ConfigOAuthBitbucketServer describes the Bitbucket integration configuration
+// for a Coder deployment.
 type ConfigOAuthBitbucketServer struct {
 	BaseURL string `json:"base_url" diff:"oauth.bitbucket_server.base_url"`
 }
 
-// ConfigOAuthGitHub describes the Github integration configuration for a Coder deployment.
+// ConfigOAuthGitHub describes the Github integration configuration for a Coder
+// deployment.
 type ConfigOAuthGitHub struct {
 	BaseURL      string `json:"base_url"`
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
 }
 
-// ConfigOAuthGitLab describes the GitLab integration configuration for a Coder deployment.
+// ConfigOAuthGitLab describes the GitLab integration configuration for a Coder
+// deployment.
 type ConfigOAuthGitLab struct {
 	BaseURL      string `json:"base_url"`
 	ClientID     string `json:"client_id" `
 	ClientSecret string `json:"client_secret"`
 }
 
-// ConfigOAuth describes the aggregate git integration configuration for a Coder deployment.
+// ConfigOAuth describes the aggregate git integration configuration for a
+// Coder deployment.
 type ConfigOAuth struct {
 	BitbucketServer ConfigOAuthBitbucketServer `json:"bitbucket_server"`
 	GitHub          ConfigOAuthGitHub          `json:"github"`
@@ -140,18 +146,81 @@ func (c *DefaultClient) PutSiteConfigExtensionMarketplace(ctx context.Context, r
 
 // ConfigWorkspaces is the site configuration for workspace attributes.
 type ConfigWorkspaces struct {
-	GPUVendor              string `json:"gpu_vendor,omitempty" valid:"in(nvidia|amd)"`
-	EnableContainerVMs     bool   `json:"enable_container_vms,omitempty"`
-	EnableWorkspacesAsCode bool   `json:"enable_workspaces_as_code,omitempty"`
-	EnableP2P              bool   `json:"enable_p2p,omitempty"`
+	GPUVendor              string `json:"gpu_vendor"`
+	EnableContainerVMs     bool   `json:"enable_container_vms"`
+	EnableWorkspacesAsCode bool   `json:"enable_workspaces_as_code"`
 }
 
 // SiteConfigWorkspaces fetches the workspace configuration.
 func (c *DefaultClient) SiteConfigWorkspaces(ctx context.Context) (*ConfigWorkspaces, error) {
 	var conf ConfigWorkspaces
-	// TODO: use the `/api/v0/workspaces/config route once we migrate from using general config
-	if err := c.requestBody(ctx, http.MethodGet, "/api/private/config", nil, &conf); err != nil {
+	if err := c.requestBody(ctx, http.MethodGet, "/api/v0/workspaces/config", nil, &conf); err != nil {
 		return nil, err
 	}
 	return &conf, nil
+}
+
+// PutSiteConfigWorkspaces sets the workspace configuration.
+func (c *DefaultClient) PutSiteConfigWorkspaces(ctx context.Context, req ConfigWorkspaces) error {
+	return c.requestBody(ctx, http.MethodPut, "/api/v0/workspaces/config", req, nil)
+}
+
+type ConfigDormancy struct {
+	// UserDormancyThresholdDays is not currently updatable.
+	// UserDormancyThresholdDays int `json:"user_dormancy_threshold_days"`
+	UserDeletionThresholdDays int `json:"user_deletion_threshold_days"`
+}
+
+// SiteConfigDormancy fetches the dormancy configuration.
+func (c *DefaultClient) SiteConfigDormancy(ctx context.Context) (*ConfigDormancy, error) {
+	var conf ConfigDormancy
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/dormancy/config", nil, &conf); err != nil {
+		return nil, err
+	}
+	return &conf, nil
+}
+
+// PutSiteConfigDormancy sets the dormancy configuration.
+func (c *DefaultClient) PutSiteConfigDormancy(ctx context.Context, req ConfigDormancy) error {
+	return c.requestBody(ctx, http.MethodPut, "/api/private/dormancy/config", req, nil)
+}
+
+type ConfigDevURLAccess struct {
+	Private bool `json:"private"`
+	Org     bool `json:"org"`
+	Authed  bool `json:"authed"`
+	Public  bool `json:"public"`
+}
+
+// SiteConfigDevURLAccess fetches the DevURL access configuration.
+func (c *DefaultClient) SiteConfigDevURLAccess(ctx context.Context) (*ConfigDevURLAccess, error) {
+	var conf ConfigDevURLAccess
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/devurls/config", nil, &conf); err != nil {
+		return nil, err
+	}
+	return &conf, nil
+}
+
+// PutSiteConfigDevURLAccess sets the DevURL access configuration.
+func (c *DefaultClient) PutSiteConfigDevURLAccess(ctx context.Context, req ConfigDevURLAccess) error {
+	return c.requestBody(ctx, http.MethodPut, "/api/private/devurls/config", req, nil)
+}
+
+// ConfigSSHSettings is the site configuration for SSH.
+type ConfigSSHSettings struct {
+	KeygenAlgorithm string `json:"keygen_algorithm"`
+}
+
+// SiteConfigSSHSettings fetches the SSH configuration.
+func (c *DefaultClient) SiteConfigSSHSettings(ctx context.Context) (*ConfigSSHSettings, error) {
+	var conf ConfigSSHSettings
+	if err := c.requestBody(ctx, http.MethodGet, "/api/private/ssh/config", nil, &conf); err != nil {
+		return nil, err
+	}
+	return &conf, nil
+}
+
+// PutSiteConfigSSHSettings sets the SSH configuration.
+func (c *DefaultClient) PutSiteConfigSSHSettings(ctx context.Context, req ConfigSSHSettings) error {
+	return c.requestBody(ctx, http.MethodPut, "/api/private/ssh/config", req, nil)
 }
