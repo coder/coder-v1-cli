@@ -32,6 +32,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	goosWindows       = "windows"
+	goosLinux         = "linux"
+	apiPrivateVersion = "/api/private/version"
+)
+
 // updater updates coder-cli.
 type updater struct {
 	confirmF       func(string) (string, error)
@@ -143,7 +149,10 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 		}
 	}
 
-	downloadURL := makeDownloadURL(desiredVersion, u.osF(), runtime.GOARCH)
+	downloadURL, err := queryGithubAssetURL(u.httpClient, desiredVersion, u.osF())
+	if err != nil {
+		return clog.Fatal("failed to query github assets url", clog.Causef(err.Error()))
+	}
 
 	var downloadBuf bytes.Buffer
 	memWriter := bufio.NewWriter(&downloadBuf)
@@ -262,15 +271,7 @@ func defaultConfirm(label string) (string, error) {
 	return p.Run()
 }
 
-func makeDownloadURL(version *semver.Version, ostype, arch string) string {
-	const template = "https://github.com/cdr/coder-cli/releases/download/v%s/coder-cli-%s-%s.%s"
-	var ext string
-	switch ostype {
-	case "linux":
-		ext = "tar.gz"
-	default:
-		ext = "zip"
-	}
+func queryGithubAssetURL(httpClient getter, version *semver.Version, ostype string) (string, error) {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "%d", version.Major())
 	fmt.Fprint(&b, ".")
@@ -282,7 +283,41 @@ func makeDownloadURL(version *semver.Version, ostype, arch string) string {
 		fmt.Fprint(&b, version.Prerelease())
 	}
 
-	return fmt.Sprintf(template, b.String(), ostype, arch, ext)
+	urlString := fmt.Sprintf("https://api.github.com/repos/cdr/coder-cli/releases/tags/v%s", b.String())
+	clog.LogInfo("query github releases", fmt.Sprintf("url: %q", urlString))
+
+	type asset struct {
+		BrowserDownloadURL string `json:"browser_download_url"`
+		Name               string `json:"name"`
+	}
+	type release struct {
+		Assets []asset `json:"assets"`
+	}
+	var r release
+
+	resp, err := httpClient.Get(urlString)
+	if err != nil {
+		return "", xerrors.Errorf("query github release url %s: %w", urlString, err)
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&r)
+	if err != nil {
+		return "", xerrors.Errorf("unmarshal github releases api response: %w", err)
+	}
+
+	var assetURLStr string
+	for _, a := range r.Assets {
+		if strings.HasPrefix(a.Name, "coder-cli-"+ostype) {
+			assetURLStr = a.BrowserDownloadURL
+		}
+	}
+
+	if assetURLStr == "" {
+		return "", xerrors.Errorf("could not find release for ostype %s", ostype)
+	}
+
+	return assetURLStr, nil
 }
 
 func extractFromArchive(path string, archive []byte) ([]byte, error) {
