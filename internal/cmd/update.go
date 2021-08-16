@@ -199,6 +199,19 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 		return clog.Fatal("failed to persist updated coder binary to disk", clog.Causef(err.Error()))
 	}
 
+	_ = updatedBin.Close()
+
+	// validate that we can execute the new binary before overwriting
+	updatedVersionOutput, err := u.execF(ctx, updatedCoderBinaryPath, "--version")
+	if err != nil {
+		return clog.Fatal("failed to check version of updated coder binary",
+			clog.BlankLine,
+			fmt.Sprintf("output: %q", string(updatedVersionOutput)),
+			clog.Causef(err.Error()))
+	}
+
+	clog.LogInfo(fmt.Sprintf("updated binary reports %s", bytes.TrimSpace(updatedVersionOutput)))
+
 	if err = u.fs.Rename(updatedCoderBinaryPath, u.executablePath); err != nil {
 		return clog.Fatal("failed to update coder binary in-place", clog.Causef(err.Error()))
 	}

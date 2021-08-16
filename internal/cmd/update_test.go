@@ -22,15 +22,16 @@ import (
 )
 
 const (
-	fakeExePathLinux      = "/home/user/bin/coder"
-	fakeExePathWindows    = `C:\Users\user\bin\coder.exe`
-	fakeCoderURL          = "https://my.cdr.dev"
-	fakeNewVersion        = "1.23.4-rc.5+678-gabcdef-12345678"
-	fakeOldVersion        = "1.22.4-rc.5+678-gabcdef-12345678"
-	fakeReleaseURLLinux   = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/coder-cli-linux-amd64.tar.gz"
-	fakeReleaseURLWindows = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/coder-cli-windows-amd64.zip"
-	goosWindows           = "windows"
-	goosLinux             = "linux"
+	fakeExePathLinux        = "/home/user/bin/coder"
+	fakeUpdatedExePathLinux = "/home/user/bin/coder.new"
+	fakeExePathWindows      = `C:\Users\user\bin\coder.exe`
+	fakeCoderURL            = "https://my.cdr.dev"
+	fakeNewVersion          = "1.23.4-rc.5+678-gabcdef-12345678"
+	fakeOldVersion          = "1.22.4-rc.5+678-gabcdef-12345678"
+	fakeReleaseURLLinux     = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/coder-cli-linux-amd64.tar.gz"
+	fakeReleaseURLWindows   = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/coder-cli-windows-amd64.zip"
+	goosWindows             = "windows"
+	goosLinux               = "linux"
 )
 
 var (
@@ -116,6 +117,7 @@ func Test_updater_run(t *testing.T) {
 		p.HTTPClient.M[fakeReleaseURLLinux] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
+		p.Execer.M[p.ExecutablePath+".new --version"] = fakeExecerResult{[]byte(fakeNewVersion), nil}
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL, fakeNewVersion)
@@ -129,6 +131,7 @@ func Test_updater_run(t *testing.T) {
 		p.HTTPClient.M[fakeReleaseURLLinux] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
+		p.Execer.M[p.ExecutablePath+".new --version"] = fakeExecerResult{[]byte(fakeNewVersion), nil}
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL, "")
@@ -143,6 +146,7 @@ func Test_updater_run(t *testing.T) {
 		p.HTTPClient.M[fakeReleaseURLLinux] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
+		p.Execer.M[p.ExecutablePath+".new --version"] = fakeExecerResult{[]byte(fakeNewVersion), nil}
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, p.ExecutablePath, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL, "")
@@ -158,6 +162,7 @@ func Test_updater_run(t *testing.T) {
 		p.HTTPClient.M[fakeReleaseURLWindows] = newFakeGetterResponse(fakeValidZipBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
+		p.Execer.M[p.ExecutablePath+".new --version"] = fakeExecerResult{[]byte(fakeNewVersion), nil}
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathWindows, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL, "")
@@ -170,6 +175,7 @@ func Test_updater_run(t *testing.T) {
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeReleaseURLLinux] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
+		p.Execer.M[p.ExecutablePath+".new --version"] = fakeExecerResult{[]byte(fakeNewVersion), nil}
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, true, fakeCoderURL, "")
@@ -301,6 +307,20 @@ func Test_updater_run(t *testing.T) {
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL, "")
 		assertCLIError(t, "update coder - read-only fs", err, "failed to create file", "")
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
+	})
+
+	run(t, "update coder - cannot exec new binary", func(t *testing.T, p *params) {
+		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
+		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeReleaseURLLinux] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
+		p.VersionF = func() string { return fakeOldVersion }
+		p.ConfirmF = fakeConfirmYes
+		p.Execer.M[p.ExecutablePath+".new --version"] = fakeExecerResult{nil, fakeError}
+		u := fromParams(p)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
+		err := u.Run(p.Ctx, false, fakeCoderURL, "")
+		assertCLIError(t, "update coder - cannot exec new binary", err, "failed to check version of updated coder binary", "")
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
