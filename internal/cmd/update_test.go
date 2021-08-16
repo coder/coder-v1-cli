@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/fs"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,9 +14,11 @@ import (
 	"strings"
 	"testing"
 
+	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/slog/sloggers/slogtest/assert"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/afero"
+	"golang.org/x/xerrors"
 )
 
 const (
@@ -34,7 +35,9 @@ const (
 
 var (
 	apiPrivateVersionURL = fakeCoderURL + "/api/private/version"
+	fakeError            = xerrors.New("fake error for testing")
 	fakeNewVersionJSON   = fmt.Sprintf(`{"version":%q}`, fakeNewVersion)
+	fakeOldVersionJSON   = fmt.Sprintf(`{"version":%q}`, fakeOldVersion)
 )
 
 func Test_updater_run(t *testing.T) {
@@ -169,14 +172,14 @@ func Test_updater_run(t *testing.T) {
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
-		assert.ErrorContains(t, "update coder - user cancelled", err, "failed to confirm update")
+		assertCLIError(t, "update coder - user cancelled", err, "failed to confirm update", "")
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
 	run(t, "update coder - cannot stat", func(t *testing.T, p *params) {
 		u := fromParams(p)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
-		assert.ErrorContains(t, "update coder - cannot stat", err, "cannot stat current binary")
+		assertCLIError(t, "update coder - cannot stat", err, "cannot stat current binary", os.ErrNotExist.Error())
 	})
 
 	run(t, "update coder - no permission", func(t *testing.T, p *params) {
@@ -184,7 +187,7 @@ func Test_updater_run(t *testing.T) {
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
-		assert.ErrorContains(t, "update coder - no permission", err, "missing write permission")
+		assertCLIError(t, "update coder - no permission", err, "missing write permission", "")
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
@@ -194,31 +197,31 @@ func Test_updater_run(t *testing.T) {
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, "h$$p://invalid.url")
-		assert.ErrorContains(t, "update coder - invalid url", err, "invalid coder URL")
+		assertCLIError(t, "update coder - invalid url", err, "invalid coder URL", "first path segment in URL cannot contain colon")
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
 	run(t, "update coder - fetch api version failure", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
-		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte{}, 401, variadicS(), net.ErrClosed)
+		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte{}, 401, variadicS(), fakeError)
 		p.VersionF = func() string { return fakeOldVersion }
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
-		assert.ErrorContains(t, "update coder - fetch api version failure", err, "fetch api version")
+		assertCLIError(t, "update coder - fetch api version failure", err, "fetch api version", fakeError.Error())
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
 	run(t, "update coder - failed to fetch URL", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeReleaseURLLinux] = newFakeGetterResponse([]byte{}, 0, variadicS(), net.ErrClosed)
+		p.HTTPClient.M[fakeReleaseURLLinux] = newFakeGetterResponse([]byte{}, 0, variadicS(), fakeError)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
-		assert.ErrorContains(t, "update coder - release URL 404", err, "failed to fetch URL")
+		assertCLIError(t, "update coder - failed to fetch URL", err, "failed to fetch URL", fakeError.Error())
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
@@ -231,7 +234,7 @@ func Test_updater_run(t *testing.T) {
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
-		assert.ErrorContains(t, "update coder - release URL 404", err, "failed to fetch release")
+		assertCLIError(t, "update coder - release URL 404", err, "failed to fetch release", "status code 404")
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
@@ -244,7 +247,7 @@ func Test_updater_run(t *testing.T) {
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
-		assert.ErrorContains(t, "update coder - invalid archive", err, "failed to extract coder binary from archive")
+		assertCLIError(t, "update coder - invalid tgz archive", err, "failed to extract coder binary from archive", "unknown archive type")
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
@@ -259,7 +262,7 @@ func Test_updater_run(t *testing.T) {
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, p.ExecutablePath, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
-		assert.ErrorContains(t, "update coder - invalid archive", err, "failed to extract coder binary from archive")
+		assertCLIError(t, "update coder - invalid zip archive", err, "failed to extract coder binary from archive", "unknown archive type")
 		assertFileContent(t, p.Fakefs, p.ExecutablePath, fakeOldVersion)
 	})
 
@@ -274,7 +277,7 @@ func Test_updater_run(t *testing.T) {
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL)
-		assert.ErrorContains(t, "update coder - read-only fs", err, "failed to create file")
+		assertCLIError(t, "update coder - read-only fs", err, "failed to create file", "")
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
@@ -283,35 +286,35 @@ func Test_updater_run(t *testing.T) {
 			p.ExecutablePath = `C:\Windows\system32\coder.exe`
 			u := fromParams(p)
 			err := u.Run(p.Ctx, false, fakeCoderURL)
-			assert.ErrorContains(t, "update coder - path blocklist - windows", err, "cowardly refusing to update coder binary")
+			assertCLIError(t, "update coder - path blocklist - windows", err, "cowardly refusing to update coder binary", "blocklisted prefix")
 		})
 	} else {
 		run(t, "update coder - path blocklist - coder assets dir", func(t *testing.T, p *params) {
 			p.ExecutablePath = `/var/tmp/coder/coder`
 			u := fromParams(p)
 			err := u.Run(p.Ctx, false, fakeCoderURL)
-			assert.ErrorContains(t, "update coder - path blocklist - windows", err, "cowardly refusing to update coder binary")
+			assertCLIError(t, "update coder - path blocklist - windows", err, "cowardly refusing to update coder binary", "blocklisted prefix")
 		})
 		run(t, "update coder - path blocklist - old homebrew prefix", func(t *testing.T, p *params) {
 			p.Execer.M["brew --prefix"] = fakeExecerResult{[]byte("/usr/local"), nil}
 			p.ExecutablePath = `/usr/local/bin/coder`
 			u := fromParams(p)
 			err := u.Run(p.Ctx, false, fakeCoderURL)
-			assert.ErrorContains(t, "update coder - path blocklist - old homebrew prefix", err, "cowardly refusing to update coder binary")
+			assertCLIError(t, "update coder - path blocklist - old homebrew prefix", err, "cowardly refusing to update coder binary", "blocklisted prefix")
 		})
 		run(t, "update coder - path blocklist - new homebrew prefix", func(t *testing.T, p *params) {
 			p.Execer.M["brew --prefix"] = fakeExecerResult{[]byte("/opt/homebrew"), nil}
 			p.ExecutablePath = `/opt/homebrew/bin/coder`
 			u := fromParams(p)
 			err := u.Run(p.Ctx, false, fakeCoderURL)
-			assert.ErrorContains(t, "update coder - path blocklist - new homebrew prefix", err, "cowardly refusing to update coder binary")
+			assertCLIError(t, "update coder - path blocklist - new homebrew prefix", err, "cowardly refusing to update coder binary", "blocklisted prefix")
 		})
 		run(t, "update coder - path blocklist - linuxbrew", func(t *testing.T, p *params) {
 			p.Execer.M["brew --prefix"] = fakeExecerResult{[]byte("/home/user/.linuxbrew"), nil}
 			p.ExecutablePath = `/home/user/.linuxbrew/bin/coder`
 			u := fromParams(p)
 			err := u.Run(p.Ctx, false, fakeCoderURL)
-			assert.ErrorContains(t, "update coder - path blocklist - linuxbrew", err, "cowardly refusing to update coder binary")
+			assertCLIError(t, "update coder - path blocklist - linuxbrew", err, "cowardly refusing to update coder binary", "blocklisted prefix")
 		})
 	}
 }
@@ -406,6 +409,27 @@ func assertFileContent(t *testing.T, fs afero.Fs, name string, content string) {
 	assert.Success(t, "read file "+name, err)
 
 	assert.Equal(t, "assert content equal", content, string(b))
+}
+
+func assertCLIError(t *testing.T, name string, err error, expectedHeader, expectedLines string) {
+	t.Helper()
+	cliError, ok := err.(clog.CLIError)
+	if !ok {
+		t.Errorf("%s: assert cli error: %+v is not a cli error", name, err)
+	}
+
+	if !strings.Contains(err.Error(), expectedHeader) {
+		t.Errorf("%s: assert cli error: expected header %q to contain %q", name, err.Error(), expectedHeader)
+	}
+
+	if expectedLines == "" {
+		return
+	}
+
+	fullLines := strings.Join(cliError.Lines, "\n")
+	if !strings.Contains(fullLines, expectedLines) {
+		t.Errorf("%s: assert cli error: expected %q to contain %q", name, fullLines, expectedLines)
+	}
 }
 
 // this is a valid tgz archive containing a single file named 'coder' with permissions 0751
