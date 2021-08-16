@@ -131,11 +131,9 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 	currentVersion, err := semver.StrictNewVersion(u.versionF())
 	if err != nil {
 		clog.LogWarn("failed to determine current version of coder-cli", clog.Causef(err.Error()))
-	} else {
-		if currentVersion.Compare(desiredVersion) == 0 {
-			clog.LogInfo("Up to date!")
-			return nil
-		}
+	} else if currentVersion.Compare(desiredVersion) == 0 {
+		clog.LogInfo("Up to date!")
+		return nil
 	}
 
 	if !force {

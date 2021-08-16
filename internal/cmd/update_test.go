@@ -22,16 +22,15 @@ import (
 )
 
 const (
-	fakeExePathLinux        = "/home/user/bin/coder"
-	fakeUpdatedExePathLinux = "/home/user/bin/coder.new"
-	fakeExePathWindows      = `C:\Users\user\bin\coder.exe`
-	fakeCoderURL            = "https://my.cdr.dev"
-	fakeNewVersion          = "1.23.4-rc.5+678-gabcdef-12345678"
-	fakeOldVersion          = "1.22.4-rc.5+678-gabcdef-12345678"
-	fakeReleaseURLLinux     = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/coder-cli-linux-amd64.tar.gz"
-	fakeReleaseURLWindows   = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/coder-cli-windows-amd64.zip"
-	goosWindows             = "windows"
-	goosLinux               = "linux"
+	fakeExePathLinux      = "/home/user/bin/coder"
+	fakeExePathWindows    = `C:\Users\user\bin\coder.exe`
+	fakeCoderURL          = "https://my.cdr.dev"
+	fakeNewVersion        = "1.23.4-rc.5+678-gabcdef-12345678"
+	fakeOldVersion        = "1.22.4-rc.5+678-gabcdef-12345678"
+	fakeReleaseURLLinux   = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/coder-cli-linux-amd64.tar.gz"
+	fakeReleaseURLWindows = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/coder-cli-windows-amd64.zip"
+	goosWindows           = "windows"
+	goosLinux             = "linux"
 )
 
 var (
