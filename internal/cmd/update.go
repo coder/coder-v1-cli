@@ -45,8 +45,9 @@ type updater struct {
 
 func updateCmd() *cobra.Command {
 	var (
-		force    bool
-		coderURL string
+		force      bool
+		coderURL   string
+		versionArg string
 	)
 
 	cmd := &cobra.Command{
@@ -73,12 +74,13 @@ func updateCmd() *cobra.Command {
 				osF:            func() string { return runtime.GOOS },
 				versionF:       func() string { return version.Version },
 			}
-			return updater.Run(ctx, force, coderURL)
+			return updater.Run(ctx, force, coderURL, versionArg)
 		},
 	}
 
 	cmd.Flags().BoolVar(&force, "force", false, "do not prompt for confirmation")
-	cmd.Flags().StringVar(&coderURL, "coder", "", "coder instance against which to match version")
+	cmd.Flags().StringVar(&coderURL, "coder", "", "query this coder instance for the matching version")
+	cmd.Flags().StringVar(&versionArg, "version", "", "explicitly specify which version to fetch and install")
 
 	return cmd
 }
@@ -87,7 +89,7 @@ type getter interface {
 	Get(url string) (*http.Response, error)
 }
 
-func (u *updater) Run(ctx context.Context, force bool, coderURLString string) error {
+func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versionArg string) error {
 	// Check under following directories and warn if coder binary is under them:
 	//   * C:\Windows\
 	//   * homebrew prefix
@@ -119,34 +121,18 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLString string) er
 		return clog.Fatal("preflight: missing write permission on current binary")
 	}
 
-	var coderURL *url.URL
-	if coderURLString == "" {
-		coderURL, err = getCoderConfigURL()
-		if err != nil {
-			return clog.Fatal(
-				"Unable to automatically determine coder URL",
-				clog.Causef(err.Error()),
-				clog.BlankLine,
-				clog.Tipf("use --coder <url> to specify coder URL"),
-			)
-		}
-	} else {
-		coderURL, err = url.Parse(coderURLString)
-		if err != nil {
-			return clog.Fatal("invalid coder URL", err.Error())
-		}
-	}
-
-	desiredVersion, err := getAPIVersionUnauthed(u.httpClient, *coderURL)
-	if err != nil {
-		return clog.Fatal("fetch api version", clog.Causef(err.Error()))
-	}
-
-	clog.LogInfo(fmt.Sprintf("Coder instance at %q reports version %s", coderURL.String(), desiredVersion.String()))
 	clog.LogInfo(fmt.Sprintf("Current version of coder-cli is %s", version.Version))
 
-	if currentVersion, err := semver.StrictNewVersion(u.versionF()); err == nil {
-		if desiredVersion.Compare(currentVersion) == 0 {
+	desiredVersion, err := getDesiredVersion(u.httpClient, coderURLArg, versionArg)
+	if err != nil {
+		return clog.Fatal("failed to determine desired version of coder", clog.Causef(err.Error()))
+	}
+
+	currentVersion, err := semver.StrictNewVersion(u.versionF())
+	if err != nil {
+		clog.LogWarn("failed to determine current version of coder-cli", clog.Causef(err.Error()))
+	} else {
+		if currentVersion.Compare(desiredVersion) == 0 {
 			clog.LogInfo("Up to date!")
 			return nil
 		}
@@ -219,6 +205,45 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLString string) er
 
 	clog.LogSuccess("Updated coder CLI to version " + desiredVersion.String())
 	return nil
+}
+
+func getDesiredVersion(httpClient getter, coderURLArg string, versionArg string) (*semver.Version, error) {
+	var coderURL *url.URL
+	var desiredVersion *semver.Version
+	var err error
+
+	if coderURLArg != "" && versionArg != "" {
+		clog.LogWarn(fmt.Sprintf("ignoring the version reported by %q", coderURLArg), clog.Causef("--version flag was specified explicitly"))
+	}
+
+	if versionArg != "" {
+		desiredVersion, err = semver.StrictNewVersion(versionArg)
+		if err != nil {
+			return &semver.Version{}, xerrors.Errorf("parse desired version arg: %w", err)
+		}
+		return desiredVersion, nil
+	}
+
+	if coderURLArg == "" {
+		coderURL, err = getCoderConfigURL()
+		if err != nil {
+			return &semver.Version{}, xerrors.Errorf("get coder url: %w", err)
+		}
+	} else {
+		coderURL, err = url.Parse(coderURLArg)
+		if err != nil {
+			return &semver.Version{}, xerrors.Errorf("parse coder url arg: %w", err)
+		}
+	}
+
+	desiredVersion, err = getAPIVersionUnauthed(httpClient, *coderURL)
+	if err != nil {
+		return &semver.Version{}, xerrors.Errorf("query coder version: %w", err)
+	}
+
+	clog.LogInfo(fmt.Sprintf("Coder instance at %q reports version %s", coderURL.String(), desiredVersion.String()))
+
+	return desiredVersion, nil
 }
 
 func defaultConfirm(label string) (string, error) {

@@ -13,9 +13,10 @@ coder update [flags]
 ### Options
 
 ```
-      --coder string   coder instance against which to match version
-      --force          do not prompt for confirmation
-  -h, --help           help for update
+      --coder string     query this coder instance for the matching version
+      --force            do not prompt for confirmation
+  -h, --help             help for update
+      --version string   explicitly specify which version to fetch and install
 ```
 
 ### Options inherited from parent commands
