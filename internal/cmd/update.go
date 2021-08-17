@@ -180,11 +180,9 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 
 	// TODO: validate the checksum of the downloaded file. GitHub does not currently provide this information
 	// and we do not generate them yet.
-	var updatedBinaryName string
+	updatedBinaryName := "coder"
 	if u.osF() == "windows" {
 		updatedBinaryName = "coder.exe"
-	} else {
-		updatedBinaryName = "coder"
 	}
 	updatedBinary, err := extractFromArchive(updatedBinaryName, downloadBuf.Bytes())
 	if err != nil {
