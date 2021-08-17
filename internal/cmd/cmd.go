@@ -38,6 +38,7 @@ func Make() *cobra.Command {
 		tagsCmd(),
 		tokensCmd(),
 		tunnelCmd(),
+		updateCmd(),
 		urlCmd(),
 		usersCmd(),
 		workspacesCmd(),

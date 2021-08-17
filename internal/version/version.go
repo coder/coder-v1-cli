@@ -1,5 +1,5 @@
 // Package version contains the compile-time injected version string and
-// related utiliy methods.
+// related utility methods.
 package version
 
 import (
