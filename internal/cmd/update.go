@@ -21,10 +21,11 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/xerrors"
+
 	"cdr.dev/coder-cli/internal/config"
 	"cdr.dev/coder-cli/internal/version"
 	"cdr.dev/coder-cli/pkg/clog"
-	"golang.org/x/xerrors"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/manifoldco/promptui"

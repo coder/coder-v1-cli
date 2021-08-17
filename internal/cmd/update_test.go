@@ -14,11 +14,12 @@ import (
 	"strings"
 	"testing"
 
-	"cdr.dev/coder-cli/pkg/clog"
 	"cdr.dev/slog/sloggers/slogtest/assert"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/afero"
 	"golang.org/x/xerrors"
+
+	"cdr.dev/coder-cli/pkg/clog"
 )
 
 const (
