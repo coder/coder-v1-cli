@@ -218,7 +218,7 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 
 func (u *updater) doUpdate(ctx context.Context, updatedCoderBinaryPath string) error {
 	var err error
-	// TODO(cian): on Windows, we must do two things differnetly:
+	// TODO(cian): on Windows, we must do two things differently:
 	// 1) Calling the updated binary fails due to the xterminal.MakeOutputRaw call in main; skipping this check on Windows.
 	// 2) We must rename the currently running binary before renaming the new binary
 	if u.osF() == goosWindows {

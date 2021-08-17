@@ -71,34 +71,36 @@ func Test_updater_run(t *testing.T) {
 	}
 
 	run := func(t *testing.T, name string, fn func(t *testing.T, p *params)) {
-		t.Logf("running %s", name)
-		ctx := context.Background()
-		fakefs := afero.NewMemMapFs()
-		execer := newFakeExecer(t)
-		execer.M["brew --prefix"] = fakeExecerResult{[]byte{}, os.ErrNotExist}
-		params := &params{
-			// This must be overridden inside run()
-			ConfirmF: func(string) (string, error) {
-				t.Errorf("unhandled ConfirmF")
-				t.FailNow()
-				return "", nil
-			},
-			Execer:         execer,
-			Ctx:            ctx,
-			ExecutablePath: fakeExePathLinux,
-			Fakefs:         fakefs,
-			HTTPClient:     newFakeGetter(t),
-			// Default to GOOS=linux
-			OsF: func() string { return goosLinux },
-			// This must be overridden inside run()
-			VersionF: func() string {
-				t.Errorf("unhandled VersionF")
-				t.FailNow()
-				return ""
-			},
-		}
+		t.Run(name, func(t *testing.T) {
+			t.Logf("running %s", name)
+			ctx := context.Background()
+			fakefs := afero.NewMemMapFs()
+			execer := newFakeExecer(t)
+			execer.M["brew --prefix"] = fakeExecerResult{[]byte{}, os.ErrNotExist}
+			params := &params{
+				// This must be overridden inside run()
+				ConfirmF: func(string) (string, error) {
+					t.Errorf("unhandled ConfirmF")
+					t.FailNow()
+					return "", nil
+				},
+				Execer:         execer,
+				Ctx:            ctx,
+				ExecutablePath: fakeExePathLinux,
+				Fakefs:         fakefs,
+				HTTPClient:     newFakeGetter(t),
+				// Default to GOOS=linux
+				OsF: func() string { return goosLinux },
+				// This must be overridden inside run()
+				VersionF: func() string {
+					t.Errorf("unhandled VersionF")
+					t.FailNow()
+					return ""
+				},
+			}
 
-		fn(t, params)
+			fn(t, params)
+		})
 	}
 
 	run(t, "update coder - noop", func(t *testing.T, p *params) {
