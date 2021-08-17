@@ -208,22 +208,42 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 
 	_ = updatedBin.Close()
 
-	// validate that we can execute the new binary before overwriting
-	updatedVersionOutput, err := u.execF(ctx, updatedCoderBinaryPath, "--version")
-	if err != nil {
-		return clog.Fatal("failed to check version of updated coder binary",
-			clog.BlankLine,
-			fmt.Sprintf("output: %q", string(updatedVersionOutput)),
-			clog.Causef(err.Error()))
-	}
-
-	clog.LogInfo(fmt.Sprintf("updated binary reports %s", bytes.TrimSpace(updatedVersionOutput)))
-
-	if err = u.fs.Rename(updatedCoderBinaryPath, u.executablePath); err != nil {
-		return clog.Fatal("failed to update coder binary in-place", clog.Causef(err.Error()))
+	if err := u.doUpdate(ctx, updatedCoderBinaryPath); err != nil {
+		return clog.Fatal("failed to update coder binary", clog.Causef(err.Error()))
 	}
 
 	clog.LogSuccess("Updated coder CLI to version " + desiredVersion.String())
+	return nil
+}
+
+func (u *updater) doUpdate(ctx context.Context, updatedCoderBinaryPath string) error {
+	var err error
+	// TODO(cian): on Windows, we must do two things differnetly:
+	// 1) Calling the updated binary fails due to the xterminal.MakeOutputRaw call in main; skipping this check on Windows.
+	// 2) We must rename the currently running binary before renaming the new binary
+	if u.osF() == goosWindows {
+		err = u.fs.Rename(u.executablePath, updatedCoderBinaryPath+".old")
+		if err != nil {
+			return xerrors.Errorf("windows: rename current coder binary: %w", err)
+		}
+		err = u.fs.Rename(updatedCoderBinaryPath, u.executablePath)
+		if err != nil {
+			return xerrors.Errorf("windows: rename updated coder binary: %w", err)
+		}
+		return nil
+	}
+
+	// validate that we can execute the new binary before overwriting
+	updatedVersionOutput, err := u.execF(ctx, updatedCoderBinaryPath, "--version")
+	if err != nil {
+		return xerrors.Errorf("check version of updated coder binary: %w", err)
+	}
+	clog.LogInfo(fmt.Sprintf("updated binary reports %s", bytes.TrimSpace(updatedVersionOutput)))
+
+	if err = u.fs.Rename(updatedCoderBinaryPath, u.executablePath); err != nil {
+		return xerrors.Errorf("update coder binary in-place: %w", err)
+	}
+
 	return nil
 }
 

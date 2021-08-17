@@ -345,11 +345,25 @@ func Test_updater_run(t *testing.T) {
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL, "")
-		assertCLIError(t, "update coder - cannot exec new binary", err, "failed to check version of updated coder binary", "")
+		assertCLIError(t, "update coder - cannot exec new binary", err, "failed to update coder binary", fakeError.Error())
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
 	if runtime.GOOS == goosWindows {
+		run(t, "update coder - windows", func(t *testing.T, p *params) {
+			fakeFile(t, p.Fakefs, fakeExePathWindows, 0755, fakeOldVersion)
+			p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
+			p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+			p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse(fakeValidTgzBytes, 200, variadicS(), nil)
+			p.VersionF = func() string { return fakeOldVersion }
+			p.ConfirmF = fakeConfirmYes
+			p.OsF = func() string { return goosWindows }
+			u := fromParams(p)
+			assertFileContent(t, p.Fakefs, fakeExePathWindows, fakeOldVersion)
+			err := u.Run(p.Ctx, false, fakeCoderURL, "")
+			assertCLIError(t, "update coder - cannot exec new binary", err, "failed to update coder binary", fakeError.Error())
+			assertFileContent(t, p.Fakefs, fakeExePathWindows, fakeOldVersion)
+		})
 		run(t, "update coder - path blocklist - windows", func(t *testing.T, p *params) {
 			p.ExecutablePath = `C:\Windows\system32\coder.exe`
 			u := fromParams(p)
