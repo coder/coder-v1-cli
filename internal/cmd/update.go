@@ -145,7 +145,7 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 	if !force {
 		label := fmt.Sprintf("Do you want to download version %s instead", desiredVersion)
 		if _, err := u.confirmF(label); err != nil {
-			return clog.Fatal("failed to confirm update", clog.Tipf(`use "--force" to update without confirmation`))
+			return clog.Fatal("user cancelled operation", clog.Tipf(`use "--force" to update without confirmation`))
 		}
 	}
 
@@ -383,7 +383,10 @@ func extractFromTgz(path string, archive []byte) ([]byte, error) {
 		}
 		fi := hdr.FileInfo()
 		if fi.Name() == path && fi.Mode().IsRegular() {
-			_, _ = io.Copy(bw, tr)
+			_, err = io.Copy(bw, tr)
+			if err != nil {
+				return nil, xerrors.Errorf("failed to read file %q from archive", fi.Name())
+			}
 			break
 		}
 	}

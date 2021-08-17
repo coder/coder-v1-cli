@@ -197,7 +197,7 @@ func Test_updater_run(t *testing.T) {
 		u := fromParams(p)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 		err := u.Run(p.Ctx, false, fakeCoderURL, "")
-		assertCLIError(t, "update coder - user cancelled", err, "failed to confirm update", "")
+		assertCLIError(t, "update coder - user cancelled", err, "user cancelled operation", "")
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeOldVersion)
 	})
 
