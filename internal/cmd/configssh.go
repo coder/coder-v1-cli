@@ -261,7 +261,7 @@ func makeSSHConfig(binPath, workspaceName, privateKeyFilepath string, additional
 	}
 	options = append(options,
 		fmt.Sprintf("HostName coder.%s", workspaceName),
-		fmt.Sprintf("ProxyCommand %q tunnel %s 12213 stdio", binPath, workspaceName),
+		fmt.Sprintf("ProxyCommand %s", proxyCommand(binPath, workspaceName, true)),
 		"StrictHostKeyChecking no",
 		"ConnectTimeout=0",
 		"IdentitiesOnly yes",
@@ -277,6 +277,13 @@ func makeSSHConfig(binPath, workspaceName, privateKeyFilepath string, additional
 	}
 
 	return fmt.Sprintf("Host coder.%s\n\t%s\n\n", workspaceName, strings.Join(options, "\n\t"))
+}
+
+func proxyCommand(binPath, workspaceName string, quoted bool) string {
+	if quoted {
+		binPath = fmt.Sprintf("%q", binPath)
+	}
+	return fmt.Sprintf(`%s tunnel %s 12213 stdio`, binPath, workspaceName)
 }
 
 func writeStr(filename, data string) error {

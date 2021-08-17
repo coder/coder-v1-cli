@@ -70,6 +70,7 @@ const (
 
 func lsWorkspacesCommand() *cobra.Command {
 	var (
+		all       bool
 		outputFmt string
 		user      string
 		provider  string
@@ -85,15 +86,18 @@ func lsWorkspacesCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			workspaces, err := getWorkspaces(ctx, client, user)
+
+			var workspaces []coder.Workspace
+			switch {
+			case all:
+				workspaces, err = getAllWorkspaces(ctx, client)
+			case provider != "":
+				workspaces, err = getWorkspacesByProvider(ctx, client, provider, user)
+			default:
+				workspaces, err = getWorkspaces(ctx, client, user)
+			}
 			if err != nil {
 				return err
-			}
-			if provider != "" {
-				workspaces, err = getWorkspacesByProvider(ctx, client, provider, user)
-				if err != nil {
-					return err
-				}
 			}
 			if len(workspaces) < 1 {
 				clog.LogInfo("no workspaces found")
@@ -124,6 +128,7 @@ func lsWorkspacesCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&all, "all", false, "Get workspaces for all users (admin only)")
 	cmd.Flags().StringVar(&user, "user", coder.Me, "Specify the user whose resources to target")
 	cmd.Flags().StringVarP(&outputFmt, "output", "o", humanOutput, "human | json")
 	cmd.Flags().StringVarP(&provider, "provider", "p", "", "Filter workspaces by a particular workspace provider name.")

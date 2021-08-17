@@ -24,9 +24,9 @@ func Test_users(t *testing.T) {
 
 func assertAdmin(t *testing.T, users []coder.User) {
 	for _, u := range users {
-		if u.Username == "admin" {
+		if u.Username == "kyle" {
 			return
 		}
 	}
-	slogtest.Fatal(t, "did not find admin user", slog.F("users", users))
+	slogtest.Fatal(t, "did not find kyle user", slog.F("users", users))
 }

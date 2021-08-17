@@ -13,6 +13,7 @@ coder workspaces ls [flags]
 ### Options
 
 ```
+      --all               Get workspaces for all users (admin only)
   -h, --help              help for ls
   -o, --output string     human | json (default "human")
   -p, --provider string   Filter workspaces by a particular workspace provider name.
