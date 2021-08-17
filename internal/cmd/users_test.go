@@ -16,17 +16,17 @@ func Test_users(t *testing.T) {
 	res := execute(t, nil, "users", "ls", "--output=json")
 	res.success(t)
 	res.stdoutUnmarshals(t, &users)
-	assertCICD(t, users)
+	assertAdmin(t, users)
 
 	res = execute(t, nil, "users", "ls", "--output=human")
 	res.success(t)
 }
 
-func assertCICD(t *testing.T, users []coder.User) {
+func assertAdmin(t *testing.T, users []coder.User) {
 	for _, u := range users {
-		if u.Username == "cicd" {
+		if u.Username == "admin" {
 			return
 		}
 	}
-	slogtest.Fatal(t, "did not find cicd user", slog.F("users", users))
+	slogtest.Fatal(t, "did not find admin user", slog.F("users", users))
 }
