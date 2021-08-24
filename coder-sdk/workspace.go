@@ -112,7 +112,7 @@ type ParseTemplateRequest struct {
 	Local    io.Reader `json:"-"`
 }
 
-// TemplateVersion is a Workspaces As Code (WAC) template.
+// TemplateVersion is a workspace template.
 // For now, let's not interpret it on the CLI level. We just need
 // to forward this as part of the create workspace request.
 type TemplateVersion struct {
