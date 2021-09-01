@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"context"
+	"net/http"
+	"net/http/pprof"
 	"net/url"
 	"os"
 	"os/signal"
@@ -78,6 +81,8 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 				}
 			}
 
+			go servePprof(ctx, log)
+
 			log.Info(ctx, "starting wsnet listener", slog.F("coder_access_url", u.String()))
 			listener, err := wsnet.Listen(ctx, log, wsnet.ListenEndpoint(u, token), token)
 			if err != nil {
@@ -104,4 +109,16 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 	cmd.Flags().StringVar(&coderURL, "coder-url", "", "coder access url")
 
 	return cmd
+}
+
+// This prevents the pprof import from being accidentally deleted.
+var _ = pprof.Handler
+
+func servePprof(ctx context.Context, log slog.Logger) {
+	const pprofServerAddr = ":6060"
+	log.Debug(ctx, "pprof http server listening", slog.F("addr", pprofServerAddr))
+	err := http.ListenAndServe(pprofServerAddr, nil)
+	if err != nil {
+		log.Error(ctx, "pprof http server listen", slog.Error(err))
+	}
 }
