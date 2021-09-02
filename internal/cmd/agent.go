@@ -61,6 +61,9 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 			}
 
 			log := slog.Make(sinks...).Leveled(slog.LevelDebug)
+			if err != nil {
+				log.Info(ctx, "failed to open agent log file", slog.Error(err))
+			}
 			if coderURL == "" {
 				var ok bool
 				coderURL, ok = os.LookupEnv("CODER_URL")
