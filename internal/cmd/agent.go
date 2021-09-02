@@ -52,24 +52,24 @@ coder agent start --log-file=/tmp/coder-agent.log
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			sinks := []slog.Sink{
-				sloghuman.Sink(os.Stderr),
-			}
+
+			log := slog.Make(sloghuman.Sink(os.Stderr)).Leveled(slog.LevelDebug)
 
 			// Optional log file path to write
 			if logFile != "" {
 				// Truncate the file if it already exists
 				file, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 				if err != nil {
-					// If an error occurs, it should be fatal, because we asked to write
-					// a log to a path but cannot write it for some reason
-					return xerrors.Errorf("open log file: %w", err)
+					// If an error occurs, log it as an error, but consider it non-fatal
+					log.Warn(ctx, "failed to open log file", slog.Error(err))
+				} else {
+					// Log to both standard output and our file
+					log = slog.Make(
+						sloghuman.Sink(os.Stderr),
+						sloghuman.Sink(file),
+					).Leveled(slog.LevelDebug)
 				}
-
-				sinks = append(sinks, sloghuman.Sink(file))
 			}
-
-			log := slog.Make(sinks...).Leveled(slog.LevelDebug)
 
 			if coderURL == "" {
 				var ok bool
