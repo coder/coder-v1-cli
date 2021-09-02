@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	// We use slog here since agent runs in the background and we can benefit
@@ -48,10 +49,20 @@ coder agent start
 coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var (
-				ctx = cmd.Context()
-				log = slog.Make(sloghuman.Sink(os.Stderr)).Leveled(slog.LevelDebug)
-			)
+			ctx := cmd.Context()
+			sinks := []slog.Sink{
+				sloghuman.Sink(os.Stderr),
+			}
+
+			file, err := os.OpenFile(filepath.Join(os.TempDir(), "coder-agent.log"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+			if err == nil && file != nil {
+				sinks = append(sinks, sloghuman.Sink(file))
+			}
+
+			log := slog.Make(sinks...).Leveled(slog.LevelDebug)
+			if err != nil {
+				log.Info(ctx, "failed to open agent log file", slog.Error(err))
+			}
 			if coderURL == "" {
 				var ok bool
 				coderURL, ok = os.LookupEnv("CODER_URL")
