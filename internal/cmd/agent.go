@@ -63,7 +63,7 @@ coder agent start --log-file=/tmp/coder-agent.log
 				if err != nil {
 					// If an error occurs, it should be fatal, because we asked to write
 					// a log to a path but cannot write it for some reason
-					return xerrors.Errorf("open log-file %q: %w", logFile, err)
+					return xerrors.Errorf("open log file: %w", err)
 				}
 
 				sinks = append(sinks, sloghuman.Sink(file))
