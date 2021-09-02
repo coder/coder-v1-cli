@@ -4,7 +4,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 
 	// We use slog here since agent runs in the background and we can benefit
@@ -35,18 +34,21 @@ func startCmd() *cobra.Command {
 	var (
 		token    string
 		coderURL string
+		logFile  string
 	)
 	cmd := &cobra.Command{
-		Use:   "start --coder-url=[coder_url] --token=[token]",
+		Use:   "start --coder-url=<coder_url> --token=<token> --log-file=<path>",
 		Short: "starts the coder agent",
 		Long:  "starts the coder agent",
 		Example: `# start the agent and use CODER_URL and CODER_AGENT_TOKEN env vars
-
 coder agent start
 
 # start the agent and connect with a specified url and agent token
-
 coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
+
+# start the agent and write a copy of the log to /tmp/coder-agent.log
+# if the file already exists, it will be truncated
+coder agent start --log-file=/tmp/coder-agent.log
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -54,15 +56,21 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 				sloghuman.Sink(os.Stderr),
 			}
 
-			file, err := os.OpenFile(filepath.Join(os.TempDir(), "coder-agent.log"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-			if err == nil && file != nil {
+			// Optional log file path to write
+			if logFile != "" {
+				// Truncate the file if it already exists
+				file, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+				if err != nil {
+					// If an error occurs, it should be fatal, because we asked to write
+					// a log to a path but cannot write it for some reason
+					return xerrors.Errorf("open log-file %q: %w", logFile, err)
+				}
+
 				sinks = append(sinks, sloghuman.Sink(file))
 			}
 
 			log := slog.Make(sinks...).Leveled(slog.LevelDebug)
-			if err != nil {
-				log.Info(ctx, "failed to open agent log file", slog.Error(err))
-			}
+
 			if coderURL == "" {
 				var ok bool
 				coderURL, ok = os.LookupEnv("CODER_URL")
@@ -113,6 +121,7 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 
 	cmd.Flags().StringVar(&token, "token", "", "coder agent token")
 	cmd.Flags().StringVar(&coderURL, "coder-url", "", "coder access url")
+	cmd.Flags().StringVar(&logFile, "log-file", "", "write a copy of logs to file")
 
 	return cmd
 }
