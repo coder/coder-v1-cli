@@ -11,7 +11,6 @@ import (
 	// from structured logging.
 	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/sloghuman"
-	"cdr.dev/slog/sloggers/slogjson"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
@@ -57,7 +56,7 @@ coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 
 			file, err := os.OpenFile(filepath.Join(os.TempDir(), "coder-agent.log"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 			if err == nil && file != nil {
-				sinks = append(sinks, slogjson.Sink(file))
+				sinks = append(sinks, sloghuman.Sink(file))
 			}
 
 			log := slog.Make(sinks...).Leveled(slog.LevelDebug)
