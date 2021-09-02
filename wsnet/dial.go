@@ -392,19 +392,22 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
 
-	errCh := make(chan error)
+	errCh := make(chan error, 1)
 	go func() {
+		defer close(errCh)
+
 		var res DialChannelResponse
 		err = json.NewDecoder(rw).Decode(&res)
 		if err != nil {
 			errCh <- fmt.Errorf("read dial response: %w", err)
 			return
 		}
+
 		d.log.Debug(ctx, "dial response", slog.F("res", res))
 		if res.Err == "" {
-			close(errCh)
 			return
 		}
+
 		err := errors.New(res.Err)
 		if res.Code == CodeDialErr {
 			err = &net.OpError{
