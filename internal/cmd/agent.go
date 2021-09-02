@@ -4,12 +4,14 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	// We use slog here since agent runs in the background and we can benefit
 	// from structured logging.
 	"cdr.dev/slog"
 	"cdr.dev/slog/sloggers/sloghuman"
+	"cdr.dev/slog/sloggers/slogjson"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
@@ -48,10 +50,17 @@ coder agent start
 coder agent start --coder-url https://my-coder.com --token xxxx-xxxx
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var (
-				ctx = cmd.Context()
-				log = slog.Make(sloghuman.Sink(os.Stderr)).Leveled(slog.LevelDebug)
-			)
+			ctx := cmd.Context()
+			sinks := []slog.Sink{
+				sloghuman.Sink(os.Stderr),
+			}
+
+			file, err := os.OpenFile(filepath.Join(os.TempDir(), "coder-agent.log"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+			if err == nil && file != nil {
+				sinks = append(sinks, slogjson.Sink(file))
+			}
+
+			log := slog.Make(sinks...).Leveled(slog.LevelDebug)
 			if coderURL == "" {
 				var ok bool
 				coderURL, ok = os.LookupEnv("CODER_URL")
