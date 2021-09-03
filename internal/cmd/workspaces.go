@@ -449,7 +449,7 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 				}
 			}
 
-			if forUser != "" {
+			if forUser != "" && forUser != coder.Me {
 				// Making a workspace for another user, do they exist?
 				u, err := client.UserByEmail(ctx, forUser)
 				if err != nil {
@@ -522,7 +522,7 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.Flags().BoolVar(&useCVM, "container-based-vm", false, "deploy the workspace as a Container-based VM")
 	cmd.Flags().BoolVar(&enableAutostart, "enable-autostart", false, "automatically start this workspace at your preferred time.")
-	cmd.Flags().StringVar(&forUser, "for", "", "Optionally create a workspace for another user. This field should be the user's email.")
+	cmd.Flags().StringVar(&forUser, "user", coder.Me, "Specify the user whose resources to target")
 	_ = cmd.MarkFlagRequired("image")
 	return cmd
 }
