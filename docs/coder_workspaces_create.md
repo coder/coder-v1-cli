@@ -33,6 +33,7 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
   -o, --org string           name of the organization the workspace should be created under.
       --provider string      name of Workspace Provider with which to create the workspace
   -t, --tag string           tag of the image the workspace will be based off of. (default "latest")
+      --user string          Specify the user whose resources to target (default "me")
 ```
 
 ### Options inherited from parent commands
