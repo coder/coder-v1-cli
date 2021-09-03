@@ -1,8 +1,8 @@
 cdr.dev/slog v1.3.0/go.mod h1:C5OL99WyuOK8YHZdYY57dAPN1jK2WJlCdq2VP6xeQns=
 cdr.dev/slog v1.4.1 h1:Q8+X63m8/WB4geelMTDO8t4CTwVh1f7+5Cxi7kS/SZg=
 cdr.dev/slog v1.4.1/go.mod h1:O76C6gZJxa5HK1SXMrjd48V2kJxYZKFRTcFfn/V9OhA=
-cdr.dev/wsep v0.0.0-20200728013649-82316a09813f h1:WnTUINBwXE11xjp5nTVt+H2qB2/KEymos1jKMcppG9U=
-cdr.dev/wsep v0.0.0-20200728013649-82316a09813f/go.mod h1:2VKClUml3gfmLez0gBxTJIjSKszpQotc2ZqPdApfK/Y=
+cdr.dev/wsep v0.1.0 h1:70z0VLd9hCHuBrX/XLmhspRDL0XTAtpg/0tGqHiEIhY=
+cdr.dev/wsep v0.1.0/go.mod h1:9xXBG4xn80ogx5+WHX0zlFZR2X28ECbGtakqU7ncjdM=
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.38.0/go.mod h1:990N+gfupTy94rShfmMCWGDn0LpTmnzTp2qbd1dvSRU=

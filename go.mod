@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	cdr.dev/slog v1.4.1
-	cdr.dev/wsep v0.0.0-20200728013649-82316a09813f
+	cdr.dev/wsep v0.1.0
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/briandowns/spinner v1.16.0
 	github.com/cli/safeexec v1.0.0
