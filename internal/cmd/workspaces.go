@@ -397,6 +397,7 @@ func createWorkspaceCmd() *cobra.Command {
 		useCVM          bool
 		providerName    string
 		enableAutostart bool
+		forUser         string // Optional
 	)
 
 	cmd := &cobra.Command{
@@ -448,6 +449,19 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 				}
 			}
 
+			if forUser != "" {
+				// Making a workspace for another user, do they exist?
+				u, err := client.UserByEmail(ctx, forUser)
+				if err != nil {
+					// Try by ID?
+					u, err = client.UserByID(ctx, forUser)
+					if err != nil {
+						return xerrors.Errorf("the user %q was not found: %w", forUser, err)
+					}
+				}
+				forUser = u.ID
+			}
+
 			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
 			createReq := &coder.CreateWorkspaceRequest{
 				Name:            args[0],
@@ -462,6 +476,7 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 				ResourcePoolID:  provider.ID,
 				Namespace:       provider.DefaultNamespace,
 				EnableAutoStart: enableAutostart,
+				ForUserID:       forUser,
 			}
 
 			// if any of these defaulted to their zero value we provision
@@ -507,6 +522,7 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.Flags().BoolVar(&useCVM, "container-based-vm", false, "deploy the workspace as a Container-based VM")
 	cmd.Flags().BoolVar(&enableAutostart, "enable-autostart", false, "automatically start this workspace at your preferred time.")
+	cmd.Flags().StringVar(&forUser, "for", "", "Optionally create a workspace for another user. This field should be the user's email.")
 	_ = cmd.MarkFlagRequired("image")
 	return cmd
 }

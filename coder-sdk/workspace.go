@@ -89,6 +89,10 @@ type CreateWorkspaceRequest struct {
 	Namespace       string  `json:"namespace"`
 	EnableAutoStart bool    `json:"autostart_enabled"`
 
+	// ForUserID is an optional param to create a workspace for another user
+	// other than the requester. This only works for admins and site managers.
+	ForUserID string `json:"for_user_id,omitempty"`
+
 	// TemplateID comes from the parse template route on cemanager.
 	TemplateID string `json:"template_id,omitempty"`
 }
