@@ -449,6 +449,7 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 				}
 			}
 
+			var forEmail string
 			if forUser != "" && forUser != coder.Me {
 				// Making a workspace for another user, do they exist?
 				u, err := client.UserByEmail(ctx, forUser)
@@ -460,6 +461,7 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 					}
 				}
 				forUser = u.ID
+				forEmail = u.Email
 			}
 
 			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
@@ -504,9 +506,13 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 				return nil
 			}
 
+			extraFlags := ""
+			if forEmail != coder.Me && forEmail != "" {
+				extraFlags = " --user " + forEmail
+			}
 			clog.LogSuccess("creating workspace...",
 				clog.BlankLine,
-				clog.Tipf(`run "coder workspaces watch-build %s" to trail the build logs`, workspace.Name),
+				clog.Tipf(`run "coder workspaces watch-build %s%s" to trail the build logs`, workspace.Name, extraFlags),
 			)
 			return nil
 		},
