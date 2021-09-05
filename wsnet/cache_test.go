@@ -19,7 +19,10 @@ func TestCache(t *testing.T) {
 
 	t.Run("Caches", func(t *testing.T) {
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		l, err := Listen(context.Background(), ListenOptions{
+			Log:       slogtest.Make(t, nil),
+			BrokerURL: listenAddr,
+		})
 		require.NoError(t, err)
 		defer l.Close()
 
@@ -35,7 +38,10 @@ func TestCache(t *testing.T) {
 
 	t.Run("Create If Closed", func(t *testing.T) {
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		l, err := Listen(context.Background(), ListenOptions{
+			Log:       slogtest.Make(t, nil),
+			BrokerURL: listenAddr,
+		})
 		require.NoError(t, err)
 		defer l.Close()
 
@@ -53,7 +59,10 @@ func TestCache(t *testing.T) {
 
 	t.Run("Evict No Connections", func(t *testing.T) {
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		l, err := Listen(context.Background(), ListenOptions{
+			Log:       slogtest.Make(t, nil),
+			BrokerURL: listenAddr,
+		})
 		require.NoError(t, err)
 		defer l.Close()
 

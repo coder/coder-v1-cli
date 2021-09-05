@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"sync"
 	"sync/atomic"
@@ -42,15 +43,28 @@ type DialChannelResponse struct {
 	Op  string
 }
 
+// ListenOptions are options to configure a listener.
+type ListenOptions struct {
+	Log        slog.Logger
+	BrokerURL  string
+	HTTPClient *http.Client
+
+	TURNProxyAuthToken string
+}
+
 // Listen connects to the broker proxies connections to the local net.
 // Close will end all RTC connections.
-func Listen(ctx context.Context, log slog.Logger, broker string, turnProxyAuthToken string) (io.Closer, error) {
+func Listen(ctx context.Context, options ListenOptions) (io.Closer, error) {
+	if options.BrokerURL == "" {
+		return nil, errors.New("broker must be set")
+	}
 	l := &listener{
-		log:                log,
-		broker:             broker,
+		log:                options.Log,
+		httpClient:         options.HTTPClient,
+		brokerURL:          options.BrokerURL,
 		connClosers:        make([]io.Closer, 0),
 		closed:             make(chan struct{}, 1),
-		turnProxyAuthToken: turnProxyAuthToken,
+		turnProxyAuthToken: options.TURNProxyAuthToken,
 	}
 
 	// We do a one-off dial outside of the loop to ensure the initial
@@ -99,7 +113,8 @@ func Listen(ctx context.Context, log slog.Logger, broker string, turnProxyAuthTo
 }
 
 type listener struct {
-	broker             string
+	brokerURL          string
+	httpClient         *http.Client
 	turnProxyAuthToken string
 
 	log            slog.Logger
@@ -111,12 +126,14 @@ type listener struct {
 }
 
 func (l *listener) dial(ctx context.Context) (<-chan error, error) {
-	l.log.Info(ctx, "connecting to broker", slog.F("broker_url", l.broker))
+	l.log.Info(ctx, "connecting to broker", slog.F("broker_url", l.brokerURL))
 	if l.ws != nil {
 		_ = l.ws.Close(websocket.StatusNormalClosure, "new connection inbound")
 	}
 
-	conn, resp, err := websocket.Dial(ctx, l.broker, nil)
+	conn, resp, err := websocket.Dial(ctx, l.brokerURL, &websocket.DialOptions{
+		HTTPClient: l.httpClient,
+	})
 	if err != nil {
 		if resp != nil {
 			return nil, coder.NewHTTPError(resp)

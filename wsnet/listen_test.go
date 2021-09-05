@@ -35,7 +35,10 @@ func TestListen(t *testing.T) {
 		s := httptest.NewServer(mux)
 		defer s.Close()
 
-		l, err := Listen(context.Background(), slogtest.Make(t, nil), s.URL, "")
+		l, err := Listen(context.Background(), ListenOptions{
+			Log:       slogtest.Make(t, nil),
+			BrokerURL: s.URL,
+		})
 		require.NoError(t, err)
 		defer l.Close()
 		conn := <-connCh

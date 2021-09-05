@@ -69,7 +69,10 @@ func TestDial(t *testing.T) {
 		log := slogtest.Make(t, nil)
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), log, listenAddr, "")
+		l, err := Listen(context.Background(), ListenOptions{
+			Log:       log,
+			BrokerURL: listenAddr,
+		})
 		require.NoError(t, err)
 		defer l.Close()
 
@@ -87,7 +90,10 @@ func TestDial(t *testing.T) {
 		log := slogtest.Make(t, nil)
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), log, listenAddr, "")
+		l, err := Listen(context.Background(), ListenOptions{
+			Log:       log,
+			BrokerURL: listenAddr,
+		})
 		require.NoError(t, err)
 		defer l.Close()
 
@@ -115,7 +121,10 @@ func TestDial(t *testing.T) {
 		log := slogtest.Make(t, nil)
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), log, listenAddr, "")
+		l, err := Listen(context.Background(), ListenOptions{
+			Log:       log,
+			BrokerURL: listenAddr,
+		})
 		require.NoError(t, err)
 		defer l.Close()
 
@@ -148,7 +157,10 @@ func TestDial(t *testing.T) {
 		}()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), log, listenAddr, "")
+		l, err := Listen(context.Background(), ListenOptions{
+			Log:       log,
+			BrokerURL: listenAddr,
+		})
 		require.NoError(t, err)
 		defer l.Close()
 
@@ -179,7 +191,10 @@ func TestDial(t *testing.T) {
 		}()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), log, listenAddr, "")
+		l, err := Listen(context.Background(), ListenOptions{
+			Log:       log,
+			BrokerURL: listenAddr,
+		})
 		require.NoError(t, err)
 		defer l.Close()
 
@@ -202,7 +217,10 @@ func TestDial(t *testing.T) {
 		log := slogtest.Make(t, nil)
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), log, listenAddr, "")
+		l, err := Listen(context.Background(), ListenOptions{
+			Log:       log,
+			BrokerURL: listenAddr,
+		})
 		require.NoError(t, err)
 		defer l.Close()
 
@@ -229,7 +247,10 @@ func TestDial(t *testing.T) {
 		}()
 
 		connectAddr, listenAddr := createDumbBroker(t)
-		l, err := Listen(context.Background(), log, listenAddr, "")
+		l, err := Listen(context.Background(), ListenOptions{
+			Log:       log,
+			BrokerURL: listenAddr,
+		})
 		require.NoError(t, err)
 		defer l.Close()
 
@@ -268,7 +289,10 @@ func TestDial(t *testing.T) {
 			_, _ = listener.Accept()
 		}()
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err = Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		_, err = Listen(context.Background(), ListenOptions{
+			Log:       log,
+			BrokerURL: listenAddr,
+		})
 		if err != nil {
 			t.Error(err)
 			return
@@ -313,7 +337,10 @@ func TestDial(t *testing.T) {
 			}
 		}()
 		connectAddr, listenAddr := createDumbBroker(t)
-		_, err = Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
+		_, err = Listen(context.Background(), ListenOptions{
+			Log:       log,
+			BrokerURL: listenAddr,
+		})
 		require.NoError(t, err)
 
 		d1, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
@@ -375,7 +402,10 @@ func BenchmarkThroughput(b *testing.B) {
 		}
 	}()
 	connectAddr, listenAddr := createDumbBroker(b)
-	l, err := Listen(context.Background(), slogtest.Make(b, nil), listenAddr, "")
+	l, err := Listen(context.Background(), ListenOptions{
+		Log:       slogtest.Make(b, nil),
+		BrokerURL: listenAddr,
+	})
 	if err != nil {
 		b.Error(err)
 		return
