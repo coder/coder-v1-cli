@@ -11,11 +11,12 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/slog/sloggers/slogtest"
 	"github.com/pion/ice/v2"
 	"github.com/pion/webrtc/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"cdr.dev/slog/sloggers/slogtest"
 )
 
 func ExampleDial_basic() {
@@ -260,33 +261,35 @@ func TestDial(t *testing.T) {
 		log := slogtest.Make(t, nil)
 
 		listener, err := net.Listen("tcp", "0.0.0.0:0")
-		if err != nil {
-			t.Error(err)
-			return
-		}
+		require.NoError(t, err)
+
 		go func() {
 			_, _ = listener.Accept()
 		}()
+
 		connectAddr, listenAddr := createDumbBroker(t)
 		_, err = Listen(context.Background(), slogtest.Make(t, nil), listenAddr, "")
-		if err != nil {
-			t.Error(err)
-			return
-		}
+		require.NoError(t, err)
 
 		dialer, err := DialWebsocket(context.Background(), connectAddr, &DialOptions{
 			Log: &log,
 		}, nil)
-		if err != nil {
-			t.Error(err)
-		}
-		conn, _ := dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+		require.NoError(t, err)
+
+		conn, err := dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+		require.NoError(t, err)
 		assert.Equal(t, 1, dialer.activeConnections())
+
 		_ = conn.Close()
 		assert.Equal(t, 0, dialer.activeConnections())
-		_, _ = dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
-		conn, _ = dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+
+		_, err = dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+		require.NoError(t, err)
+
+		conn, err = dialer.DialContext(context.Background(), listener.Addr().Network(), listener.Addr().String())
+		require.NoError(t, err)
 		assert.Equal(t, 2, dialer.activeConnections())
+
 		_ = conn.Close()
 		assert.Equal(t, 1, dialer.activeConnections())
 	})

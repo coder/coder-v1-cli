@@ -290,8 +290,8 @@ func (d *Dialer) negotiate(ctx context.Context) (err error) {
 	return <-errCh
 }
 
-// ActiveConnections returns the amount of active connections.
-// DialContext opens a connection, and close will end it.
+// ActiveConnections returns the amount of active connections. DialContext
+// opens a connection, and close will end it.
 func (d *Dialer) activeConnections() int {
 	stats, ok := d.rtc.GetStats().GetConnectionStats(d.rtc)
 	if !ok {
