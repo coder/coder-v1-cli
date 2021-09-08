@@ -81,7 +81,9 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 		options = &DialOptions{}
 	}
 	if options.Log == nil {
-		options.Log = &slog.Logger{}
+		// This logger will log nothing.
+		log := slog.Make()
+		options.Log = &log
 	}
 	log := *options.Log
 	if options.ICEServers == nil {
