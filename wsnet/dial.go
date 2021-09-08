@@ -8,7 +8,6 @@ import (
 	"io"
 	"net"
 	"net/url"
-	"os"
 	"sync"
 	"time"
 
@@ -18,7 +17,6 @@ import (
 	"nhooyr.io/websocket"
 
 	"cdr.dev/slog"
-	"cdr.dev/slog/sloggers/sloghuman"
 
 	"cdr.dev/coder-cli/coder-sdk"
 )
@@ -83,8 +81,7 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 		options = &DialOptions{}
 	}
 	if options.Log == nil {
-		log := slog.Make(sloghuman.Sink(os.Stderr)).Leveled(slog.LevelInfo).Named("wsnet_dial")
-		options.Log = &log
+		options.Log = &slog.Logger{}
 	}
 	log := *options.Log
 	if options.ICEServers == nil {
