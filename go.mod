@@ -15,9 +15,9 @@ require (
 	github.com/fatih/color v1.12.0
 	github.com/google/go-cmp v0.5.6
 	github.com/gorilla/websocket v1.4.2
-	github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864
+	github.com/hashicorp/yamux v0.0.0-20210826001029-26ff87cf9493
 	github.com/kirsle/configdir v0.0.0-20170128060238-e45d2f54772f
-	github.com/klauspost/compress v1.10.8 // indirect
+	github.com/klauspost/compress v1.13.5 // indirect
 	github.com/manifoldco/promptui v0.8.0
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/pion/datachannel v1.4.21
@@ -25,18 +25,18 @@ require (
 	github.com/pion/ice/v2 v2.1.12
 	github.com/pion/logging v0.2.2
 	github.com/pion/turn/v2 v2.0.5
-	github.com/pion/webrtc/v3 v3.1.0-beta.6.0.20210907233552-57c66b872d12
-	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
+	github.com/pion/webrtc/v3 v3.1.0-beta.7
+	github.com/pkg/browser v0.0.0-20210904010418-6d279e18f982
 	github.com/rjeczalik/notify v0.9.2
 	github.com/spf13/afero v1.6.0
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
-	golang.org/x/net v0.0.0-20210825183410-e898025ed96a
+	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
+	golang.org/x/net v0.0.0-20210907225631-ff17edfbf26d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
-	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
-	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
+	golang.org/x/sys v0.0.0-20210906170528-6f6e22806c34
+	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
+	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	nhooyr.io/websocket v1.8.7
 )
