@@ -2,6 +2,8 @@ module cdr.dev/coder-cli
 
 go 1.14
 
+replace github.com/pion/turn/v2 => github.com/deansheather/turn/v2 v2.0.6-0.20210908222112-8e1286eedccd
+
 require (
 	cdr.dev/slog v1.4.1
 	cdr.dev/wsep v0.1.0
@@ -19,7 +21,7 @@ require (
 	github.com/pion/dtls/v2 v2.0.9
 	github.com/pion/ice/v2 v2.1.12
 	github.com/pion/logging v0.2.2
-	github.com/pion/turn/v2 v2.0.5
+	github.com/pion/turn/v2 v2.0.6-0.20210908222112-8e1286eedccd
 	github.com/pion/webrtc/v3 v3.1.0-beta.7
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 	github.com/rjeczalik/notify v0.9.2
