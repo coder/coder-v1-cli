@@ -327,14 +327,17 @@ func (d *Dialer) Ping(ctx context.Context) error {
 			return err
 		}
 	}
+
 	d.pingMut.Lock()
 	defer d.pingMut.Unlock()
+
 	d.log.Debug(ctx, "sending ping")
 	_, err = d.ctrlrw.Write([]byte{'a'})
 	if err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
-	errCh := make(chan error)
+
+	errCh := make(chan error, 1)
 	go func() {
 		// There's a race in which connections can get lost-mid ping
 		// in which case this would block forever.
@@ -342,6 +345,7 @@ func (d *Dialer) Ping(ctx context.Context) error {
 		_, err = d.ctrlrw.Read(make([]byte, 4))
 		errCh <- err
 	}()
+
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
 	defer cancelFunc()
 	select {
