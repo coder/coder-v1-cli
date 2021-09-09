@@ -201,16 +201,12 @@ func (d *Dialer) negotiate(ctx context.Context) (err error) {
 	)
 	go func() {
 		defer close(errCh)
-		defer func() {
-			_ = d.conn.Close()
-		}()
+		defer func() { _ = d.conn.Close() }()
 
 		err := waitForConnectionOpen(context.Background(), d.rtc)
 		if err != nil {
 			d.log.Debug(ctx, "negotiation error", slog.Error(err))
-			if errors.Is(err, context.DeadlineExceeded) {
-				_ = d.conn.Close()
-			}
+
 			errCh <- fmt.Errorf("wait for connection to open: %w", err)
 			return
 		}
