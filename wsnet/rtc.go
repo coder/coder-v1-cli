@@ -60,17 +60,16 @@ func DialICE(server webrtc.ICEServer, options *DialICEOptions) error {
 
 func dialICEURL(server webrtc.ICEServer, rawURL string, options *DialICEOptions) error {
 	var (
-		tcpConn        net.Conn
-		udpConn        net.PacketConn
-		turnServerAddr string
-		err            error
+		tcpConn net.Conn
+		udpConn net.PacketConn
+		err     error
 	)
 
 	url, err := ice.ParseURL(rawURL)
 	if err != nil {
 		return xerrors.Errorf("parse ice url: %w", err)
 	}
-	turnServerAddr = fmt.Sprintf("%s:%d", url.Host, url.Port)
+	turnServerAddr := fmt.Sprintf("%s:%d", url.Host, url.Port)
 
 	switch {
 	case url.Scheme == ice.SchemeTypeTURN || url.Scheme == ice.SchemeTypeSTUN:
@@ -311,13 +310,11 @@ func waitForConnectionOpen(ctx context.Context, conn *webrtc.PeerConnection) err
 
 // waitForDataChannelOpen waits for a DataChannel to hit the open state.
 func waitForDataChannelOpen(ctx context.Context, channel *webrtc.DataChannel) error {
-	switch channel.ReadyState() {
-	case webrtc.DataChannelStateOpen:
+	state := channel.ReadyState()
+	if state == webrtc.DataChannelStateOpen {
 		return nil
-
-	case webrtc.DataChannelStateClosed,
-		webrtc.DataChannelStateClosing:
-		return xerrors.New("channel closed")
+	} else if state != webrtc.DataChannelStateConnecting {
+		return xerrors.New("channel is not connecting")
 	}
 
 	connected := make(chan struct{})
