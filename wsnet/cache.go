@@ -136,6 +136,7 @@ func (d *DialerCache) Dial(ctx context.Context, key string, dialerFunc func() (*
 	if err != nil {
 		return nil, false, err
 	}
+
 	select {
 	case <-d.closed:
 		return nil, false, errors.New("cache closed")

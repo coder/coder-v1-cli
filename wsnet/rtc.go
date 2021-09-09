@@ -18,15 +18,16 @@ import (
 	"github.com/pion/turn/v2"
 	"github.com/pion/webrtc/v3"
 	"golang.org/x/net/proxy"
+	"golang.org/x/xerrors"
 )
 
 var (
-	// ErrMismatchedProtocol occurs when a TURN is requested to a STUN server,
-	// or a TURN server is requested instead of TURNS.
+	// ErrMismatchedProtocol occurs when a TURN is requested to a STUN
+	// server, or a TURN server is requested instead of TURNS.
 	ErrMismatchedProtocol = errors.New("mismatched protocols")
-	// ErrInvalidCredentials occurs when invalid credentials are passed to a
-	// TURN server. This error cannot occur for STUN servers, as they don't accept
-	// credentials.
+	// ErrInvalidCredentials occurs when invalid credentials are passed to
+	// a TURN server. This error cannot occur for STUN servers, as they
+	// don't accept credentials.
 	ErrInvalidCredentials = errors.New("invalid credentials")
 
 	// Constant for the control channel protocol.
@@ -36,7 +37,7 @@ var (
 // DialICEOptions provides options for dialing an ICE server.
 type DialICEOptions struct {
 	Timeout time.Duration
-	// Whether to ignore TLS errors.
+	// InsecureSkipVerify determines whether to ignore TLS errors.
 	InsecureSkipVerify bool
 }
 
@@ -50,52 +51,79 @@ func DialICE(server webrtc.ICEServer, options *DialICEOptions) error {
 	for _, rawURL := range server.URLs {
 		err := dialICEURL(server, rawURL, options)
 		if err != nil {
-			return err
+			return xerrors.Errorf("dial ice url: %w", err)
 		}
 	}
+
 	return nil
 }
 
 func dialICEURL(server webrtc.ICEServer, rawURL string, options *DialICEOptions) error {
-	url, err := ice.ParseURL(rawURL)
-	if err != nil {
-		return err
-	}
 	var (
 		tcpConn        net.Conn
 		udpConn        net.PacketConn
-		turnServerAddr = fmt.Sprintf("%s:%d", url.Host, url.Port)
+		turnServerAddr string
+		err            error
 	)
+
+	url, err := ice.ParseURL(rawURL)
+	if err != nil {
+		return xerrors.Errorf("parse ice url: %w", err)
+	}
+	turnServerAddr = fmt.Sprintf("%s:%d", url.Host, url.Port)
+
 	switch {
 	case url.Scheme == ice.SchemeTypeTURN || url.Scheme == ice.SchemeTypeSTUN:
 		switch url.Proto {
 		case ice.ProtoTypeUDP:
 			udpConn, err = net.ListenPacket("udp4", "0.0.0.0:0")
+			if err != nil {
+				return xerrors.Errorf("listen packet udp4: %w", err)
+			}
+
 		case ice.ProtoTypeTCP:
 			tcpConn, err = net.Dial("tcp4", turnServerAddr)
+			if err != nil {
+				return xerrors.Errorf("dial tcp4: %w", err)
+			}
+
+		default:
+			return xerrors.Errorf("unknown url proto: %q", url.Proto)
 		}
+
 	case url.Scheme == ice.SchemeTypeTURNS || url.Scheme == ice.SchemeTypeSTUNS:
 		switch url.Proto {
 		case ice.ProtoTypeUDP:
-			udpAddr, resErr := net.ResolveUDPAddr("udp4", turnServerAddr)
-			if resErr != nil {
-				return resErr
+			udpAddr, err := net.ResolveUDPAddr("udp4", turnServerAddr)
+			if err != nil {
+				return xerrors.Errorf("resolve udp4 addr: %w", err)
 			}
-			dconn, dialErr := dtls.Dial("udp4", udpAddr, &dtls.Config{
+
+			dconn, err := dtls.Dial("udp4", udpAddr, &dtls.Config{
 				InsecureSkipVerify: options.InsecureSkipVerify,
 			})
-			err = dialErr
+			if err != nil {
+				return xerrors.Errorf("dtls dial udp4: %w", err)
+			}
+
 			udpConn = turn.NewSTUNConn(dconn)
+
 		case ice.ProtoTypeTCP:
 			tcpConn, err = tls.Dial("tcp4", turnServerAddr, &tls.Config{
 				InsecureSkipVerify: options.InsecureSkipVerify,
 			})
+			if err != nil {
+				return xerrors.Errorf("tls dial tcp4: %w", err)
+			}
+
+		default:
+			return xerrors.Errorf("unknown url proto: %q", url.Proto)
 		}
+
+	default:
+		return xerrors.Errorf("unknown url scheme: %q", url.Scheme)
 	}
 
-	if err != nil {
-		return err
-	}
 	if tcpConn != nil {
 		udpConn = turn.NewSTUNConn(tcpConn)
 	}
@@ -116,45 +144,61 @@ func dialICEURL(server webrtc.ICEServer, rawURL string, options *DialICEOptions)
 		RTO:            options.Timeout,
 	})
 	if err != nil {
-		return err
+		return xerrors.Errorf("create turn client: %w", err)
 	}
 	defer client.Close()
+
 	err = client.Listen()
 	if err != nil {
-		return err
+		return xerrors.Errorf("listen turn client: %w", err)
 	}
-	// STUN servers are not authenticated with credentials.
-	// As long as the transport is valid, this should always work.
+
+	// STUN servers are not authenticated with credentials. As long as the
+	// transport is valid, this should always work.
 	_, err = client.SendBindingRequest()
 	if err != nil {
-		// Transport failed to connect.
-		// https://github.com/pion/turn/blob/8231b69046f562420299916e9fb69cbff4754231/errors.go#L20
-		if strings.Contains(err.Error(), "retransmissions failed") {
-			return ErrMismatchedProtocol
+		// Transport failed to connect. Convert error into a detectable
+		// one.
+		if errIsTurnAllRetransmissionsFailed(err) {
+			err = ErrMismatchedProtocol
 		}
-		return fmt.Errorf("binding: %w", err)
+
+		return xerrors.Errorf("send binding request: %w", err)
 	}
+
 	if url.Scheme == ice.SchemeTypeTURN || url.Scheme == ice.SchemeTypeTURNS {
 		// We TURN to validate server credentials are correct.
 		pc, err := client.Allocate()
 		if err != nil {
 			if strings.Contains(err.Error(), "error 400") {
-				return ErrInvalidCredentials
+				err = ErrInvalidCredentials
 			}
+
 			// Since TURN and STUN follow the same protocol, they can
 			// both handshake, but once a tunnel is allocated it will
 			// fail to transmit.
-			if strings.Contains(err.Error(), "retransmissions failed") {
-				return ErrMismatchedProtocol
+			if errIsTurnAllRetransmissionsFailed(err) {
+				err = ErrMismatchedProtocol
 			}
-			return err
+
+			return xerrors.Errorf("turn allocate: %w", err)
 		}
 		defer pc.Close()
 	}
+
 	return nil
 }
 
-// Generalizes creating a new peer connection with consistent options.
+// errIsTurnAllRetransmissionsFailed detects the `errAllRetransmissionsFailed`
+// error from pion/turn.
+//
+// See: https://github.com/pion/turn/blob/8231b69046f562420299916e9fb69cbff4754231/errors.go#L20
+func errIsTurnAllRetransmissionsFailed(err error) bool {
+	return strings.Contains(err.Error(), "retransmissions failed")
+}
+
+// newPeerConnection generalizes creating a new peer connection with consistent
+// options.
 func newPeerConnection(servers []webrtc.ICEServer, dialer proxy.Dialer) (*webrtc.PeerConnection, error) {
 	se := webrtc.SettingEngine{}
 	se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
@@ -200,7 +244,7 @@ func newPeerConnection(servers []webrtc.ICEServer, dialer proxy.Dialer) (*webrtc
 	})
 }
 
-// Proxies ICE candidates using the protocol to a writer.
+// proxyICECandidates proxies ICE candidates using the protocol to a writer.
 func proxyICECandidates(conn *webrtc.PeerConnection, w io.Writer) func() {
 	var (
 		mut     sync.Mutex
@@ -220,6 +264,7 @@ func proxyICECandidates(conn *webrtc.PeerConnection, w io.Writer) func() {
 		}
 		mut.Lock()
 		defer mut.Unlock()
+
 		if !flushed {
 			queue = append(queue, i)
 			return
@@ -227,58 +272,78 @@ func proxyICECandidates(conn *webrtc.PeerConnection, w io.Writer) func() {
 
 		write(i)
 	})
+
 	return func() {
 		mut.Lock()
 		defer mut.Unlock()
+
 		for _, i := range queue {
 			write(i)
 		}
+
 		flushed = true
 	}
 }
 
-// Waits for a PeerConnection to hit the open state.
+// waitForConnectionOpen waits for a PeerConnection to hit the open state.
 func waitForConnectionOpen(ctx context.Context, conn *webrtc.PeerConnection) error {
 	if conn.ConnectionState() == webrtc.PeerConnectionStateConnected {
 		return nil
 	}
-	var cancel context.CancelFunc
-	if _, deadlineSet := ctx.Deadline(); deadlineSet {
-		ctx, cancel = context.WithCancel(ctx)
-	} else {
-		ctx, cancel = context.WithTimeout(ctx, time.Second*15)
-	}
+
+	connected := make(chan struct{})
+	ctx, cancel := ctxDeadlineIfNotSet(ctx, 15*time.Second)
 	defer cancel()
+
 	conn.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 		if pcs == webrtc.PeerConnectionStateConnected {
-			cancel()
+			close(connected)
 		}
 	})
-	<-ctx.Done()
-	if ctx.Err() == context.DeadlineExceeded {
-		return context.DeadlineExceeded
-	}
-	return nil
-}
 
-// Waits for a DataChannel to hit the open state.
-func waitForDataChannelOpen(ctx context.Context, channel *webrtc.DataChannel) error {
-	if channel.ReadyState() == webrtc.DataChannelStateOpen {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-connected:
 		return nil
 	}
-	if channel.ReadyState() != webrtc.DataChannelStateConnecting {
-		return fmt.Errorf("channel closed")
+}
+
+// waitForDataChannelOpen waits for a DataChannel to hit the open state.
+func waitForDataChannelOpen(ctx context.Context, channel *webrtc.DataChannel) error {
+	switch channel.ReadyState() {
+	case webrtc.DataChannelStateOpen:
+		return nil
+
+	case webrtc.DataChannelStateClosed,
+		webrtc.DataChannelStateClosing:
+		return xerrors.New("channel closed")
 	}
-	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
-	defer cancelFunc()
+
+	connected := make(chan struct{})
+	ctx, cancel := ctxDeadlineIfNotSet(ctx, 15*time.Second)
+	defer cancel()
+
 	channel.OnOpen(func() {
-		cancelFunc()
+		close(connected)
 	})
-	<-ctx.Done()
-	if ctx.Err() == context.DeadlineExceeded {
+
+	select {
+	case <-ctx.Done():
 		return ctx.Err()
+	case <-connected:
+		return nil
 	}
-	return nil
+}
+
+// ctxDeadlineIfNotSet sets a deadline from the parent context, if and only if
+// a deadline does not already exist for the parent context.
+func ctxDeadlineIfNotSet(ctx context.Context, deadline time.Duration) (_ctx context.Context, cancel func()) {
+	if _, ok := ctx.Deadline(); ok {
+		return context.WithCancel(ctx)
+	}
+
+	return context.WithTimeout(ctx, deadline)
 }
 
 func stringPtr(s string) *string {

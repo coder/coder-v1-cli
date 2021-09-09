@@ -1,13 +1,13 @@
 package wsnet
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/pion/ice/v2"
 	"github.com/pion/webrtc/v3"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDialICE(t *testing.T) {
@@ -26,9 +26,7 @@ func TestDialICE(t *testing.T) {
 			Timeout:            time.Millisecond,
 			InsecureSkipVerify: true,
 		})
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 	})
 
 	t.Run("Protocol mismatch", func(t *testing.T) {
@@ -44,9 +42,7 @@ func TestDialICE(t *testing.T) {
 			Timeout:            time.Millisecond,
 			InsecureSkipVerify: true,
 		})
-		if !errors.Is(err, ErrMismatchedProtocol) {
-			t.Error(err)
-		}
+		assert.ErrorIs(t, err, ErrMismatchedProtocol)
 	})
 
 	t.Run("Invalid auth", func(t *testing.T) {
@@ -62,9 +58,7 @@ func TestDialICE(t *testing.T) {
 			Timeout:            time.Millisecond,
 			InsecureSkipVerify: true,
 		})
-		if !errors.Is(err, ErrInvalidCredentials) {
-			t.Error(err)
-		}
+		assert.ErrorIs(t, err, ErrInvalidCredentials)
 	})
 
 	t.Run("Protocol mismatch public", func(t *testing.T) {
@@ -76,8 +70,6 @@ func TestDialICE(t *testing.T) {
 			Timeout:            time.Millisecond,
 			InsecureSkipVerify: true,
 		})
-		if !errors.Is(err, ErrMismatchedProtocol) {
-			t.Error(err)
-		}
+		assert.ErrorIs(t, err, ErrMismatchedProtocol)
 	})
 }
