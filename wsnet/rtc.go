@@ -286,8 +286,11 @@ func proxyICECandidates(conn *webrtc.PeerConnection, w io.Writer) func() {
 
 // waitForConnectionOpen waits for a PeerConnection to hit the open state.
 func waitForConnectionOpen(ctx context.Context, conn *webrtc.PeerConnection) error {
-	if conn.ConnectionState() == webrtc.PeerConnectionStateConnected {
+	state := conn.ConnectionState()
+	if state == webrtc.PeerConnectionStateConnected {
 		return nil
+	} else if state != webrtc.PeerConnectionStateConnecting {
+		return xerrors.New("connection is not connecting")
 	}
 
 	connected := make(chan struct{})
