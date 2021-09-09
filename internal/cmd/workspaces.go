@@ -462,6 +462,8 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 				}
 				forUser = u.ID
 				forEmail = u.Email
+			} else if forUser == coder.Me {
+				forUser = "" // coder.Me means it's not for someone else, set blank
 			}
 
 			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
