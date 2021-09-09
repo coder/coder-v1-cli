@@ -346,8 +346,9 @@ func (d *Dialer) Ping(ctx context.Context) error {
 		errCh <- err
 	}()
 
-	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
-	defer cancelFunc()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*15)
+	defer cancel()
+
 	select {
 	case err := <-errCh:
 		return err
