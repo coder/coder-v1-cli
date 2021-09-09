@@ -39,6 +39,7 @@ func SingleFile(ctx context.Context, local, remoteDir string, workspace *coder.W
 	if err != nil {
 		return xerrors.Errorf("start sync command: %w", err)
 	}
+	defer process.Close()
 
 	sourceFile, err := os.Open(local)
 	if err != nil {

@@ -109,6 +109,8 @@ func (s Sync) remoteCmd(ctx context.Context, prog string, args ...string) error 
 	if err != nil {
 		return xerrors.Errorf("exec remote process: %w", err)
 	}
+	defer process.Close()
+
 	// NOTE: If the copy routine fail, it will result in `process.Wait` to unblock and report an error.
 	go func() { _, _ = io.Copy(s.OutW, process.Stdout()) }() // Best effort.
 	go func() { _, _ = io.Copy(s.ErrW, process.Stderr()) }() // Best effort.
@@ -290,6 +292,8 @@ func (s Sync) Version() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer process.Close()
+
 	buf := &bytes.Buffer{}
 	_, _ = io.Copy(buf, process.Stdout()) // Ignore error, if any, it would be handled by the process.Wait return.
 
