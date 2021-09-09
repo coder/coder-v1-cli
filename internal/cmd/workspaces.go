@@ -397,6 +397,7 @@ func createWorkspaceCmd() *cobra.Command {
 		useCVM          bool
 		providerName    string
 		enableAutostart bool
+		forUser         string // Optional
 	)
 
 	cmd := &cobra.Command{
@@ -448,6 +449,23 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 				}
 			}
 
+			var forEmail string
+			if forUser != "" && forUser != coder.Me {
+				// Making a workspace for another user, do they exist?
+				u, err := client.UserByEmail(ctx, forUser)
+				if err != nil {
+					// Try by ID?
+					u, err = client.UserByID(ctx, forUser)
+					if err != nil {
+						return xerrors.Errorf("the user %q was not found: %w", forUser, err)
+					}
+				}
+				forUser = u.ID
+				forEmail = u.Email
+			} else if forUser == coder.Me {
+				forUser = "" // coder.Me means it's not for someone else, set blank
+			}
+
 			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
 			createReq := &coder.CreateWorkspaceRequest{
 				Name:            args[0],
@@ -462,6 +480,7 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 				ResourcePoolID:  provider.ID,
 				Namespace:       provider.DefaultNamespace,
 				EnableAutoStart: enableAutostart,
+				ForUserID:       forUser,
 			}
 
 			// if any of these defaulted to their zero value we provision
@@ -489,9 +508,13 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 				return nil
 			}
 
+			extraFlags := ""
+			if forEmail != coder.Me && forEmail != "" {
+				extraFlags = " --user " + forEmail
+			}
 			clog.LogSuccess("creating workspace...",
 				clog.BlankLine,
-				clog.Tipf(`run "coder workspaces watch-build %s" to trail the build logs`, workspace.Name),
+				clog.Tipf(`run "coder workspaces watch-build %s%s" to trail the build logs`, workspace.Name, extraFlags),
 			)
 			return nil
 		},
@@ -507,6 +530,7 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 	cmd.Flags().BoolVar(&follow, "follow", false, "follow buildlog after initiating rebuild")
 	cmd.Flags().BoolVar(&useCVM, "container-based-vm", false, "deploy the workspace as a Container-based VM")
 	cmd.Flags().BoolVar(&enableAutostart, "enable-autostart", false, "automatically start this workspace at your preferred time.")
+	cmd.Flags().StringVar(&forUser, "user", coder.Me, "Specify the user whose resources to target. This flag can only be used by admins and managers. Input an email or user id.")
 	_ = cmd.MarkFlagRequired("image")
 	return cmd
 }
