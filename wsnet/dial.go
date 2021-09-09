@@ -193,7 +193,7 @@ type Dialer struct {
 func (d *Dialer) negotiate(ctx context.Context) (err error) {
 	var (
 		decoder = json.NewDecoder(d.conn)
-		errCh   = make(chan error)
+		errCh   = make(chan error, 1)
 		// If candidates are sent before an offer, we place them here.
 		// We currently have no assurances to ensure this can't happen,
 		// so it's better to buffer and process than fail.
@@ -201,16 +201,12 @@ func (d *Dialer) negotiate(ctx context.Context) (err error) {
 	)
 	go func() {
 		defer close(errCh)
-		defer func() {
-			_ = d.conn.Close()
-		}()
+		defer func() { _ = d.conn.Close() }()
 
 		err := waitForConnectionOpen(context.Background(), d.rtc)
 		if err != nil {
 			d.log.Debug(ctx, "negotiation error", slog.Error(err))
-			if errors.Is(err, context.DeadlineExceeded) {
-				_ = d.conn.Close()
-			}
+
 			errCh <- fmt.Errorf("wait for connection to open: %w", err)
 			return
 		}
@@ -331,14 +327,17 @@ func (d *Dialer) Ping(ctx context.Context) error {
 			return err
 		}
 	}
+
 	d.pingMut.Lock()
 	defer d.pingMut.Unlock()
+
 	d.log.Debug(ctx, "sending ping")
 	_, err = d.ctrlrw.Write([]byte{'a'})
 	if err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
-	errCh := make(chan error)
+
+	errCh := make(chan error, 1)
 	go func() {
 		// There's a race in which connections can get lost-mid ping
 		// in which case this would block forever.
@@ -346,8 +345,10 @@ func (d *Dialer) Ping(ctx context.Context) error {
 		_, err = d.ctrlrw.Read(make([]byte, 4))
 		errCh <- err
 	}()
-	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
-	defer cancelFunc()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*15)
+	defer cancel()
+
 	select {
 	case err := <-errCh:
 		return err
