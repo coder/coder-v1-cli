@@ -193,7 +193,7 @@ type Dialer struct {
 func (d *Dialer) negotiate(ctx context.Context) (err error) {
 	var (
 		decoder = json.NewDecoder(d.conn)
-		errCh   = make(chan error)
+		errCh   = make(chan error, 1)
 		// If candidates are sent before an offer, we place them here.
 		// We currently have no assurances to ensure this can't happen,
 		// so it's better to buffer and process than fail.
