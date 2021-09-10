@@ -178,7 +178,9 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 
 	err = dialer.negotiate(ctx)
 	if err != nil {
-		return nil, xerrors.Errorf("negotiate rtc connection: %w", err)
+		// Return the dialer since we have tests that verify things are closed
+		// if negotiation fails.
+		return dialer, xerrors.Errorf("negotiate rtc connection: %w", err)
 	}
 
 	return dialer, nil

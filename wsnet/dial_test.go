@@ -62,7 +62,15 @@ func TestDial(t *testing.T) {
 		defer cancelFunc()
 		dialer, err := DialWebsocket(ctx, connectAddr, nil, nil)
 		require.True(t, errors.Is(err, context.DeadlineExceeded))
+		require.NotNil(t, dialer)
 		require.Error(t, dialer.conn.Close(), "already wrote close")
+
+		// Ensure the rtc peer connection is closed. Setting the config options
+		// to empty struct does nothing, but it does fail if the rtc peer conn
+		// is closed.
+		err = dialer.rtc.SetConfiguration(webrtc.Configuration{})
+		require.Error(t, err)
+		require.ErrorIs(t, err, webrtc.ErrConnectionClosed)
 	})
 
 	t.Run("Ping", func(t *testing.T) {
