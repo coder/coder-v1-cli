@@ -3,9 +3,6 @@ package cmd
 import (
 	"testing"
 
-	"cdr.dev/slog"
-	"cdr.dev/slog/sloggers/slogtest"
-
 	"cdr.dev/coder-cli/coder-sdk"
 )
 
