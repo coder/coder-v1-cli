@@ -14,6 +14,7 @@ import (
 	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
 	"golang.org/x/net/proxy"
+	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 
 	"cdr.dev/slog"
@@ -112,6 +113,11 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 				iceServers: rtc.GetConfiguration().ICEServers,
 				rtc:        rtc.ConnectionState(),
 			}
+
+			closeErr := rtc.Close()
+			if closeErr != nil {
+				log.Warn(context.Background(), "close rtc connection on dial failure", slog.Error(closeErr))
+			}
 		}
 	}()
 
@@ -170,9 +176,12 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 		connClosers: []io.Closer{ctrl},
 	}
 
-	// This is on a separate line so the defer above catches it.
 	err = dialer.negotiate(ctx)
-	return dialer, err
+	if err != nil {
+		return nil, xerrors.Errorf("negotiate rtc connection: %w", err)
+	}
+
+	return dialer, nil
 }
 
 // Dialer enables arbitrary dialing to any network and address
