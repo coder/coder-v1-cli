@@ -89,6 +89,10 @@ type CreateWorkspaceRequest struct {
 	Namespace       string  `json:"namespace"`
 	EnableAutoStart bool    `json:"autostart_enabled"`
 
+	// ForUserID is an optional param to create a workspace for another user
+	// other than the requester. This only works for admins and site managers.
+	ForUserID string `json:"for_user_id,omitempty"`
+
 	// TemplateID comes from the parse template route on cemanager.
 	TemplateID string `json:"template_id,omitempty"`
 }
@@ -112,7 +116,7 @@ type ParseTemplateRequest struct {
 	Local    io.Reader `json:"-"`
 }
 
-// TemplateVersion is a Workspaces As Code (WAC) template.
+// TemplateVersion is a workspace template.
 // For now, let's not interpret it on the CLI level. We just need
 // to forward this as part of the create workspace request.
 type TemplateVersion struct {

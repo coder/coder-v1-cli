@@ -8,17 +8,16 @@ import (
 	"io"
 	"net"
 	"net/url"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
 	"golang.org/x/net/proxy"
+	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 
 	"cdr.dev/slog"
-	"cdr.dev/slog/sloggers/sloghuman"
 
 	"cdr.dev/coder-cli/coder-sdk"
 )
@@ -83,7 +82,8 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 		options = &DialOptions{}
 	}
 	if options.Log == nil {
-		log := slog.Make(sloghuman.Sink(os.Stderr)).Leveled(slog.LevelInfo).Named("wsnet_dial")
+		// This logger will log nothing.
+		log := slog.Make()
 		options.Log = &log
 	}
 	log := *options.Log
@@ -112,6 +112,11 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 				err:        err,
 				iceServers: rtc.GetConfiguration().ICEServers,
 				rtc:        rtc.ConnectionState(),
+			}
+
+			closeErr := rtc.Close()
+			if closeErr != nil {
+				log.Warn(context.Background(), "close rtc connection on dial failure", slog.Error(closeErr))
 			}
 		}
 	}()
@@ -171,9 +176,14 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 		connClosers: []io.Closer{ctrl},
 	}
 
-	// This is on a separate line so the defer above catches it.
 	err = dialer.negotiate(ctx)
-	return dialer, err
+	if err != nil {
+		// Return the dialer since we have tests that verify things are closed
+		// if negotiation fails.
+		return dialer, xerrors.Errorf("negotiate rtc connection: %w", err)
+	}
+
+	return dialer, nil
 }
 
 // Dialer enables arbitrary dialing to any network and address
@@ -194,7 +204,7 @@ type Dialer struct {
 func (d *Dialer) negotiate(ctx context.Context) (err error) {
 	var (
 		decoder = json.NewDecoder(d.conn)
-		errCh   = make(chan error)
+		errCh   = make(chan error, 1)
 		// If candidates are sent before an offer, we place them here.
 		// We currently have no assurances to ensure this can't happen,
 		// so it's better to buffer and process than fail.
@@ -202,16 +212,12 @@ func (d *Dialer) negotiate(ctx context.Context) (err error) {
 	)
 	go func() {
 		defer close(errCh)
-		defer func() {
-			_ = d.conn.Close()
-		}()
+		defer func() { _ = d.conn.Close() }()
 
 		err := waitForConnectionOpen(context.Background(), d.rtc)
 		if err != nil {
 			d.log.Debug(ctx, "negotiation error", slog.Error(err))
-			if errors.Is(err, context.DeadlineExceeded) {
-				_ = d.conn.Close()
-			}
+
 			errCh <- fmt.Errorf("wait for connection to open: %w", err)
 			return
 		}
@@ -290,8 +296,8 @@ func (d *Dialer) negotiate(ctx context.Context) (err error) {
 	return <-errCh
 }
 
-// ActiveConnections returns the amount of active connections.
-// DialContext opens a connection, and close will end it.
+// ActiveConnections returns the amount of active connections. DialContext
+// opens a connection, and close will end it.
 func (d *Dialer) activeConnections() int {
 	stats, ok := d.rtc.GetStats().GetConnectionStats(d.rtc)
 	if !ok {
@@ -332,14 +338,17 @@ func (d *Dialer) Ping(ctx context.Context) error {
 			return err
 		}
 	}
+
 	d.pingMut.Lock()
 	defer d.pingMut.Unlock()
+
 	d.log.Debug(ctx, "sending ping")
 	_, err = d.ctrlrw.Write([]byte{'a'})
 	if err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
-	errCh := make(chan error)
+
+	errCh := make(chan error, 1)
 	go func() {
 		// There's a race in which connections can get lost-mid ping
 		// in which case this would block forever.
@@ -347,8 +356,10 @@ func (d *Dialer) Ping(ctx context.Context) error {
 		_, err = d.ctrlrw.Read(make([]byte, 4))
 		errCh <- err
 	}()
-	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*15)
-	defer cancelFunc()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*15)
+	defer cancel()
+
 	select {
 	case err := <-errCh:
 		return err
@@ -392,19 +403,22 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
 
-	errCh := make(chan error)
+	errCh := make(chan error, 1)
 	go func() {
+		defer close(errCh)
+
 		var res DialChannelResponse
 		err = json.NewDecoder(rw).Decode(&res)
 		if err != nil {
 			errCh <- fmt.Errorf("read dial response: %w", err)
 			return
 		}
+
 		d.log.Debug(ctx, "dial response", slog.F("res", res))
 		if res.Err == "" {
-			close(errCh)
 			return
 		}
+
 		err := errors.New(res.Err)
 		if res.Code == CodeDialErr {
 			err = &net.OpError{

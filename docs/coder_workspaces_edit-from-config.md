@@ -4,7 +4,7 @@ change the template a workspace is tracking
 
 ### Synopsis
 
-Edit an existing Coder workspace using a Workspaces As Code template.
+Edit an existing Coder workspace using a workspace template.
 
 ```
 coder workspaces edit-from-config [flags]
@@ -14,8 +14,8 @@ coder workspaces edit-from-config [flags]
 
 ```
 # edit a new workspace from git repository
-coder envs edit-from-config dev-env --repo-url https://github.com/cdr/m --ref my-branch
-coder envs edit-from-config dev-env -f coder.yaml
+coder workspaces edit-from-config dev-env --repo-url https://github.com/cdr/m --ref my-branch
+coder workspaces edit-from-config dev-env --filepath coder.yaml
 ```
 
 ### Options
