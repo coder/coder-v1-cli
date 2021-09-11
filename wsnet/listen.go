@@ -171,13 +171,13 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 // This functions control-flow is important to readability,
 // so the cognitive overload linter has been disabled.
 // nolint:gocognit,nestif
-func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
+func (l *listener) negotiate(ctx context.Context, rw io.ReadWriteCloser) {
 	id := atomic.AddInt64(&l.nextConnNumber, 1)
 	ctx = slog.With(ctx, slog.F("conn_id", id))
 
 	var (
 		err            error
-		decoder        = json.NewDecoder(conn)
+		decoder        = json.NewDecoder(rw)
 		rtc            *webrtc.PeerConnection
 		connClosers    = make([]io.Closer, 0)
 		connClosersMut sync.Mutex
@@ -193,8 +193,8 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 			d, _ := json.Marshal(&BrokerMessage{
 				Error: err.Error(),
 			})
-			_, _ = conn.Write(d)
-			_ = conn.Close()
+			_, _ = rw.Write(d)
+			_ = rw.Close()
 			if rtc != nil {
 				if rtc.ConnectionState() != webrtc.PeerConnectionStateConnected {
 					rtc.Close()
@@ -280,7 +280,7 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 					return
 				case webrtc.PeerConnectionStateConnecting:
 					// Safe to close the negotiating WebSocket.
-					_ = conn.Close()
+					_ = rw.Close()
 					return
 				}
 
@@ -293,7 +293,7 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 				connClosers = make([]io.Closer, 0)
 			})
 
-			flushCandidates := proxyICECandidates(rtc, conn)
+			flushCandidates := proxyICECandidates(rtc, rw)
 			rtc.OnDataChannel(l.handle(ctx, msg, &connClosers, &connClosersMut))
 
 			l.log.Debug(ctx, "set remote description", slog.F("offer", *msg.Offer))
@@ -327,7 +327,7 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 			}
 
 			l.log.Debug(ctx, "writing message", slog.F("msg", bmsg))
-			_, err = conn.Write(data)
+			_, err = rw.Write(data)
 			if err != nil {
 				closeError(fmt.Errorf("write: %w", err))
 				return
@@ -462,6 +462,14 @@ func (l *listener) handle(ctx context.Context, msg BrokerMessage, connClosers *[
 		})
 	}
 }
+
+// Add a DialContext abstraction.
+// Implement Ping for the client.
+// Measure latency:
+// - Client -> linksrv
+// - linksrv -> Instance
+// - Detect if connected -> Instance
+// - Custom protocol required to communicate between Instance and linksrv.
 
 // Close closes the broker socket and all created RTC connections.
 func (l *listener) Close() error {
