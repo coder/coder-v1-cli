@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"sync"
 	"time"
@@ -66,8 +67,17 @@ type turnProxyDialer struct {
 }
 
 func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
-	headers := http.Header{}
-	headers.Set("Session-Token", t.token)
+	client := &http.Client{}
+	client.Jar, err = cookiejar.New(nil)
+	if err != nil {
+		// The source never returns an error.
+		panic(err)
+	}
+	cookies := []*http.Cookie{{
+		Name:  "token",
+		Value: t.token,
+	}}
+	client.Jar.SetCookies(t.baseURL, cookies)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
@@ -82,9 +92,9 @@ func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
 	default:
 		return nil, errors.New("invalid turn url addr scheme provided")
 	}
-	url.Path = "/api/private/turn"
+	url.Path = "/api/turn"
 	conn, resp, err := websocket.Dial(ctx, url.String(), &websocket.DialOptions{
-		HTTPHeader: headers,
+		HTTPClient: client,
 	})
 	if err != nil {
 		if resp != nil {
