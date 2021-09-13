@@ -5,8 +5,36 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
 )
+
+func LoadCertsFromDirectory(dir string) ([]*x509.Certificate, error) {
+	var certs []*x509.Certificate
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("directory traverse error: %w", err)
+		}
+
+		var foundCerts []*x509.Certificate
+		if d.IsDir() {
+			foundCerts, err = LoadCertsFromDirectory(path)
+		} else {
+			foundCerts, err = LoadCertsFromFile(path)
+		}
+
+		if err != nil {
+			return err
+		}
+		certs = append(certs, foundCerts...)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return certs, nil
+}
 
 // LoadCertsFromFile loads all x509 certificates from a given file.
 func LoadCertsFromFile(path string) ([]*x509.Certificate, error) {

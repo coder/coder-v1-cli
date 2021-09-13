@@ -34,10 +34,10 @@ func agentCmd() *cobra.Command {
 
 func startCmd() *cobra.Command {
 	var (
-		token           string
-		coderURL        string
-		logFile         string
-		certificateFile string
+		token                string
+		coderURL             string
+		logFile              string
+		certificateDirectory string
 	)
 	cmd := &cobra.Command{
 		Use:   "start --coder-url=<coder_url> --token=<token> --log-file=<path>",
@@ -103,12 +103,12 @@ coder agent start --log-file=/tmp/coder-agent.log
 			log.Info(ctx, "starting wsnet listener", slog.F("coder_access_url", u.String()))
 			var listener io.Closer
 			var listenError error
-			// If certificateFile is specified, the user is indicating to use a specific certificate to connect
+			// If certificateDirectory is specified, the user is indicating to use a specific certificate to connect
 			// with the Coder deployment.
-			if certificateFile != "" {
-				certs, err := certificate.LoadCertsFromFile(certificateFile)
+			if certificateDirectory != "" {
+				certs, err := certificate.LoadCertsFromDirectory(certificateDirectory)
 				if err != nil {
-					return xerrors.Errorf("loading certificate file %q: %w", certificateFile, err)
+					return xerrors.Errorf("loading certificate file %q: %w", certificateDirectory, err)
 				}
 				if len(certs) == 0 {
 					return xerrors.Errorf("expect at least 1 certificate from the certificate file, found none")
@@ -141,7 +141,7 @@ coder agent start --log-file=/tmp/coder-agent.log
 	cmd.Flags().StringVar(&token, "token", "", "coder agent token")
 	cmd.Flags().StringVar(&coderURL, "coder-url", "", "coder access url")
 	cmd.Flags().StringVar(&logFile, "log-file", "", "write a copy of logs to file")
-	cmd.Flags().StringVar(&certificateFile, "cert-file", "", "Optional: tls certificate of the coder deployment")
+	cmd.Flags().StringVar(&certificateDirectory, "cert-dir", "", "Optional: tls certificates to trust when attempting to connect to the deployment instance.")
 
 	return cmd
 }
