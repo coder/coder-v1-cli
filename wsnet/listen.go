@@ -45,9 +45,14 @@ type DialChannelResponse struct {
 	Op  string
 }
 
+func defaultTransport() *http.Transport {
+	return http.DefaultTransport.(*http.Transport)
+}
+
 // ListenWithCerts will use the given broker certificate for the given broker url. This allows trusting
 // a broker with a cert that is not trusted by the system's defaults.
 func ListenWithCerts(ctx context.Context, log slog.Logger, broker string, turnProxyAuthToken string, certs []*x509.Certificate) (io.Closer, error) {
+	// CA pool with additional certs to trust
 	pool := x509.NewCertPool()
 	for i := range certs {
 		pool.AddCert(certs[i])
@@ -58,7 +63,8 @@ func ListenWithCerts(ctx context.Context, log slog.Logger, broker string, turnPr
 		RootCAs:    pool,
 	}
 
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// Clone the default transport
+	transport := defaultTransport().Clone()
 	transport.TLSClientConfig = tlsConfig
 
 	opts := &websocket.DialOptions{

@@ -15,7 +15,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/wsnet"
-	certificate "cdr.dev/coder-cli/wsnet/cli-certificate"
+	certificate "cdr.dev/coder-cli/wsnet/tlscertificates"
 )
 
 func agentCmd() *cobra.Command {
@@ -103,8 +103,10 @@ coder agent start --log-file=/tmp/coder-agent.log
 			log.Info(ctx, "starting wsnet listener", slog.F("coder_access_url", u.String()))
 			var listener io.Closer
 			var listenError error
+			// If certificateFile is specified, the user is indicating to use a specific certificate to connect
+			// with the Coder deployment.
 			if certificateFile != "" {
-				certs, err := certificate.LoadCerts(certificateFile)
+				certs, err := certificate.LoadCertsFromFile(certificateFile)
 				if err != nil {
 					return xerrors.Errorf("loading certificate file %q: %w", certificateFile, err)
 				}
@@ -139,7 +141,7 @@ coder agent start --log-file=/tmp/coder-agent.log
 	cmd.Flags().StringVar(&token, "token", "", "coder agent token")
 	cmd.Flags().StringVar(&coderURL, "coder-url", "", "coder access url")
 	cmd.Flags().StringVar(&logFile, "log-file", "", "write a copy of logs to file")
-	cmd.Flags().StringVar(&certificateFile, "cert-file", "", "Optional: certificate of coder deployment to trust")
+	cmd.Flags().StringVar(&certificateFile, "cert-file", "", "Optional: tls certificate of the coder deployment")
 
 	return cmd
 }

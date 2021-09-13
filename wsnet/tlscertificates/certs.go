@@ -8,7 +8,8 @@ import (
 	"os"
 )
 
-func LoadCerts(path string) ([]*x509.Certificate, error) {
+// LoadCertsFromFile loads all x509 certificates from a given file.
+func LoadCertsFromFile(path string) ([]*x509.Certificate, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open file %q: %w", path, err)

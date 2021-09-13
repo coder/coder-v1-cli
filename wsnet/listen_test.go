@@ -49,3 +49,10 @@ func TestListen(t *testing.T) {
 		<-connCh
 	})
 }
+
+// TestDefaultTransport tests if the default transport returns a valid
+// http transport. This is mainly assuring the type check is always valid,
+// and the native go lib does not change.
+func TestDefaultTransport(t *testing.T) {
+	require.NotNil(t, defaultTransport())
+}
