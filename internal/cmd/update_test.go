@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"cdr.dev/slog/sloggers/slogtest/assert"
+	"github.com/Masterminds/semver/v3"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/afero"
 	"golang.org/x/xerrors"
@@ -388,6 +389,38 @@ func Test_updater_run(t *testing.T) {
 			assertCLIError(t, "update coder - path blocklist - linuxbrew", err, "cowardly refusing to update coder binary", "blocklisted prefix")
 		})
 	}
+}
+
+func Test_getDesiredVersion(t *testing.T) {
+	t.Parallel()
+
+	t.Run("invalid version specified by user", func(t *testing.T) {
+		t.Parallel()
+
+		expected := &semver.Version{}
+		actual, err := getDesiredVersion(nil, "", "not a valid version")
+		assert.ErrorContains(t, "error should be nil", err, "Invalid Semantic Version")
+		assert.Equal(t, "expected should equal actual", expected, actual)
+	})
+
+	t.Run("underspecified version from user", func(t *testing.T) {
+		t.Parallel()
+
+		expected, err := semver.StrictNewVersion("1.23.0")
+		assert.Success(t, "error should be nil", err)
+		actual, err := getDesiredVersion(nil, "", "1.23")
+		assert.Success(t, "error should be nil", err)
+		assert.True(t, "should handle versions without trailing zero", expected.Equal(actual))
+	})
+
+	t.Run("empty coder URL", func(t *testing.T) {
+		t.Parallel()
+
+		expected := &semver.Version{}
+		actual, err := getDesiredVersion(nil, "", "")
+		assert.ErrorContains(t, "error should be nil", err, "get coder url")
+		assert.True(t, "should handle versions without trailing zero", expected.Equal(actual))
+	})
 }
 
 // fakeGetter mocks HTTP requests.
