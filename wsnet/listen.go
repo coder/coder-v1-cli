@@ -2,11 +2,14 @@ package wsnet
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"sync"
 	"sync/atomic"
@@ -42,15 +45,46 @@ type DialChannelResponse struct {
 	Op  string
 }
 
+// ListenWithCerts will use the given broker certificate for the given broker url. This allows trusting
+// a broker with a cert that is not trusted by the system's defaults.
+func ListenWithCerts(ctx context.Context, log slog.Logger, broker string, turnProxyAuthToken string, certs []*x509.Certificate) (io.Closer, error) {
+	pool := x509.NewCertPool()
+	for i := range certs {
+		pool.AddCert(certs[i])
+	}
+
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		RootCAs:    pool,
+	}
+
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = tlsConfig
+
+	opts := &websocket.DialOptions{
+		HTTPClient: &http.Client{
+			Timeout:   time.Second * 3,
+			Transport: transport,
+		},
+	}
+
+	return listen(ctx, log, broker, turnProxyAuthToken, opts)
+}
+
+func Listen(ctx context.Context, log slog.Logger, broker string, turnProxyAuthToken string) (io.Closer, error) {
+	return listen(ctx, log, broker, turnProxyAuthToken, nil)
+}
+
 // Listen connects to the broker proxies connections to the local net.
 // Close will end all RTC connections.
-func Listen(ctx context.Context, log slog.Logger, broker string, turnProxyAuthToken string) (io.Closer, error) {
+func listen(ctx context.Context, log slog.Logger, broker string, turnProxyAuthToken string, opts *websocket.DialOptions) (io.Closer, error) {
 	l := &listener{
 		log:                log,
 		broker:             broker,
 		connClosers:        make([]io.Closer, 0),
 		closed:             make(chan struct{}, 1),
 		turnProxyAuthToken: turnProxyAuthToken,
+		opts:               opts,
 	}
 
 	// We do a one-off dial outside of the loop to ensure the initial
@@ -108,6 +142,7 @@ type listener struct {
 	connClosersMut sync.Mutex
 	closed         chan struct{}
 	nextConnNumber int64
+	opts           *websocket.DialOptions
 }
 
 func (l *listener) dial(ctx context.Context) (<-chan error, error) {
@@ -116,7 +151,7 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 		_ = l.ws.Close(websocket.StatusNormalClosure, "new connection inbound")
 	}
 
-	conn, resp, err := websocket.Dial(ctx, l.broker, nil)
+	conn, resp, err := websocket.Dial(ctx, l.broker, l.opts)
 	if err != nil {
 		if resp != nil {
 			return nil, coder.NewHTTPError(resp)

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"io"
 	"net/url"
 	"os"
 	"os/signal"
@@ -14,6 +15,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/wsnet"
+	certificate "cdr.dev/coder-cli/wsnet/cli-certificate"
 )
 
 func agentCmd() *cobra.Command {
@@ -32,9 +34,10 @@ func agentCmd() *cobra.Command {
 
 func startCmd() *cobra.Command {
 	var (
-		token    string
-		coderURL string
-		logFile  string
+		token           string
+		coderURL        string
+		logFile         string
+		certificateFile string
 	)
 	cmd := &cobra.Command{
 		Use:   "start --coder-url=<coder_url> --token=<token> --log-file=<path>",
@@ -98,9 +101,23 @@ coder agent start --log-file=/tmp/coder-agent.log
 			}
 
 			log.Info(ctx, "starting wsnet listener", slog.F("coder_access_url", u.String()))
-			listener, err := wsnet.Listen(ctx, log, wsnet.ListenEndpoint(u, token), token)
-			if err != nil {
-				return xerrors.Errorf("listen: %w", err)
+			var listener io.Closer
+			var listenError error
+			if certificateFile != "" {
+				certs, err := certificate.LoadCerts(certificateFile)
+				if err != nil {
+					return xerrors.Errorf("loading certificate file %q: %w", certificateFile, err)
+				}
+				if len(certs) == 0 {
+					return xerrors.Errorf("expect at least 1 certificate from the certificate file, found none")
+				}
+
+				listener, listenError = wsnet.ListenWithCerts(ctx, log, wsnet.ListenEndpoint(u, token), token, certs)
+			} else {
+				listener, listenError = wsnet.Listen(ctx, log, wsnet.ListenEndpoint(u, token), token)
+			}
+			if listenError != nil {
+				return xerrors.Errorf("listen: %w", listenError)
 			}
 			defer func() {
 				log.Info(ctx, "closing wsnet listener")
@@ -122,6 +139,7 @@ coder agent start --log-file=/tmp/coder-agent.log
 	cmd.Flags().StringVar(&token, "token", "", "coder agent token")
 	cmd.Flags().StringVar(&coderURL, "coder-url", "", "coder access url")
 	cmd.Flags().StringVar(&logFile, "log-file", "", "write a copy of logs to file")
+	cmd.Flags().StringVar(&certificateFile, "cert-file", "", "Optional: certificate of coder deployment to trust")
 
 	return cmd
 }
