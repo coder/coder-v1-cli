@@ -258,7 +258,7 @@ func getDesiredVersion(httpClient getter, coderURLArg string, versionArg string)
 	}
 
 	if versionArg != "" {
-		desiredVersion, err = semver.StrictNewVersion(versionArg)
+		desiredVersion, err = semver.NewVersion(versionArg)
 		if err != nil {
 			return &semver.Version{}, xerrors.Errorf("parse desired version arg: %w", err)
 		}
