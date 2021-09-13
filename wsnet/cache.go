@@ -65,6 +65,15 @@ func (d *DialerCache) evict() {
 
 			// If we're no longer signaling, the connection is pending close.
 			evict := dialer.rtc.SignalingState() == webrtc.SignalingStateClosed
+
+			// HACK: since the pion package can't reuse data channel IDs we need
+			// to terminate the connection once we approach the critical number.
+			// We're working on adding data channel ID reuse support upstream.
+			stats, ok := dialer.rtc.GetStats().GetConnectionStats(dialer.rtc)
+			if ok && stats.DataChannelsRequested > 32500 {
+				evict = true
+			}
+
 			if dialer.activeConnections() == 0 && time.Since(d.atime[key]) >= d.ttl {
 				evict = true
 			} else {
