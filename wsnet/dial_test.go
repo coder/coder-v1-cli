@@ -61,7 +61,7 @@ func TestDial(t *testing.T) {
 		defer cancelFunc()
 		dialer, err := DialWebsocket(ctx, connectAddr, nil, nil)
 		require.True(t, errors.Is(err, context.DeadlineExceeded))
-		require.Error(t, dialer.conn.Close(), "already wrote close")
+		require.Nil(t, dialer)
 	})
 
 	t.Run("Ping", func(t *testing.T) {
