@@ -78,7 +78,7 @@ func ListenWithCerts(ctx context.Context, log slog.Logger, broker string, turnPr
 		},
 	}
 
-	return listen(ctx, log, broker, turnProxyAuthToken, opts)
+	return listenToBroker(ctx, log, broker, turnProxyAuthToken, opts)
 }
 
 // Listen connects to the broker proxies connections to the local net.
