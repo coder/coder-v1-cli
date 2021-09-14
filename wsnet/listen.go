@@ -161,7 +161,8 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 		_ = l.ws.Close(websocket.StatusNormalClosure, "new connection inbound")
 	}
 
-	conn, resp, err := websocket.Dial(ctx, l.broker, l.opts)
+	// Lib says not to close to resp body
+	conn, resp, err := websocket.Dial(ctx, l.broker, l.opts) //nolint: bodyclose
 	if err != nil {
 		if resp != nil {
 			return nil, coder.NewHTTPError(resp)
