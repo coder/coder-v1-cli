@@ -45,6 +45,8 @@ type DialChannelResponse struct {
 	Op  string
 }
 
+// defaultTransport returns the native golang default transport that
+// forces http2 and has various timeouts set.
 func defaultTransport() *http.Transport {
 	return http.DefaultTransport.(*http.Transport)
 }
@@ -53,6 +55,8 @@ func defaultTransport() *http.Transport {
 // a broker with a cert that is not trusted by the system's defaults.
 func ListenWithCerts(ctx context.Context, log slog.Logger, broker string, turnProxyAuthToken string, certs []*x509.Certificate) (io.Closer, error) {
 	// CA pool with additional certs to trust
+	// TODO: @emyrk when we update to go 1.17, use x509.SystemCertPool() instead of NewCertPool().
+	//		It does not work for windows, so for windows continue to use NewCertPool()
 	pool := x509.NewCertPool()
 	for i := range certs {
 		pool.AddCert(certs[i])

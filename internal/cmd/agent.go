@@ -103,15 +103,15 @@ coder agent start --log-file=/tmp/coder-agent.log
 			log.Info(ctx, "starting wsnet listener", slog.F("coder_access_url", u.String()))
 			var listener io.Closer
 			var listenError error
-			// If certificateDirectory is specified, the user is indicating to use a specific certificate to connect
-			// with the Coder deployment.
+			// If certificateDirectory is specified, the user is specifying which certificates to trust
+			// when making the websocket connections to the coderd deployment.
 			if certificateDirectory != "" {
 				certs, err := tlscertificates.LoadCertsFromDirectory(certificateDirectory)
 				if err != nil {
-					return xerrors.Errorf("loading certificate file %q: %w", certificateDirectory, err)
+					return xerrors.Errorf("loading certificate directory %q: %w", certificateDirectory, err)
 				}
 				if len(certs) == 0 {
-					return xerrors.Errorf("expect at least 1 certificate from the certificate file, found none")
+					return xerrors.Errorf("expect at least 1 certificate from the certificate directory, found none")
 				}
 
 				listener, listenError = wsnet.ListenWithCerts(ctx, log, wsnet.ListenEndpoint(u, token), token, certs)

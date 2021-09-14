@@ -86,10 +86,19 @@ func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
 	}
 	url.Path = "/api/private/turn"
 
-	opts := t.opts
-	if opts == nil {
-		opts = &websocket.DialOptions{}
+	opts := &websocket.DialOptions{}
+	if t.opts != nil {
+		// If we have options, do a shallow copy and replace the header.
+		// We do a shallow copy to not modify/add any headers to the original options
+		opts = shallowCopyDialOpts(*t.opts)
+		// Copy the header values into our local header map.
+		if len(opts.HTTPHeader) > 0 {
+			for k, v := range opts.HTTPHeader {
+				headers[k] = v
+			}
+		}
 	}
+
 	opts.HTTPHeader = headers
 	conn, resp, err := websocket.Dial(ctx, url.String(), opts)
 	if err != nil {
@@ -203,4 +212,8 @@ func (c *dataChannelConn) SetReadDeadline(t time.Time) error {
 
 func (c *dataChannelConn) SetWriteDeadline(t time.Time) error {
 	return nil
+}
+
+func shallowCopyDialOpts(options websocket.DialOptions) *websocket.DialOptions {
+	return &options
 }
