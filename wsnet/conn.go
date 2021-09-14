@@ -63,6 +63,8 @@ func TURNProxyICECandidate() webrtc.ICEServer {
 type turnProxyDialer struct {
 	baseURL *url.URL
 	token   string
+	// opts is for any additional dial options
+	opts *websocket.DialOptions
 }
 
 func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
@@ -83,9 +85,13 @@ func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
 		return nil, errors.New("invalid turn url addr scheme provided")
 	}
 	url.Path = "/api/private/turn"
-	conn, resp, err := websocket.Dial(ctx, url.String(), &websocket.DialOptions{
-		HTTPHeader: headers,
-	})
+
+	opts := t.opts
+	if opts == nil {
+		opts = &websocket.DialOptions{}
+	}
+	opts.HTTPHeader = headers
+	conn, resp, err := websocket.Dial(ctx, url.String(), opts)
 	if err != nil {
 		if resp != nil {
 			defer resp.Body.Close()

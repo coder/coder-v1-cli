@@ -73,11 +73,11 @@ func DialWebsocket(ctx context.Context, broker string, netOpts *DialOptions, wsO
 		// We should close the socket intentionally.
 		_ = conn.Close(websocket.StatusInternalError, "an error occurred")
 	}()
-	return Dial(ctx, nconn, netOpts)
+	return Dial(ctx, nconn, netOpts, wsOpts)
 }
 
 // Dial negotiates a connection to a listener.
-func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, error) {
+func Dial(ctx context.Context, conn net.Conn, options *DialOptions, wsOpts *websocket.DialOptions) (*Dialer, error) {
 	if options == nil {
 		options = &DialOptions{}
 	}
@@ -96,6 +96,7 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 		turnProxy = &turnProxyDialer{
 			baseURL: options.TURNLocalProxyURL,
 			token:   options.TURNProxyAuthToken,
+			opts:    wsOpts,
 		}
 	}
 
