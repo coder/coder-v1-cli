@@ -1,0 +1,1 @@
+This is an invalid cert that should be ignored as the dir load is not recursive

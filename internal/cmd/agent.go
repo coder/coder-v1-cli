@@ -15,7 +15,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"cdr.dev/coder-cli/wsnet"
-	certificate "cdr.dev/coder-cli/wsnet/tlscertificates"
+	"cdr.dev/coder-cli/wsnet/tlscertificates"
 )
 
 func agentCmd() *cobra.Command {
@@ -106,7 +106,7 @@ coder agent start --log-file=/tmp/coder-agent.log
 			// If certificateDirectory is specified, the user is indicating to use a specific certificate to connect
 			// with the Coder deployment.
 			if certificateDirectory != "" {
-				certs, err := certificate.LoadCertsFromDirectory(certificateDirectory)
+				certs, err := tlscertificates.LoadCertsFromDirectory(certificateDirectory)
 				if err != nil {
 					return xerrors.Errorf("loading certificate file %q: %w", certificateDirectory, err)
 				}

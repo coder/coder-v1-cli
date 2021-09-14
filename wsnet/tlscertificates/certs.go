@@ -1,4 +1,4 @@
-package certificate
+package tlscertificates
 
 import (
 	"crypto/x509"
