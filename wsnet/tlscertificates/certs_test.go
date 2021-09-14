@@ -3,8 +3,9 @@ package tlscertificates_test
 import (
 	"testing"
 
-	"cdr.dev/coder-cli/wsnet/tlscertificates"
 	"github.com/stretchr/testify/require"
+
+	"cdr.dev/coder-cli/wsnet/tlscertificates"
 )
 
 func TestLoadDirectory(t *testing.T) {
