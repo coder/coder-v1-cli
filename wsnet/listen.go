@@ -287,6 +287,7 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 				turnProxy = &turnProxyDialer{
 					baseURL: u,
 					token:   l.turnProxyAuthToken,
+					opts:    l.opts,
 				}
 			}
 			rtc, err = newPeerConnection(msg.Servers, turnProxy)
