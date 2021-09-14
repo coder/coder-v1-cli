@@ -81,13 +81,13 @@ func ListenWithCerts(ctx context.Context, log slog.Logger, broker string, turnPr
 	return listen(ctx, log, broker, turnProxyAuthToken, opts)
 }
 
-func Listen(ctx context.Context, log slog.Logger, broker string, turnProxyAuthToken string) (io.Closer, error) {
-	return listen(ctx, log, broker, turnProxyAuthToken, nil)
-}
-
 // Listen connects to the broker proxies connections to the local net.
 // Close will end all RTC connections.
-func listen(ctx context.Context, log slog.Logger, broker string, turnProxyAuthToken string, opts *websocket.DialOptions) (io.Closer, error) {
+func Listen(ctx context.Context, log slog.Logger, broker string, turnProxyAuthToken string) (io.Closer, error) {
+	return listenToBroker(ctx, log, broker, turnProxyAuthToken, nil)
+}
+
+func listenToBroker(ctx context.Context, log slog.Logger, broker string, turnProxyAuthToken string, opts *websocket.DialOptions) (io.Closer, error) {
 	l := &listener{
 		log:                log,
 		broker:             broker,
