@@ -19,4 +19,10 @@ func TestLoadDirectory(t *testing.T) {
 		// VeriSign is 1
 		require.Len(t, certs, 6+1+1)
 	})
+
+	t.Run("NonExistantDir", func(t *testing.T) {
+		_, err := tlscertificates.LoadCertsFromDirectory("not-exists")
+		require.Error(t, err)
+		require.Regexp(t, "no such file or directory", err.Error())
+	})
 }
