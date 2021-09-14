@@ -17,13 +17,12 @@ func LoadCertsFromDirectory(dir string) ([]*x509.Certificate, error) {
 			return fmt.Errorf("directory traverse error: %w", err)
 		}
 
-		var foundCerts []*x509.Certificate
 		if d.IsDir() {
-			foundCerts, err = LoadCertsFromDirectory(path)
-		} else {
-			foundCerts, err = LoadCertsFromFile(path)
+			// Skip directories
+			return nil
 		}
 
+		foundCerts, err := LoadCertsFromFile(path)
 		if err != nil {
 			return err
 		}
