@@ -412,15 +412,6 @@ func Test_getDesiredVersion(t *testing.T) {
 		assert.Success(t, "error should be nil", err)
 		assert.True(t, "should handle versions without trailing zero", expected.Equal(actual))
 	})
-
-	t.Run("empty coder URL", func(t *testing.T) {
-		t.Parallel()
-
-		expected := &semver.Version{}
-		actual, err := getDesiredVersion(nil, "", "")
-		assert.ErrorContains(t, "error should be nil", err, "get coder url")
-		assert.True(t, "should handle versions without trailing zero", expected.Equal(actual))
-	})
 }
 
 // fakeGetter mocks HTTP requests.
