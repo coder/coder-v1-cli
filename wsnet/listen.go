@@ -131,6 +131,9 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 		_ = l.ws.Close(websocket.StatusNormalClosure, "new connection inbound")
 	}
 
+	// Websocket lib documents not needing to close the resp body. Ignore the linter
+	// raising this an an issue.
+	//nolint: bodyclose
 	conn, resp, err := websocket.Dial(ctx, l.brokerURL, &websocket.DialOptions{
 		HTTPClient: l.httpClient,
 	})

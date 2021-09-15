@@ -98,7 +98,13 @@ coder agent start --log-file=/tmp/coder-agent.log
 			}
 
 			log.Info(ctx, "starting wsnet listener", slog.F("coder_access_url", u.String()))
-			listener, err := wsnet.Listen(ctx, log, wsnet.ListenEndpoint(u, token), token)
+			listener, err := wsnet.Listen(ctx, wsnet.ListenOptions{
+				Log:                log,
+				BrokerURL:          wsnet.ListenEndpoint(u, token),
+				HTTPClient:         nil,
+				TURNProxyAuthToken: token,
+			})
+
 			if err != nil {
 				return xerrors.Errorf("listen: %w", err)
 			}
