@@ -157,7 +157,6 @@ func dialICEURL(server webrtc.ICEServer, rawURL string, options *DialICEOptions)
 // Generalizes creating a new peer connection with consistent options.
 func newPeerConnection(servers []webrtc.ICEServer, dialer proxy.Dialer) (*webrtc.PeerConnection, error) {
 	se := webrtc.SettingEngine{}
-	se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
 	se.SetSrflxAcceptanceMinWait(0)
 	se.DetachDataChannels()
 	// If the disconnect and keep-alive timeouts are too closely related, we'll
