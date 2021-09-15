@@ -82,5 +82,6 @@ func logVersionMismatchError(apiVersion string) {
 		fmt.Sprintf("Coder CLI version: %s", version.Version),
 		fmt.Sprintf("Coder API version: %s", apiVersion), clog.BlankLine,
 		clog.Tipf("download the appropriate version here: https://github.com/cdr/coder-cli/releases"),
+		clog.Tipf("alternatively, run `coder update`"),
 	)
 }
