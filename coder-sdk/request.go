@@ -107,7 +107,7 @@ func (c *DefaultClient) request(ctx context.Context, method, path string, in int
 func (c *DefaultClient) requestBody(ctx context.Context, method, path string, in, out interface{}, opts ...requestOption) error {
 	resp, err := c.request(ctx, method, path, in, opts...)
 	if err != nil {
-		return xerrors.Errorf("Execute request: %q", err)
+		return xerrors.Errorf("Execute request: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }() // Best effort, likely connection dropped.
 
