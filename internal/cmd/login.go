@@ -143,7 +143,7 @@ func openURL(url string) error {
 	if wsl {
 		cmd = "cmd.exe"
 		args = []string{"/c", "start"}
-		url = strings.Replace(url, "&", "^&", -1)
+		url = strings.ReplaceAll(url, "&", "^&")
 		args = append(args, url)
 		return exec.Command(cmd, args...).Start()
 	}
