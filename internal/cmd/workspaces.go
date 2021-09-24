@@ -397,7 +397,8 @@ func createWorkspaceCmd() *cobra.Command {
 		useCVM          bool
 		providerName    string
 		enableAutostart bool
-		forUser         string // Optional
+		forUser         string        // Optional
+		autoOffDuration time.Duration // Optional
 	)
 
 	cmd := &cobra.Command{
@@ -468,19 +469,20 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 
 			// ExactArgs(1) ensures our name value can't panic on an out of bounds.
 			createReq := &coder.CreateWorkspaceRequest{
-				Name:            args[0],
-				ImageID:         importedImg.ID,
-				OrgID:           importedImg.OrganizationID,
-				ImageTag:        tag,
-				CPUCores:        cpu,
-				MemoryGB:        memory,
-				DiskGB:          disk,
-				GPUs:            gpus,
-				UseContainerVM:  useCVM,
-				ResourcePoolID:  provider.ID,
-				Namespace:       provider.DefaultNamespace,
-				EnableAutoStart: enableAutostart,
-				ForUserID:       forUser,
+				Name:                      args[0],
+				ImageID:                   importedImg.ID,
+				OrgID:                     importedImg.OrganizationID,
+				ImageTag:                  tag,
+				CPUCores:                  cpu,
+				MemoryGB:                  memory,
+				DiskGB:                    disk,
+				GPUs:                      gpus,
+				UseContainerVM:            useCVM,
+				ResourcePoolID:            provider.ID,
+				Namespace:                 provider.DefaultNamespace,
+				EnableAutoStart:           enableAutostart,
+				ForUserID:                 forUser,
+				WorkspaceAutoOffThreshold: coder.Duration(autoOffDuration),
 			}
 
 			// if any of these defaulted to their zero value we provision
@@ -519,6 +521,8 @@ coder workspaces create my-new-powerful-workspace --cpu 12 --disk 100 --memory 1
 			return nil
 		},
 	}
+	cmd.Flags().DurationVar(&autoOffDuration, "auto-off", 0, "Sets the workspace's auto-off setting. This only works if the organization has this feature enabled. "+
+		"Set to '-1' to disable auto-off, and '0' to default to the organization's setting.")
 	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the workspace should be created under.")
 	cmd.Flags().StringVarP(&tag, "tag", "t", defaultImgTag, "tag of the image the workspace will be based off of.")
 	cmd.Flags().Float32VarP(&cpu, "cpu", "c", 0, "number of cpu cores the workspace should be provisioned with.")

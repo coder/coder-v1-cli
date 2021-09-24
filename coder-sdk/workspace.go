@@ -89,6 +89,9 @@ type CreateWorkspaceRequest struct {
 	Namespace       string  `json:"namespace"`
 	EnableAutoStart bool    `json:"autostart_enabled"`
 
+	// WorkspaceAutoOffThreshold is optional, 0 defaults to the org settings
+	WorkspaceAutoOffThreshold Duration `json:"workspace_auto_off_threshold"`
+
 	// ForUserID is an optional param to create a workspace for another user
 	// other than the requester. This only works for admins and site managers.
 	ForUserID string `json:"for_user_id,omitempty"`
