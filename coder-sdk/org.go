@@ -72,6 +72,7 @@ type UpdateOrganizationReq struct {
 	AutoOffThreshold       *Duration `json:"auto_off_threshold"`
 	CPUProvisioningRate    *float32  `json:"cpu_provisioning_rate"`
 	MemoryProvisioningRate *float32  `json:"memory_provisioning_rate"`
+	AllowWorkspaceAutoOff  *bool     `json:"workspace_auto_off"`
 }
 
 // UpdateOrganization applys a partial update of an Organization resource.

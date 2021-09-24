@@ -729,16 +729,17 @@ coder workspaces create-from-config --name="dev-env" --filepath coder.yaml`,
 
 func editWorkspaceCmd() *cobra.Command {
 	var (
-		org    string
-		img    string
-		tag    string
-		cpu    float32
-		memory float32
-		disk   int
-		gpus   int
-		follow bool
-		user   string
-		force  bool
+		org             string
+		img             string
+		tag             string
+		cpu             float32
+		memory          float32
+		disk            int
+		gpus            int
+		follow          bool
+		user            string
+		autoOffDuration time.Duration
+		force           bool
 	)
 
 	cmd := &cobra.Command{
@@ -773,16 +774,24 @@ coder workspaces edit back-end-workspace --disk 20`,
 				return xerrors.New("org is required for multi-org members")
 			}
 
+			// Only update this field if the user specifically requested it via a flag.
+			var workspaceAutoOff *coder.Duration
+			if cmd.Flags().Changed("auto-off") {
+				tmp := coder.Duration(autoOffDuration)
+				workspaceAutoOff = &tmp
+			}
+
 			req, err := buildUpdateReq(ctx, client, updateConf{
-				cpu:       cpu,
-				memGB:     memory,
-				diskGB:    disk,
-				gpus:      gpus,
-				workspace: workspace,
-				user:      user,
-				image:     img,
-				imageTag:  tag,
-				orgName:   org,
+				cpu:                      cpu,
+				memGB:                    memory,
+				diskGB:                   disk,
+				gpus:                     gpus,
+				workspace:                workspace,
+				user:                     user,
+				image:                    img,
+				imageTag:                 tag,
+				orgName:                  org,
+				workspaceAutoOffDuration: workspaceAutoOff,
 			})
 			if err != nil {
 				return err
@@ -820,6 +829,8 @@ coder workspaces edit back-end-workspace --disk 20`,
 			return nil
 		},
 	}
+	cmd.Flags().DurationVar(&autoOffDuration, "auto-off", 0, "Sets the workspace's auto-off setting. This only works if the organization has this feature enabled. "+
+		"Set to '-1' to disable auto-off, and '0' to default to the organization's setting.")
 	cmd.Flags().StringVarP(&org, "org", "o", "", "name of the organization the workspace should be created under.")
 	cmd.Flags().StringVarP(&img, "image", "i", "", "name of the image you want the workspace to be based off of.")
 	cmd.Flags().StringVarP(&tag, "tag", "t", "latest", "image tag of the image you want to base the workspace off of.")
@@ -889,15 +900,16 @@ func rmWorkspacesCmd() *cobra.Command {
 }
 
 type updateConf struct {
-	cpu       float32
-	memGB     float32
-	diskGB    int
-	gpus      int
-	workspace *coder.Workspace
-	user      string
-	image     string
-	imageTag  string
-	orgName   string
+	cpu                      float32
+	memGB                    float32
+	diskGB                   int
+	gpus                     int
+	workspace                *coder.Workspace
+	user                     string
+	image                    string
+	imageTag                 string
+	orgName                  string
+	workspaceAutoOffDuration *coder.Duration
 }
 
 func buildUpdateReq(ctx context.Context, client coder.Client, conf updateConf) (*coder.UpdateWorkspaceReq, error) {
@@ -988,6 +1000,8 @@ func buildUpdateReq(ctx context.Context, client coder.Client, conf updateConf) (
 	} else {
 		updateReq.ImageTag = &conf.imageTag
 	}
+
+	updateReq.WorkspaceAutoOffThreshold = conf.workspaceAutoOffDuration
 	return &updateReq, nil
 }
 

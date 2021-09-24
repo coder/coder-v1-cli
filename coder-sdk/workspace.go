@@ -211,13 +211,14 @@ func (c *DefaultClient) StopWorkspace(ctx context.Context, workspaceID string) e
 // UpdateWorkspaceReq defines the update operation, only setting
 // nil-fields.
 type UpdateWorkspaceReq struct {
-	ImageID    *string  `json:"image_id"`
-	ImageTag   *string  `json:"image_tag"`
-	CPUCores   *float32 `json:"cpu_cores"`
-	MemoryGB   *float32 `json:"memory_gb"`
-	DiskGB     *int     `json:"disk_gb"`
-	GPUs       *int     `json:"gpus"`
-	TemplateID *string  `json:"template_id"`
+	ImageID                   *string   `json:"image_id"`
+	ImageTag                  *string   `json:"image_tag"`
+	CPUCores                  *float32  `json:"cpu_cores"`
+	MemoryGB                  *float32  `json:"memory_gb"`
+	DiskGB                    *int      `json:"disk_gb"`
+	GPUs                      *int      `json:"gpus"`
+	TemplateID                *string   `json:"template_id"`
+	WorkspaceAutoOffThreshold *Duration `json:"workspace_auto_off_threshold"`
 }
 
 // RebuildWorkspace requests that the given workspaceID is rebuilt with no changes to its specification.
