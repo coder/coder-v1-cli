@@ -160,7 +160,7 @@ func binPath() (string, error) {
 	// Bash and OpenSSH for Windows (used by Powershell and VS Code) to function
 	// correctly. Check if the current executable is in $PATH, and warn the user
 	// if it isn't.
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		binName := filepath.Base(exePath)
 
 		// We use safeexec instead of os/exec because os/exec returns paths in
@@ -268,7 +268,7 @@ func makeSSHConfig(binPath, workspaceName, privateKeyFilepath string, additional
 		fmt.Sprintf("IdentityFile=%q", privateKeyFilepath),
 	)
 
-	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
+	if runtime.GOOS == goosLinux || runtime.GOOS == goosDarwin {
 		options = append(options,
 			"ControlMaster auto",
 			"ControlPath ~/.ssh/.connection-%r@%h:%p",

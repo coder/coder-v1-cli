@@ -120,7 +120,7 @@ func pingAPI(ctx context.Context, workspaceURL *url.URL, token string) error {
 
 // isWSL determines if coder-cli is running within Windows Subsystem for Linux
 func isWSL() (bool, error) {
-	if runtime.GOOS == "darwin" || runtime.GOOS == "windows" {
+	if runtime.GOOS == goosDarwin || runtime.GOOS == goosWindows {
 		return false, nil
 	}
 	data, err := ioutil.ReadFile("/proc/version")
