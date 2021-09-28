@@ -36,6 +36,7 @@ import (
 const (
 	goosWindows       = "windows"
 	goosLinux         = "linux"
+	goosDarwin        = "darwin"
 	apiPrivateVersion = "/api/private/version"
 )
 
@@ -181,7 +182,7 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 	// TODO: validate the checksum of the downloaded file. GitHub does not currently provide this information
 	// and we do not generate them yet.
 	var updatedBinaryName string
-	if u.osF() == "windows" {
+	if u.osF() == goosWindows {
 		updatedBinaryName = "coder.exe"
 	} else {
 		updatedBinaryName = "coder"
