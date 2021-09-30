@@ -129,14 +129,14 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 		return clog.Fatal("preflight: missing write permission on current binary")
 	}
 
-	clog.LogInfo(fmt.Sprintf("Current version of coder-cli is %s", version.Version))
+	clog.LogInfo(fmt.Sprintf("Current version of coder-cli is %q", version.Version))
 
 	desiredVersion, err := getDesiredVersion(u.httpClient, coderURLArg, versionArg)
 	if err != nil {
 		return clog.Fatal("failed to determine desired version of coder", clog.Causef(err.Error()))
 	}
 
-	currentVersion, err := semver.StrictNewVersion(u.versionF())
+	currentVersion, err := semver.NewVersion(u.versionF())
 	if err != nil {
 		clog.LogWarn("failed to determine current version of coder-cli", clog.Causef(err.Error()))
 	} else if currentVersion.Compare(desiredVersion) == 0 {
@@ -145,7 +145,11 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 	}
 
 	if !force {
-		label := fmt.Sprintf("Do you want to download version %s instead", desiredVersion)
+		label := fmt.Sprintf("Do you want to download version %d.%d.%d instead",
+			desiredVersion.Major(),
+			desiredVersion.Minor(),
+			desiredVersion.Patch(),
+		)
 		if _, err := u.confirmF(label); err != nil {
 			return clog.Fatal("user cancelled operation", clog.Tipf(`use "--force" to update without confirmation`))
 		}
@@ -240,7 +244,7 @@ func (u *updater) doUpdate(ctx context.Context, updatedCoderBinaryPath string) e
 	if err != nil {
 		return xerrors.Errorf("check version of updated coder binary: %w", err)
 	}
-	clog.LogInfo(fmt.Sprintf("updated binary reports %s", bytes.TrimSpace(updatedVersionOutput)))
+	clog.LogInfo(fmt.Sprintf("updated binary reports %q", bytes.TrimSpace(updatedVersionOutput)))
 
 	if err = u.fs.Rename(updatedCoderBinaryPath, u.executablePath); err != nil {
 		return xerrors.Errorf("update coder binary in-place: %w", err)
@@ -283,7 +287,7 @@ func getDesiredVersion(httpClient getter, coderURLArg string, versionArg string)
 		return &semver.Version{}, xerrors.Errorf("query coder version: %w", err)
 	}
 
-	clog.LogInfo(fmt.Sprintf("Coder instance at %q reports version %s", coderURL.String(), desiredVersion.String()))
+	clog.LogInfo(fmt.Sprintf("Coder instance at %q reports version %q", coderURL.String(), desiredVersion.String()))
 
 	return desiredVersion, nil
 }
@@ -452,7 +456,7 @@ func getAPIVersionUnauthed(client getter, baseURL url.URL) (*semver.Version, err
 		return nil, xerrors.Errorf("parse version response: %w", err)
 	}
 
-	version, err := semver.StrictNewVersion(ver.Version)
+	version, err := semver.NewVersion(ver.Version)
 	if err != nil {
 		return nil, xerrors.Errorf("parsing coder version: %w", err)
 	}
