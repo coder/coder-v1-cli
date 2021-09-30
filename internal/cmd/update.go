@@ -136,7 +136,7 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 		return clog.Fatal("failed to determine desired version of coder", clog.Causef(err.Error()))
 	}
 
-	currentVersion, err := semver.StrictNewVersion(u.versionF())
+	currentVersion, err := semver.NewVersion(u.versionF())
 	if err != nil {
 		clog.LogWarn("failed to determine current version of coder-cli", clog.Causef(err.Error()))
 	} else if currentVersion.Compare(desiredVersion) == 0 {
@@ -452,7 +452,7 @@ func getAPIVersionUnauthed(client getter, baseURL url.URL) (*semver.Version, err
 		return nil, xerrors.Errorf("parse version response: %w", err)
 	}
 
-	version, err := semver.StrictNewVersion(ver.Version)
+	version, err := semver.NewVersion(ver.Version)
 	if err != nil {
 		return nil, xerrors.Errorf("parsing coder version: %w", err)
 	}
