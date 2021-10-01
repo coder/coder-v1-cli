@@ -44,6 +44,7 @@ func startCmd() *cobra.Command {
 		token    string
 		coderURL string
 		logFile  string
+		pullCert bool
 	)
 	cmd := &cobra.Command{
 		Use:   "start --coder-url=<coder_url> --token=<token> --log-file=<path>",
@@ -107,9 +108,11 @@ coder agent start --log-file=/tmp/coder-agent.log
 			}
 
 			// First inject certs
-			err = writeCoderdCerts(ctx)
-			if err != nil {
-				return xerrors.Errorf("trust certs: %w", err)
+			if pullCert {
+				err = writeCoderdCerts(ctx)
+				if err != nil {
+					return xerrors.Errorf("trust certs: %w", err)
+				}
 			}
 
 			log.Info(ctx, "starting wsnet listener", slog.F("coder_access_url", u.String()))
@@ -137,6 +140,7 @@ coder agent start --log-file=/tmp/coder-agent.log
 	cmd.Flags().StringVar(&token, "token", "", "coder agent token")
 	cmd.Flags().StringVar(&coderURL, "coder-url", "", "coder access url")
 	cmd.Flags().StringVar(&logFile, "log-file", "", "write a copy of logs to file")
+	cmd.Flags().BoolVar(&pullCert, "pull-cert", true, "pulls the tls certificate from coderd to ensure the cert is trusted")
 
 	return cmd
 }
@@ -146,6 +150,11 @@ func writeCoderdCerts(ctx context.Context) error {
 	certs, err := trustCertificate(ctx)
 	if err != nil {
 		return xerrors.Errorf("trust cert: %w", err)
+	}
+
+	// No certs to write
+	if len(certs) == 0 {
+		return nil
 	}
 
 	err = os.MkdirAll(coderdCertDir, 0666)
@@ -186,9 +195,14 @@ func trustCertificate(ctx context.Context) ([][]byte, error) {
 		},
 	}
 
-	c, err := newClient(ctx, true, withHTTPClient(hc))
+	c, err := newClient(ctx, false, withHTTPClient(hc))
 	if err != nil {
 		return nil, xerrors.Errorf("new client: %w", err)
+	}
+
+	// Non-https won't have any tls certs
+	if c.BaseURL().Scheme != "https" {
+		return nil, nil
 	}
 
 	id := os.Getenv("CODER_WORKSPACE_ID")
