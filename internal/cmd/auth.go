@@ -25,6 +25,12 @@ const urlEnv = "CODER_URL"
 
 type coderOpt func(opt *coder.ClientOptions)
 
+func withSessionToken(token string) coderOpt {
+	return func(opt *coder.ClientOptions) {
+		opt.Token = token
+	}
+}
+
 func withHTTPClient(hc *http.Client) coderOpt {
 	return func(opt *coder.ClientOptions) {
 		opt.HTTPClient = hc
@@ -38,30 +44,39 @@ func newClient(ctx context.Context, checkVersion bool, optsF ...coderOpt) (coder
 		rawURL       = os.Getenv(urlEnv)
 	)
 
-	if sessionToken == "" || rawURL == "" {
-		sessionToken, err = config.Session.Read()
-		if err != nil {
-			return nil, errNeedLogin
-		}
-
-		rawURL, err = config.URL.Read()
-		if err != nil {
-			return nil, errNeedLogin
-		}
-	}
-
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return nil, xerrors.Errorf("url malformed: %w try running \"coder login\" with a valid URL", err)
-	}
-
-	clientOpts := &coder.ClientOptions{
-		BaseURL: u,
-		Token:   sessionToken,
-	}
-
+	clientOpts := &coder.ClientOptions{}
 	for _, f := range optsF {
 		f(clientOpts)
+	}
+
+	// Missing the token
+	if clientOpts.Token == "" {
+		// If the env var is not set, try the config file
+		if sessionToken == "" {
+			sessionToken, err = config.Session.Read()
+			if err != nil {
+				return nil, errNeedLogin
+			}
+		}
+		clientOpts.Token = sessionToken
+	}
+
+	// Missing the url
+	if clientOpts.BaseURL == nil {
+		// If the env var is not set, try the config file
+		if rawURL == "" {
+			rawURL, err = config.URL.Read()
+			if err != nil {
+				return nil, errNeedLogin
+			}
+		}
+
+		u, err := url.Parse(rawURL)
+		if err != nil {
+			return nil, xerrors.Errorf("url malformed: %w try running \"coder login\" with a valid URL", err)
+		}
+
+		clientOpts.BaseURL = u
 	}
 
 	c, err := coder.NewClient(*clientOpts)

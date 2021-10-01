@@ -41,10 +41,11 @@ func agentCmd() *cobra.Command {
 
 func startCmd() *cobra.Command {
 	var (
-		token    string
-		coderURL string
-		logFile  string
-		pullCert bool
+		token        string
+		sessionToken string
+		coderURL     string
+		logFile      string
+		pullCert     bool
 	)
 	cmd := &cobra.Command{
 		Use:   "start --coder-url=<coder_url> --token=<token> --log-file=<path>",
@@ -107,9 +108,9 @@ coder agent start --log-file=/tmp/coder-agent.log
 				}
 			}
 
-			// First inject certs
+			// First inject certs if enabled
 			if pullCert {
-				count, err := writeCoderdCerts(ctx)
+				count, err := writeCoderdCerts(ctx, sessionToken)
 				if err != nil {
 					return xerrors.Errorf("trust certs: %w", err)
 				}
@@ -139,6 +140,7 @@ coder agent start --log-file=/tmp/coder-agent.log
 	}
 
 	cmd.Flags().StringVar(&token, "token", "", "coder agent token")
+	cmd.Flags().StringVar(&sessionToken, "session-token", "", "coder session token to auth as user")
 	cmd.Flags().StringVar(&coderURL, "coder-url", "", "coder access url")
 	cmd.Flags().StringVar(&logFile, "log-file", "", "write a copy of logs to file")
 	cmd.Flags().BoolVar(&pullCert, "pull-cert", true, "pulls the tls certificate from coderd to ensure the cert is trusted")
@@ -146,9 +148,9 @@ coder agent start --log-file=/tmp/coder-agent.log
 	return cmd
 }
 
-func writeCoderdCerts(ctx context.Context) (int, error) {
+func writeCoderdCerts(ctx context.Context, sessionToken string) (int, error) {
 	// Inject certs to custom dir and concat with : with existing dir.
-	certs, err := trustCertificate(ctx)
+	certs, err := trustCertificate(ctx, sessionToken)
 	if err != nil {
 		return 0, xerrors.Errorf("trust cert: %w", err)
 	}
@@ -187,7 +189,7 @@ func writeCoderdCerts(ctx context.Context) (int, error) {
 // It will then extend the certs to trust to include this directory.
 // This only happens if coderd can answer the challenge to prove
 // it has the shared secret.
-func trustCertificate(ctx context.Context) ([][]byte, error) {
+func trustCertificate(ctx context.Context, sessionToken string) ([][]byte, error) {
 	conf := &tls.Config{InsecureSkipVerify: true}
 	hc := &http.Client{
 		Timeout: time.Second * 3,
@@ -196,7 +198,7 @@ func trustCertificate(ctx context.Context) ([][]byte, error) {
 		},
 	}
 
-	c, err := newClient(ctx, false, withHTTPClient(hc))
+	c, err := newClient(ctx, false, withHTTPClient(hc), withSessionToken(sessionToken))
 	if err != nil {
 		return nil, xerrors.Errorf("new client: %w", err)
 	}
