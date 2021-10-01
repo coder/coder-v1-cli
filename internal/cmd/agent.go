@@ -214,5 +214,5 @@ func trustCertificate(ctx context.Context, sessionToken string) ([][]byte, error
 		return nil, xerrors.Errorf("challenge failed: %w", err)
 	}
 
-	return challenge.Certificates, nil
+	return challenge.PemCertificates, nil
 }

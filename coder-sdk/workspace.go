@@ -2,6 +2,7 @@ package coder
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -517,8 +518,9 @@ func (c *DefaultClient) SetPolicyTemplate(ctx context.Context, templateID string
 
 // TrustChallengeResponse returns the tls certs used in the response.
 type TrustChallengeResponse struct {
-	// Certificates are the returned response certificates
-	Certificates [][]byte `json:"-"`
+	// PemCertificates are the returned response certificates
+	PemCertificates [][]byte            `json:"-"`
+	Certificates    []*x509.Certificate `json:"-"`
 }
 
 // TrustEnvironment is used to make a secure handshake with a coderd. This is intended to run from within a workspace.
@@ -534,12 +536,14 @@ func (c *DefaultClient) TrustEnvironment(ctx context.Context, id string) (*Trust
 	}
 
 	if len(resp.TLS.PeerCertificates) > 0 {
-		for _, c := range resp.TLS.PeerCertificates {
+		for i := range resp.TLS.PeerCertificates {
+			c := resp.TLS.PeerCertificates[i]
 			data := pem.EncodeToMemory(&pem.Block{
 				Type:  "CERTIFICATE",
 				Bytes: c.Raw,
 			})
-			challenge.Certificates = append(challenge.Certificates, data)
+			challenge.PemCertificates = append(challenge.PemCertificates, data)
+			challenge.Certificates = append(challenge.Certificates, c)
 		}
 	}
 
