@@ -1,10 +1,16 @@
 package cmd
 
 import (
+	"context"
+	"crypto/tls"
+	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
+	"time"
 
 	// We use slog here since agent runs in the background and we can benefit
 	// from structured logging.
@@ -15,6 +21,9 @@ import (
 
 	"cdr.dev/coder-cli/wsnet"
 )
+
+// coderdCertDir is where the certificates for coderd are written by the coder agent.
+const coderdCertDir = "/var/tmp/coder/certs"
 
 func agentCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -97,6 +106,12 @@ coder agent start --log-file=/tmp/coder-agent.log
 				}
 			}
 
+			// First inject certs
+			err = writeCoderdCerts(ctx)
+			if err != nil {
+				return xerrors.Errorf("trust certs: %w", err)
+			}
+
 			log.Info(ctx, "starting wsnet listener", slog.F("coder_access_url", u.String()))
 			listener, err := wsnet.Listen(ctx, log, wsnet.ListenEndpoint(u, token), token)
 			if err != nil {
@@ -124,4 +139,63 @@ coder agent start --log-file=/tmp/coder-agent.log
 	cmd.Flags().StringVar(&logFile, "log-file", "", "write a copy of logs to file")
 
 	return cmd
+}
+
+func writeCoderdCerts(ctx context.Context) error {
+	// Inject certs to custom dir and concat with : with existing dir.
+	certs, err := trustCertificate(ctx)
+	if err != nil {
+		return xerrors.Errorf("trust cert: %w", err)
+	}
+
+	err = os.MkdirAll(coderdCertDir, 0666)
+	if err != nil {
+		return xerrors.Errorf("mkdir %s: %w", coderdCertDir, err)
+	}
+
+	certPath := filepath.Join(coderdCertDir, "certs.pem")
+	file, err := os.OpenFile(certPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+	if err != nil {
+		return xerrors.Errorf("create file %s: %w", certPath, err)
+	}
+
+	for _, cert := range certs {
+		_, _ = fmt.Fprintln(file, string(cert))
+	}
+
+	// Add our directory to the certs to trust
+	certDir := os.Getenv("SSL_CERT_DIR")
+	err = os.Setenv("SSL_CERT_DIR", certDir+":"+coderdCertDir)
+	if err != nil {
+		return xerrors.Errorf("set SSL_CERT_DIR: %w", err)
+	}
+
+	return nil
+}
+
+// trustCertificate will fetch coderd's certificate and write it to disc.
+// It will then extend the certs to trust to include this directory.
+// This only happens if coderd can answer the challenge to prove
+// it has the shared secret.
+func trustCertificate(ctx context.Context) ([][]byte, error) {
+	conf := &tls.Config{InsecureSkipVerify: true}
+	hc := &http.Client{
+		Timeout: time.Second * 3,
+		Transport: &http.Transport{
+			TLSClientConfig: conf,
+		},
+	}
+
+	c, err := newClient(ctx, true, withHTTPClient(hc))
+	if err != nil {
+		return nil, xerrors.Errorf("new client: %w", err)
+	}
+
+	id := os.Getenv("CODER_WORKSPACE_ID")
+	challenge, err := c.TrustEnvironment(ctx, id)
+	if err != nil {
+		return nil, xerrors.Errorf("challenge failed: %w", err)
+	}
+
+	return challenge.Certificates, nil
 }

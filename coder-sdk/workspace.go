@@ -2,6 +2,7 @@ package coder
 
 import (
 	"context"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"net/http"
@@ -512,4 +513,35 @@ func (c *DefaultClient) SetPolicyTemplate(ctx context.Context, templateID string
 	}
 
 	return &resp, nil
+}
+
+// TrustChallengeResponse returns the tls certs used in the response.
+type TrustChallengeResponse struct {
+	// Certificates are the returned response certificates
+	Certificates [][]byte `json:"-"`
+}
+
+// TrustEnvironment is used to make a secure handshake with a coderd. This is intended to run from within a workspace.
+// If this fails, we are not talking to the coderd that has access to the workspace's shared secret.
+// TODO: @emyrk the trust challenge is not fully fleshed out, and should not be used in production at this time.
+// 		The secure handshake needs to be implemented.
+func (c *DefaultClient) TrustEnvironment(ctx context.Context, id string) (*TrustChallengeResponse, error) {
+	var challenge TrustChallengeResponse
+	//nolint: bodyclose
+	resp, err := c.requestBodyWithResponse(ctx, http.MethodGet, "/api/private/environments/"+id+"/trust-challenge", nil, &challenge)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.TLS.PeerCertificates) > 0 {
+		for _, c := range resp.TLS.PeerCertificates {
+			data := pem.EncodeToMemory(&pem.Block{
+				Type:  "CERTIFICATE",
+				Bytes: c.Raw,
+			})
+			challenge.Certificates = append(challenge.Certificates, data)
+		}
+	}
+
+	return &challenge, nil
 }

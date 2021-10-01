@@ -257,4 +257,8 @@ type Client interface {
 
 	// ICEServers fetches the list of ICE servers advertised by the deployment.
 	ICEServers(ctx context.Context) ([]webrtc.ICEServer, error)
+
+	// TrustEnvironment
+	// TODO: @emyrk DO NOT USE AT THIS TIME
+	TrustEnvironment(ctx context.Context, id string) (*TrustChallengeResponse, error)
 }

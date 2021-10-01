@@ -105,23 +105,34 @@ func (c *DefaultClient) request(ctx context.Context, method, path string, in int
 // requestBody is a helper extending the Client.request helper, checking the response code
 // and decoding the response payload.
 func (c *DefaultClient) requestBody(ctx context.Context, method, path string, in, out interface{}, opts ...requestOption) error {
+	_, err := c.requestBodyWithResponse(ctx, method, path, in, out, opts...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// requestBodyWithResponse is a helper extending the Client.request helper, checking the response code
+// and decoding the response payload. It also returns the original http.Response in case the headers or other
+// response properties need to be analyzed.
+func (c *DefaultClient) requestBodyWithResponse(ctx context.Context, method, path string, in, out interface{}, opts ...requestOption) (*http.Response, error) {
 	resp, err := c.request(ctx, method, path, in, opts...)
 	if err != nil {
-		return xerrors.Errorf("Execute request: %q", err)
+		return nil, xerrors.Errorf("Execute request: %q", err)
 	}
 	defer func() { _ = resp.Body.Close() }() // Best effort, likely connection dropped.
 
 	// Responses in the 100 are handled by the http lib, in the 200 range, we have a success.
 	// Consider anything at or above 300 to be an error.
 	if resp.StatusCode > 299 {
-		return fmt.Errorf("unexpected status code %d: %w", resp.StatusCode, NewHTTPError(resp))
+		return nil, fmt.Errorf("unexpected status code %d: %w", resp.StatusCode, NewHTTPError(resp))
 	}
 
 	// If we expect a payload, process it as json.
 	if out != nil {
 		if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-			return xerrors.Errorf("decode response body: %w", err)
+			return nil, xerrors.Errorf("decode response body: %w", err)
 		}
 	}
-	return nil
+	return resp, nil
 }

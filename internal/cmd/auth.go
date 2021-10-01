@@ -23,7 +23,15 @@ var errNeedLogin = clog.Fatal(
 const tokenEnv = "CODER_TOKEN"
 const urlEnv = "CODER_URL"
 
-func newClient(ctx context.Context, checkVersion bool) (coder.Client, error) {
+type coderOpt func(opt *coder.ClientOptions)
+
+func withHTTPClient(hc *http.Client) coderOpt {
+	return func(opt *coder.ClientOptions) {
+		opt.HTTPClient = hc
+	}
+}
+
+func newClient(ctx context.Context, checkVersion bool, optsF ...coderOpt) (coder.Client, error) {
 	var (
 		err          error
 		sessionToken = os.Getenv(tokenEnv)
@@ -47,10 +55,16 @@ func newClient(ctx context.Context, checkVersion bool) (coder.Client, error) {
 		return nil, xerrors.Errorf("url malformed: %w try running \"coder login\" with a valid URL", err)
 	}
 
-	c, err := coder.NewClient(coder.ClientOptions{
+	clientOpts := &coder.ClientOptions{
 		BaseURL: u,
 		Token:   sessionToken,
-	})
+	}
+
+	for _, f := range optsF {
+		f(clientOpts)
+	}
+
+	c, err := coder.NewClient(*clientOpts)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to create new coder.Client: %w", err)
 	}
