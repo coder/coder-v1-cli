@@ -109,10 +109,11 @@ coder agent start --log-file=/tmp/coder-agent.log
 
 			// First inject certs
 			if pullCert {
-				err = writeCoderdCerts(ctx)
+				count, err := writeCoderdCerts(ctx)
 				if err != nil {
 					return xerrors.Errorf("trust certs: %w", err)
 				}
+				log.Info(ctx, "certificates pulled from coderd", slog.F("count", count))
 			}
 
 			log.Info(ctx, "starting wsnet listener", slog.F("coder_access_url", u.String()))
@@ -145,27 +146,27 @@ coder agent start --log-file=/tmp/coder-agent.log
 	return cmd
 }
 
-func writeCoderdCerts(ctx context.Context) error {
+func writeCoderdCerts(ctx context.Context) (int, error) {
 	// Inject certs to custom dir and concat with : with existing dir.
 	certs, err := trustCertificate(ctx)
 	if err != nil {
-		return xerrors.Errorf("trust cert: %w", err)
+		return 0, xerrors.Errorf("trust cert: %w", err)
 	}
 
 	// No certs to write
 	if len(certs) == 0 {
-		return nil
+		return 0, nil
 	}
 
 	err = os.MkdirAll(coderdCertDir, 0666)
 	if err != nil {
-		return xerrors.Errorf("mkdir %s: %w", coderdCertDir, err)
+		return 0, xerrors.Errorf("mkdir %s: %w", coderdCertDir, err)
 	}
 
 	certPath := filepath.Join(coderdCertDir, "certs.pem")
 	file, err := os.OpenFile(certPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 	if err != nil {
-		return xerrors.Errorf("create file %s: %w", certPath, err)
+		return 0, xerrors.Errorf("create file %s: %w", certPath, err)
 	}
 
 	for _, cert := range certs {
@@ -176,10 +177,10 @@ func writeCoderdCerts(ctx context.Context) error {
 	certDir := os.Getenv("SSL_CERT_DIR")
 	err = os.Setenv("SSL_CERT_DIR", certDir+":"+coderdCertDir)
 	if err != nil {
-		return xerrors.Errorf("set SSL_CERT_DIR: %w", err)
+		return 0, xerrors.Errorf("set SSL_CERT_DIR: %w", err)
 	}
 
-	return nil
+	return len(certs), nil
 }
 
 // trustCertificate will fetch coderd's certificate and write it to disc.
