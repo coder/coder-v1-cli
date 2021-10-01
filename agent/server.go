@@ -2,8 +2,11 @@ package agent
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
+	"os"
 	"time"
 
 	"cdr.dev/slog"
@@ -21,15 +24,17 @@ const (
 
 // Server connects to a Coder deployment and listens for p2p connections.
 type Server struct {
-	log       slog.Logger
-	listenURL *url.URL
+	log         slog.Logger
+	listenURL   *url.URL
+	coderClient coder.Client
 }
 
 // ServerArgs are the required arguments to create an agent server.
 type ServerArgs struct {
-	Log      slog.Logger
-	CoderURL *url.URL
-	Token    string
+	Log         slog.Logger
+	CoderURL    *url.URL
+	Token       string
+	CoderClient coder.Client
 }
 
 // NewServer creates a new agent server.
@@ -40,9 +45,37 @@ func NewServer(args ServerArgs) (*Server, error) {
 	}
 
 	return &Server{
-		log:       args.Log,
-		listenURL: lURL,
+		log:         args.Log,
+		listenURL:   lURL,
+		coderClient: args.CoderClient,
 	}, nil
+}
+
+// TrustCertificate will fetch coderd's certificate and write it to disc.
+// It will then extend the certs to trust to include this directory.
+// This only happens if coderd can answer the challenge to prove
+// it has the shared secret.
+func (s *Server) TrustCertificate(ctx context.Context) ([][]byte, error) {
+	conf := &tls.Config{InsecureSkipVerify: true}
+	hc := &http.Client{
+		Timeout: time.Second * 3,
+		Transport: &http.Transport{
+			TLSClientConfig: conf,
+		},
+	}
+
+	orig := s.coderClient.HTTPClient()
+	s.coderClient.SetHTTPClient(hc)
+	// Return to the original client
+	defer s.coderClient.SetHTTPClient(orig)
+
+	id := os.Getenv("CODER_WORKSPACE_ID")
+	challenge, err := s.coderClient.TrustEnvironment(ctx, id)
+	if err != nil {
+		return nil, xerrors.Errorf("challenge failed: %w", err)
+	}
+
+	return challenge.Certificates, nil
 }
 
 // Run will listen and proxy new peer connections on a retry loop.

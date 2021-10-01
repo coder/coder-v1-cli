@@ -2,6 +2,7 @@ package coder
 
 import (
 	"context"
+	"net/http"
 	"net/url"
 
 	"cdr.dev/wsep"
@@ -11,6 +12,11 @@ import (
 // Client wraps the Coder HTTP API.
 // This is an interface to allow for mocking of coder-sdk client usage.
 type Client interface {
+	// SetHTTPClient changes the http client to use for all requests
+	SetHTTPClient(hc *http.Client)
+	// HTTPClient returns the http client being used for all requests
+	HTTPClient() *http.Client
+
 	// PushActivity pushes CLI activity to Coder.
 	PushActivity(ctx context.Context, source, envID string) error
 
@@ -235,4 +241,8 @@ type Client interface {
 
 	// RenameWorkspaceProvider changes an existing providers name field.
 	RenameWorkspaceProvider(ctx context.Context, id string, name string) error
+
+	// TrustEnvironment
+	// TODO: @emyrk DO NOT USE AT THIS TIME
+	TrustEnvironment(ctx context.Context, id string) (*TrustChallengeResponse, error)
 }

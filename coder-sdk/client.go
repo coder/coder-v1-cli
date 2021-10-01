@@ -126,3 +126,13 @@ func (c *DefaultClient) Token() string {
 func (c *DefaultClient) BaseURL() url.URL {
 	return *c.baseURL
 }
+
+// SetHTTPClient allows changing the http client to use for requests
+func (c *DefaultClient) SetHTTPClient(hc *http.Client) {
+	c.httpClient = hc
+}
+
+// HTTPClient returns the http client being used for requests
+func (c *DefaultClient) HTTPClient() *http.Client {
+	return c.httpClient
+}
