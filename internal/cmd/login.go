@@ -4,7 +4,10 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/url"
+	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/pkg/browser"
@@ -66,7 +69,8 @@ func login(cmd *cobra.Command, workspaceURL *url.URL) error {
 	q.Add("show_token", "true")
 	authURL.RawQuery = q.Encode()
 
-	if err := browser.OpenURL(authURL.String()); err != nil {
+	if err := openURL(authURL.String()); err != nil {
+		clog.LogWarn(err.Error())
 		fmt.Printf("Open the following in your browser:\n\n\t%s\n\n", authURL.String())
 	} else {
 		fmt.Printf("Your browser has been opened to visit:\n\n\t%s\n\n", authURL.String())
@@ -112,4 +116,37 @@ func pingAPI(ctx context.Context, workspaceURL *url.URL, token string) error {
 		return xerrors.Errorf("call api: %w", err)
 	}
 	return nil
+}
+
+// isWSL determines if coder-cli is running within Windows Subsystem for Linux
+func isWSL() (bool, error) {
+	if runtime.GOOS == goosDarwin || runtime.GOOS == goosWindows {
+		return false, nil
+	}
+	data, err := ioutil.ReadFile("/proc/version")
+	if err != nil {
+		return false, xerrors.Errorf("read /proc/version: %w", err)
+	}
+	return strings.Contains(strings.ToLower(string(data)), "microsoft"), nil
+}
+
+// openURL opens the provided URL via user's default browser
+func openURL(url string) error {
+	var cmd string
+	var args []string
+
+	wsl, err := isWSL()
+	if err != nil {
+		return xerrors.Errorf("test running Windows Subsystem for Linux: %w", err)
+	}
+
+	if wsl {
+		cmd = "cmd.exe"
+		args = []string{"/c", "start"}
+		url = strings.ReplaceAll(url, "&", "^&")
+		args = append(args, url)
+		return exec.Command(cmd, args...).Start()
+	}
+
+	return browser.OpenURL(url)
 }
