@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"io/fs"
@@ -43,6 +43,7 @@ var (
 	fakeNewVersionJSON    = fmt.Sprintf(`{"version":%q}`, fakeNewVersion)
 	fakeOldVersionJSON    = fmt.Sprintf(`{"version":%q}`, fakeOldVersion)
 	fakeNewVersionTgz     = mustValidTgz("coder", []byte(fakeNewVersion), 0751)
+	fakeNewVersionZip     = mustValidZip("coder.exe", []byte(fakeNewVersion))
 	fakeAssetURLLinux     = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/" + filenameLinux
 	fakeAssetURLWindows   = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/" + filenameWindows
 	fakeGithubReleaseJSON = fmt.Sprintf(`{"assets":[{"name":%q,"browser_download_url":%q},{"name":%q,"browser_download_url":%q}]}`, filenameLinux, fakeAssetURLLinux, filenameWindows, fakeAssetURLWindows)
@@ -219,7 +220,7 @@ func Test_updater_run(t *testing.T) {
 		fakeFile(t, p.Fakefs, fakeExePathWindows, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeAssetURLWindows] = newFakeGetterResponse(fakeValidZipBytes, 200, variadicS(), nil)
+		p.HTTPClient.M[fakeAssetURLWindows] = newFakeGetterResponse(fakeNewVersionZip, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
 		p.Execer.M[p.ExecutablePath+".new --version"] = fakeExecerResult{[]byte(fakeNewVersion), nil}
@@ -578,13 +579,6 @@ func assertCLIError(t *testing.T, name string, err error, expectedHeader, expect
 	}
 }
 
-// this is a valid zip archive containing a single file named 'coder.exe' with permissions 0751
-// containing the string "1.23.4-rc.5+678-gabcdef-12345678".
-var fakeValidZipBytes, _ = base64.StdEncoding.DecodeString(`UEsDBAoAAAAAAAtfDVNCHNDCIAAAACAAAAAJABwAY29kZXIuZXhlVVQJAAPmXRZh/10WYXV4CwAB
-BOgDAAAE6AMAADEuMjMuNC1yYy41KzY3OC1nYWJjZGVmLTEyMzQ1Njc4UEsBAh4DCgAAAAAAC18N
-U0Ic0MIgAAAAIAAAAAkAGAAAAAAAAQAAAO2BAAAAAGNvZGVyLmV4ZVVUBQAD5l0WYXV4CwABBOgD
-AAAE6AMAAFBLBQYAAAAAAQABAE8AAABjAAAAAAA=`)
-
 // mustValidTgz creates a valid tgz file and panics if any error is encountered.
 // only for use in unit tests.
 func mustValidTgz(filename string, data []byte, perms os.FileMode) []byte {
@@ -632,7 +626,28 @@ func mustValidTgz(filename string, data []byte, perms os.FileMode) []byte {
 	return buf.Bytes()
 }
 
+// mustValidZip creates a valid zip file and panics if any error is encountered.
+// only for use in unit tests.
+func mustValidZip(filename string, data []byte) []byte {
+	must := func(err error, msg string) {
+		if err != nil {
+			panic(xerrors.Errorf("%s: %w", msg, err))
+		}
+	}
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	w, err := zw.Create(filename)
+	must(err, "create zip archive")
+	_, err = io.Copy(w, bytes.NewReader(data))
+	must(err, "write file")
+	err = zw.Close()
+	must(err, "close gzip writer")
+
+	return buf.Bytes()
+}
+
 var _ = mustValidTgz("testing", []byte("testing"), 0777)
+var _ = mustValidZip("testing", []byte("testing"))
 
 type fakeExecer struct {
 	M map[string]fakeExecerResult
