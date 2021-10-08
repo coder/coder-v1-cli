@@ -17,7 +17,9 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -139,16 +141,26 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 	currentVersion, err := semver.NewVersion(u.versionF())
 	if err != nil {
 		clog.LogWarn("failed to determine current version of coder-cli", clog.Causef(err.Error()))
-	} else if currentVersion.Compare(desiredVersion) == 0 {
+	} else if compareVersions(currentVersion, desiredVersion) == 0 {
 		clog.LogInfo("Up to date!")
 		return nil
 	}
 
 	if !force {
-		label := fmt.Sprintf("Do you want to download version %d.%d.%d instead",
+		prerelease := ""
+		if desiredVersion.Prerelease() != "" {
+			prerelease = "-" + desiredVersion.Prerelease()
+		}
+		hotfix := ""
+		if hotfixVersion(desiredVersion) != "" {
+			hotfix = hotfixVersion(desiredVersion)
+		}
+		label := fmt.Sprintf("Do you want to download version %d.%d.%d%s%s instead",
 			desiredVersion.Major(),
 			desiredVersion.Minor(),
 			desiredVersion.Patch(),
+			prerelease,
+			hotfix,
 		)
 		if _, err := u.confirmF(label); err != nil {
 			return clog.Fatal("user cancelled operation", clog.Tipf(`use "--force" to update without confirmation`))
@@ -218,7 +230,7 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 		return clog.Fatal("failed to update coder binary", clog.Causef(err.Error()))
 	}
 
-	clog.LogSuccess("Updated coder CLI to version " + desiredVersion.String())
+	clog.LogSuccess("Updated coder CLI")
 	return nil
 }
 
@@ -308,6 +320,7 @@ func queryGithubAssetURL(httpClient getter, version *semver.Version, ostype stri
 		fmt.Fprint(&b, "-")
 		fmt.Fprint(&b, version.Prerelease())
 	}
+	fmt.Fprintf(&b, "%s", hotfixVersion(version)) // this will be empty if no hotfix
 
 	urlString := fmt.Sprintf("https://api.github.com/repos/cdr/coder-cli/releases/tags/v%s", b.String())
 	clog.LogInfo("query github releases", fmt.Sprintf("url: %q", urlString))
@@ -492,4 +505,77 @@ func HasFilePathPrefix(s, prefix string) bool {
 // defaultExec wraps exec.CommandContext.
 func defaultExec(ctx context.Context, cmd string, args ...string) ([]byte, error) {
 	return exec.CommandContext(ctx, cmd, args...).CombinedOutput()
+}
+
+// hotfixExpr matches the build metadata used for identifying CLI hotfixes.
+var hotfixExpr = regexp.MustCompile(`(?i)^.*?cli\.(\d+).*?$`)
+
+// hotfixVersion returns the hotfix build metadata tag if it is present in v
+// and an empty string otherwise.
+func hotfixVersion(v *semver.Version) string {
+	match := hotfixExpr.FindStringSubmatch(v.Metadata())
+	if len(match) < 2 {
+		return ""
+	}
+
+	return fmt.Sprintf("+cli.%s", match[1])
+}
+
+// compareVersions performs a NON-SEMVER-COMPLIANT comparison of two versions.
+// If the two versions differ as per SemVer, then that result is returned.
+// Otherwise, the build metadata of the two versions are compared based on
+// the `cli.N` hotfix metadata.
+//
+// Examples:
+//   compareVersions(semver.MustParse("v1.0.0"), semver.MustParse("v1.0.0"))
+//   0
+//   compareVersions(semver.MustParse("v1.0.0"), semver.MustParse("v1.0.1"))
+//   1
+//   compareVersions(semver.MustParse("v1.0.1"), semver.MustParse("v1.0.0"))
+//   -1
+//   compareVersions(semver.MustParse("v1.0.0+cli.0"), semver.MustParse("v1.0.0"))
+//   1
+//   compareVersions(semver.MustParse("v1.0.0+cli.0"), semver.MustParse("v1.0.0+cli.0"))
+//   0
+//   compareVersions(semver.MustParse("v1.0.0"), semver.MustParse("v1.0.0+cli.0"))
+//   -1
+//   compareVersions(semver.MustParse("v1.0.0+cli.1"), semver.MustParse("v1.0.0+cli.0"))
+//   1
+//   compareVersions(semver.MustParse("v1.0.0+cli.0"), semver.MustParse("v1.0.0+cli.1"))
+//   -1
+//
+func compareVersions(a, b *semver.Version) int {
+	semverComparison := a.Compare(b)
+	if semverComparison != 0 {
+		return semverComparison
+	}
+
+	matchA := hotfixExpr.FindStringSubmatch(a.Metadata())
+	matchB := hotfixExpr.FindStringSubmatch(b.Metadata())
+
+	hotfixA := -1
+	hotfixB := -1
+
+	// extract hotfix versions from the metadata of a and b
+	if len(matchA) > 1 {
+		if n, err := strconv.Atoi(matchA[1]); err == nil {
+			hotfixA = n
+		}
+	}
+	if len(matchB) > 1 {
+		if n, err := strconv.Atoi(matchB[1]); err == nil {
+			hotfixB = n
+		}
+	}
+
+	// compare hotfix versions
+	if hotfixA < hotfixB {
+		return -1
+	}
+	if hotfixA > hotfixB {
+		return 1
+	}
+	// both versions are the same if their semver and hotfix
+	// metadata are the same.
+	return 0
 }
