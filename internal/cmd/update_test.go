@@ -36,6 +36,7 @@ const (
 	filenameLinux        = "coder-cli-linux-amd64.tar.gz"
 	filenameWindows      = "coder-cli-windows.zip"
 	fakeGithubReleaseURL = "https://api.github.com/repos/cdr/coder-cli/releases/tags/v1.23.4-rc.5"
+	fakeGithubHotfixURL  = fakeGithubReleaseURL + "+cli.2"
 )
 
 var (
@@ -50,7 +51,8 @@ var (
 	fakeHotfixVersionZip  = mustValidZip("coder.exe", []byte(fakeHotfixVersion))
 	fakeAssetURLLinux     = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/" + filenameLinux
 	fakeAssetURLWindows   = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/" + filenameWindows
-	fakeGithubReleaseJSON = fmt.Sprintf(`{"assets":[{"name":%q,"browser_download_url":%q},{"name":%q,"browser_download_url":%q}]}`, filenameLinux, fakeAssetURLLinux, filenameWindows, fakeAssetURLWindows)
+	fakeHotfixURLLinux    = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5+cli.2/" + filenameLinux
+	fakeHotfixURLWindows  = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5+cli.2/" + filenameWindows
 )
 
 func Test_updater_run(t *testing.T) {
@@ -141,7 +143,7 @@ func Test_updater_run(t *testing.T) {
 	run(t, "update coder - explicit version specified", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeOldVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameLinux, fakeAssetURLLinux), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse(fakeNewVersionTgz, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
@@ -158,7 +160,7 @@ func Test_updater_run(t *testing.T) {
 		fakeOldVersion := "v" + fakeOldVersion
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeOldVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameLinux, fakeAssetURLLinux), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse(fakeNewVersionTgz, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
@@ -173,7 +175,7 @@ func Test_updater_run(t *testing.T) {
 	run(t, "update coder - old to new", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameLinux, fakeAssetURLLinux), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse(fakeNewVersionTgz, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
@@ -190,7 +192,7 @@ func Test_updater_run(t *testing.T) {
 		fakeOldVersion := "v" + fakeOldVersion
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameLinux, fakeAssetURLLinux), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse(fakeNewVersionTgz, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
@@ -205,8 +207,8 @@ func Test_updater_run(t *testing.T) {
 	run(t, "update coder - new to hotfix", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeNewVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeHotfixVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse(fakeHotfixVersionTgz, 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubHotfixURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameLinux, fakeHotfixURLLinux), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeHotfixURLLinux] = newFakeGetterResponse(fakeHotfixVersionTgz, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeNewVersion }
 		p.ConfirmF = fakeConfirmYes
 		p.Execer.M[p.ExecutablePath+".new --version"] = fakeExecerResult{[]byte(fakeNewVersion), nil}
@@ -222,8 +224,8 @@ func Test_updater_run(t *testing.T) {
 		p.ExecutablePath = fakeExePathWindows
 		fakeFile(t, p.Fakefs, fakeExePathWindows, 0755, fakeNewVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeHotfixVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeAssetURLWindows] = newFakeGetterResponse(fakeHotfixVersionZip, 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubHotfixURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameWindows, fakeHotfixURLWindows), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeHotfixURLWindows] = newFakeGetterResponse(fakeHotfixVersionZip, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeNewVersion }
 		p.ConfirmF = fakeConfirmYes
 		p.Execer.M[p.ExecutablePath+".new --version"] = fakeExecerResult{[]byte(fakeNewVersion), nil}
@@ -238,7 +240,7 @@ func Test_updater_run(t *testing.T) {
 		p.ExecutablePath = "/home/user/bin/coder-cli"
 		fakeFile(t, p.Fakefs, p.ExecutablePath, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameLinux, fakeAssetURLLinux), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse(fakeNewVersionTgz, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
@@ -255,7 +257,7 @@ func Test_updater_run(t *testing.T) {
 		p.ExecutablePath = fakeExePathWindows
 		fakeFile(t, p.Fakefs, fakeExePathWindows, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameWindows, fakeAssetURLWindows), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeAssetURLWindows] = newFakeGetterResponse(fakeNewVersionZip, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
@@ -270,7 +272,7 @@ func Test_updater_run(t *testing.T) {
 	run(t, "update coder - old to new forced", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameLinux, fakeAssetURLLinux), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse(fakeNewVersionTgz, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.Execer.M[p.ExecutablePath+".new --version"] = fakeExecerResult{[]byte(fakeNewVersion), nil}
@@ -355,7 +357,7 @@ func Test_updater_run(t *testing.T) {
 	run(t, "update coder - failed to fetch URL", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameLinux, fakeAssetURLLinux), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse([]byte{}, 0, variadicS(), fakeError)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
@@ -369,7 +371,7 @@ func Test_updater_run(t *testing.T) {
 	run(t, "update coder - release URL 404", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameLinux, fakeAssetURLLinux), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse([]byte{}, 404, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
@@ -383,7 +385,7 @@ func Test_updater_run(t *testing.T) {
 	run(t, "update coder - invalid tgz archive", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameLinux, fakeAssetURLLinux), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse([]byte{}, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
@@ -399,7 +401,7 @@ func Test_updater_run(t *testing.T) {
 		p.ExecutablePath = fakeExePathWindows
 		fakeFile(t, p.Fakefs, fakeExePathWindows, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameWindows, fakeAssetURLWindows), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeAssetURLWindows] = newFakeGetterResponse([]byte{}, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
@@ -415,7 +417,7 @@ func Test_updater_run(t *testing.T) {
 		p.Fakefs = afero.NewReadOnlyFs(rwfs)
 		fakeFile(t, rwfs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameLinux, fakeAssetURLLinux), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse(fakeNewVersionTgz, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
@@ -429,7 +431,7 @@ func Test_updater_run(t *testing.T) {
 	run(t, "update coder - cannot exec new binary", func(t *testing.T, p *params) {
 		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeOldVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeNewVersionJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse(fakeGithubReleaseJSON(filenameLinux, fakeAssetURLLinux), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse(fakeNewVersionTgz, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeOldVersion }
 		p.ConfirmF = fakeConfirmYes
@@ -739,4 +741,17 @@ func newFakeExecer(t *testing.T) *fakeExecer {
 type fakeExecerResult struct {
 	Output []byte
 	Err    error
+}
+
+func fakeGithubReleaseJSON(filename, assetURL string) []byte {
+	jsonStr := fmt.Sprintf(`
+	{"assets":
+		[
+			{
+				"name": %q,
+				"browser_download_url": %q
+			}
+		]
+	}`, filename, assetURL)
+	return []byte(jsonStr)
 }

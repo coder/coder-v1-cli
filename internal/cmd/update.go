@@ -147,10 +147,20 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 	}
 
 	if !force {
-		label := fmt.Sprintf("Do you want to download version %d.%d.%d instead",
+		prerelease := ""
+		if desiredVersion.Prerelease() != "" {
+			prerelease = "-" + desiredVersion.Prerelease()
+		}
+		hotfix := ""
+		if hotfixVersion(desiredVersion) != "" {
+			hotfix = "+" + hotfixVersion(desiredVersion)
+		}
+		label := fmt.Sprintf("Do you want to download version %d.%d.%d%s%s instead",
 			desiredVersion.Major(),
 			desiredVersion.Minor(),
 			desiredVersion.Patch(),
+			prerelease,
+			hotfix,
 		)
 		if _, err := u.confirmF(label); err != nil {
 			return clog.Fatal("user cancelled operation", clog.Tipf(`use "--force" to update without confirmation`))
@@ -310,6 +320,7 @@ func queryGithubAssetURL(httpClient getter, version *semver.Version, ostype stri
 		fmt.Fprint(&b, "-")
 		fmt.Fprint(&b, version.Prerelease())
 	}
+	fmt.Fprintf(&b, "%s", hotfixVersion(version)) // this will be empty if no hotfix
 
 	urlString := fmt.Sprintf("https://api.github.com/repos/cdr/coder-cli/releases/tags/v%s", b.String())
 	clog.LogInfo("query github releases", fmt.Sprintf("url: %q", urlString))
@@ -498,6 +509,17 @@ func defaultExec(ctx context.Context, cmd string, args ...string) ([]byte, error
 
 // hotfixExpr matches the build metadata used for identifying CLI hotfixes.
 var hotfixExpr = regexp.MustCompile(`(?i)^.*?cli\.(\d+).*?$`)
+
+// hotfixVersion returns the hotfix build metadata tag if it is present in v
+// and an empty string otherwise.
+func hotfixVersion(v *semver.Version) string {
+	match := hotfixExpr.FindStringSubmatch(v.Metadata())
+	if len(match) < 2 {
+		return ""
+	}
+
+	return fmt.Sprintf("+cli.%s", match[1])
+}
 
 // compareVersions performs a NON-SEMVER-COMPLIANT comparison of two versions.
 // If the two versions differ as per SemVer, then that result is returned.
