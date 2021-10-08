@@ -230,7 +230,7 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 		return clog.Fatal("failed to update coder binary", clog.Causef(err.Error()))
 	}
 
-	clog.LogSuccess("Updated coder CLI to version " + desiredVersion.String())
+	clog.LogSuccess("Updated coder CLI")
 	return nil
 }
 
