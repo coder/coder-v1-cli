@@ -153,7 +153,7 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 		}
 		hotfix := ""
 		if hotfixVersion(desiredVersion) != "" {
-			hotfix = "+" + hotfixVersion(desiredVersion)
+			hotfix = hotfixVersion(desiredVersion)
 		}
 		label := fmt.Sprintf("Do you want to download version %d.%d.%d%s%s instead",
 			desiredVersion.Major(),
