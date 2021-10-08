@@ -32,6 +32,7 @@ const (
 	fakeCoderURL         = "https://my.cdr.dev"
 	fakeNewVersion       = "1.23.4-rc.5+678-gabcdef-12345678"
 	fakeOldVersion       = "1.22.4-rc.5+678-gabcdef-12345678"
+	fakeHotfixVersion    = "1.23.4-rc.5+678-gabcdef-12345678.cli.2"
 	filenameLinux        = "coder-cli-linux-amd64.tar.gz"
 	filenameWindows      = "coder-cli-windows.zip"
 	fakeGithubReleaseURL = "https://api.github.com/repos/cdr/coder-cli/releases/tags/v1.23.4-rc.5"
@@ -42,7 +43,9 @@ var (
 	fakeError             = xerrors.New("fake error for testing")
 	fakeNewVersionJSON    = fmt.Sprintf(`{"version":%q}`, fakeNewVersion)
 	fakeOldVersionJSON    = fmt.Sprintf(`{"version":%q}`, fakeOldVersion)
+	fakeHotfixVersionJSON = fmt.Sprintf(`{"version":%q}`, fakeHotfixVersion)
 	fakeNewVersionTgz     = mustValidTgz("coder", []byte(fakeNewVersion), 0751)
+	fakeHotfixVersionTgz  = mustValidTgz("coder", []byte(fakeHotfixVersion), 0751)
 	fakeNewVersionZip     = mustValidZip("coder.exe", []byte(fakeNewVersion))
 	fakeAssetURLLinux     = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/" + filenameLinux
 	fakeAssetURLWindows   = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/" + filenameWindows
@@ -196,6 +199,38 @@ func Test_updater_run(t *testing.T) {
 		err := u.Run(p.Ctx, false, fakeCoderURL, "")
 		assert.Success(t, "update coder - old to new", err)
 		assertFileContent(t, p.Fakefs, fakeExePathLinux, strings.TrimPrefix(fakeNewVersion, "v")) // TODO: stop hard-coding this
+	})
+
+	run(t, "update coder - new to hotfix", func(t *testing.T, p *params) {
+		fakeFile(t, p.Fakefs, fakeExePathLinux, 0755, fakeNewVersion)
+		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeHotfixVersionJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse(fakeHotfixVersionTgz, 200, variadicS(), nil)
+		p.VersionF = func() string { return fakeNewVersion }
+		p.ConfirmF = fakeConfirmYes
+		p.Execer.M[p.ExecutablePath+".new --version"] = fakeExecerResult{[]byte(fakeNewVersion), nil}
+		u := fromParams(p)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeNewVersion)
+		err := u.Run(p.Ctx, false, fakeCoderURL, "")
+		assert.Success(t, "update coder - new to hotfix", err)
+		assertFileContent(t, p.Fakefs, fakeExePathLinux, fakeHotfixVersion)
+	})
+
+	run(t, "update coder - new to hotfix - windows", func(t *testing.T, p *params) {
+		p.OsF = func() string { return goosWindows }
+		p.ExecutablePath = fakeExePathWindows
+		fakeFile(t, p.Fakefs, fakeExePathWindows, 0755, fakeNewVersion)
+		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeHotfixVersionJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
+		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse(fakeHotfixVersionTgz, 200, variadicS(), nil)
+		p.VersionF = func() string { return fakeNewVersion }
+		p.ConfirmF = fakeConfirmYes
+		p.Execer.M[p.ExecutablePath+".new --version"] = fakeExecerResult{[]byte(fakeNewVersion), nil}
+		u := fromParams(p)
+		assertFileContent(t, p.Fakefs, fakeExePathWindows, fakeNewVersion)
+		err := u.Run(p.Ctx, false, fakeCoderURL, "")
+		assert.Success(t, "update coder - new to hotfix", err)
+		assertFileContent(t, p.Fakefs, fakeExePathWindows, fakeHotfixVersion)
 	})
 
 	run(t, "update coder - old to new - binary renamed", func(t *testing.T, p *params) {
