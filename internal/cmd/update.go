@@ -17,7 +17,9 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -139,7 +141,7 @@ func (u *updater) Run(ctx context.Context, force bool, coderURLArg string, versi
 	currentVersion, err := semver.NewVersion(u.versionF())
 	if err != nil {
 		clog.LogWarn("failed to determine current version of coder-cli", clog.Causef(err.Error()))
-	} else if currentVersion.Compare(desiredVersion) == 0 {
+	} else if compareVersions(currentVersion, desiredVersion) == 0 {
 		clog.LogInfo("Up to date!")
 		return nil
 	}
@@ -492,4 +494,66 @@ func HasFilePathPrefix(s, prefix string) bool {
 // defaultExec wraps exec.CommandContext.
 func defaultExec(ctx context.Context, cmd string, args ...string) ([]byte, error) {
 	return exec.CommandContext(ctx, cmd, args...).CombinedOutput()
+}
+
+// hotfixExpr matches the build metadata used for identifying CLI hotfixes.
+var hotfixExpr = regexp.MustCompile(`(?i)^.*?cli\.(\d+).*?$`)
+
+// compareVersions performs a NON-SEMVER-COMPLIANT comparison of two versions.
+// If the two versions differ as per SemVer, then that result is returned.
+// Otherwise, the build metadata of the two versions are compared based on
+// the `cli.N` hotfix metadata.
+//
+// Examples:
+//   compareVersions(semver.MustParse("v1.0.0"), semver.MustParse("v1.0.0"))
+//   0
+//   compareVersions(semver.MustParse("v1.0.0"), semver.MustParse("v1.0.1"))
+//   1
+//   compareVersions(semver.MustParse("v1.0.1"), semver.MustParse("v1.0.0"))
+//   -1
+//   compareVersions(semver.MustParse("v1.0.0+cli.0"), semver.MustParse("v1.0.0"))
+//   1
+//   compareVersions(semver.MustParse("v1.0.0+cli.0"), semver.MustParse("v1.0.0+cli.0"))
+//   0
+//   compareVersions(semver.MustParse("v1.0.0"), semver.MustParse("v1.0.0+cli.0"))
+//   -1
+//   compareVersions(semver.MustParse("v1.0.0+cli.1"), semver.MustParse("v1.0.0+cli.0"))
+//   1
+//   compareVersions(semver.MustParse("v1.0.0+cli.0"), semver.MustParse("v1.0.0+cli.1"))
+//   -1
+//
+func compareVersions(a, b *semver.Version) int {
+	semverComparison := a.Compare(b)
+	if semverComparison != 0 {
+		return semverComparison
+	}
+
+	matchA := hotfixExpr.FindStringSubmatch(a.Metadata())
+	matchB := hotfixExpr.FindStringSubmatch(b.Metadata())
+
+	hotfixA := -1
+	hotfixB := -1
+
+	// extract hotfix versions from the metadata of a and b
+	if len(matchA) > 1 {
+		if n, err := strconv.Atoi(matchA[1]); err == nil {
+			hotfixA = n
+		}
+	}
+	if len(matchB) > 1 {
+		if n, err := strconv.Atoi(matchB[1]); err == nil {
+			hotfixB = n
+		}
+	}
+
+	// compare hotfix versions
+	if hotfixA < hotfixB {
+		return -1
+	}
+	if hotfixA > hotfixB {
+		return 1
+	}
+	// both versions are the same if their semver and hotfix
+	// metadata are the same.
+	return 0
 }

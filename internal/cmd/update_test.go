@@ -47,6 +47,7 @@ var (
 	fakeNewVersionTgz     = mustValidTgz("coder", []byte(fakeNewVersion), 0751)
 	fakeHotfixVersionTgz  = mustValidTgz("coder", []byte(fakeHotfixVersion), 0751)
 	fakeNewVersionZip     = mustValidZip("coder.exe", []byte(fakeNewVersion))
+	fakeHotfixVersionZip  = mustValidZip("coder.exe", []byte(fakeHotfixVersion))
 	fakeAssetURLLinux     = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/" + filenameLinux
 	fakeAssetURLWindows   = "https://github.com/cdr/coder-cli/releases/download/v1.23.4-rc.5/" + filenameWindows
 	fakeGithubReleaseJSON = fmt.Sprintf(`{"assets":[{"name":%q,"browser_download_url":%q},{"name":%q,"browser_download_url":%q}]}`, filenameLinux, fakeAssetURLLinux, filenameWindows, fakeAssetURLWindows)
@@ -222,7 +223,7 @@ func Test_updater_run(t *testing.T) {
 		fakeFile(t, p.Fakefs, fakeExePathWindows, 0755, fakeNewVersion)
 		p.HTTPClient.M[apiPrivateVersionURL] = newFakeGetterResponse([]byte(fakeHotfixVersionJSON), 200, variadicS(), nil)
 		p.HTTPClient.M[fakeGithubReleaseURL] = newFakeGetterResponse([]byte(fakeGithubReleaseJSON), 200, variadicS(), nil)
-		p.HTTPClient.M[fakeAssetURLLinux] = newFakeGetterResponse(fakeHotfixVersionTgz, 200, variadicS(), nil)
+		p.HTTPClient.M[fakeAssetURLWindows] = newFakeGetterResponse(fakeHotfixVersionZip, 200, variadicS(), nil)
 		p.VersionF = func() string { return fakeNewVersion }
 		p.ConfirmF = fakeConfirmYes
 		p.Execer.M[p.ExecutablePath+".new --version"] = fakeExecerResult{[]byte(fakeNewVersion), nil}
@@ -499,6 +500,34 @@ func Test_getDesiredVersion(t *testing.T) {
 		assert.Success(t, "error should be nil", err)
 		assert.True(t, "should handle versions without trailing zero", expected.Equal(actual))
 	})
+}
+
+func Test_compareVersions(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		Name     string
+		V1       string
+		V2       string
+		Expected int
+	}{
+		{"old vs old", fakeOldVersion, fakeOldVersion, 0},
+		{"old vs new", fakeOldVersion, fakeNewVersion, -1},
+		{"old vs hotfix", fakeOldVersion, fakeHotfixVersion, -1},
+		{"new vs old", fakeNewVersion, fakeOldVersion, 1},
+		{"new vs new", fakeNewVersion, fakeNewVersion, 0},
+		{"new vs hotfix", fakeNewVersion, fakeHotfixVersion, -1},
+		{"hotfix vs old", fakeHotfixVersion, fakeOldVersion, 1},
+		{"hotfix vs new", fakeHotfixVersion, fakeNewVersion, 1},
+		{"hotfix vs hotfix", fakeHotfixVersion, fakeHotfixVersion, 0},
+	}
+	for _, testCase := range testCases {
+		testCase := testCase
+		v1 := semver.MustParse(testCase.V1)
+		v2 := semver.MustParse(testCase.V2)
+		actual := compareVersions(v1, v2)
+		assert.Equal(t, testCase.Name+": expected comparison differs", testCase.Expected, actual)
+	}
 }
 
 // fakeGetter mocks HTTP requests.
