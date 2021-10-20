@@ -2,12 +2,21 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/cdr/coder-cli?color=6b9ded&include_prerelease=false)](https://github.com/cdr/coder-cli/releases)
 [![Documentation](https://godoc.org/cdr.dev/coder-cli?status.svg)](https://pkg.go.dev/cdr.dev/coder-cli/coder-sdk)
-![build](https://github.com/cdr/coder-cli/workflows/build/badge.svg)
-[![Go Report Card](https://goreportcard.com/badge/cdr.dev/coder-cli)](https://goreportcard.com/report/cdr.dev/coder-cli)
 
 `coder` is a command line utility for Coder.
 
 To report bugs and request features, please [open an issue](https://github.com/cdr/coder-cli/issues/new).
+
+## Code
+
+As of v1.24.0, the Coder CLI is closed source. The code in this repo will remain
+as it was when closed on 20 October 2021. We will continue to use issues and
+releases for the time being, but this may change.
+
+We recommend using the SDK included in this repo until we publish the new Go SDK
+that's currently in progress.
+
+We will not accept any further pull requests.
 
 ## Installation
 
