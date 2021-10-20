@@ -16,6 +16,8 @@ for the time being but this may change in the future.
 We recommend using the SDK included in this repo until we publish a new Go SDK,
 which we are working on right now.
 
+Pull requests will not be accepted.
+
 ## Installation
 
 ### Homebrew (Mac, Linux)
