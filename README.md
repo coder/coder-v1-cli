@@ -9,14 +9,14 @@ To report bugs and request features, please [open an issue](https://github.com/c
 
 ## Code
 
-Coder CLI is now closed source. The code in this repo will remain as it was when
-it was closed sourced in 1.24.0. Issues and releases will continue to be used
-for the time being but this may change in the future.
+As of v1.24.0, the Coder CLI is closed source. The code in this repo will remain
+as it was when closed on 20 October 2021. We will continue to use issues and
+releases for the time being, but this may change.
 
-We recommend using the SDK included in this repo until we publish a new Go SDK,
-which we are working on right now.
+We recommend using the SDK included in this repo until we publish the new Go SDK
+that's currently in progress.
 
-Pull requests will not be accepted.
+We will not accept any further pull requests.
 
 ## Installation
 
