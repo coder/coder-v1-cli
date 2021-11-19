@@ -2,7 +2,7 @@
     "source": ["./coder"],
     "bundle_id": "com.coder.cli",
     "sign": {
-        "application_identity": "D1855DA519BA44A92BE99414A2E561209C9DDE88"
+        "application_identity": "BDB050EB749EDD6A80C6F119BF1382ECA119CCCC"
     },
     "zip": {
         "output_path": "coder.zip"
