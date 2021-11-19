@@ -7,24 +7,24 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
-// errWrap wraps the error with some extra details about the state of the
+// wrapError wraps the error with some extra details about the state of the
 // connection.
-type errWrap struct {
+type wrapError struct {
 	err error
 
 	iceServers []webrtc.ICEServer
 	rtc        webrtc.PeerConnectionState
 }
 
-var _ error = errWrap{}
-var _ interface{ Unwrap() error } = errWrap{}
+var _ error = wrapError{}
+var _ interface{ Unwrap() error } = wrapError{}
 
 // Error implements error.
-func (e errWrap) Error() string {
+func (e wrapError) Error() string {
 	return fmt.Sprintf("%v (ice: [%v], rtc: %v)", e.err.Error(), e.ice(), e.rtc.String())
 }
 
-func (e errWrap) ice() string {
+func (e wrapError) ice() string {
 	msgs := []string{}
 	for _, s := range e.iceServers {
 		msgs = append(msgs, strings.Join(s.URLs, ", "))
@@ -34,6 +34,6 @@ func (e errWrap) ice() string {
 }
 
 // Unwrap implements Unwrapper.
-func (e errWrap) Unwrap() error {
+func (e wrapError) Unwrap() error {
 	return e.err
 }

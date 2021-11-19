@@ -15,11 +15,11 @@ import (
 	"github.com/pion/webrtc/v3"
 	"golang.org/x/net/proxy"
 	"golang.org/x/xerrors"
+	"k8s.io/utils/pointer"
 	"nhooyr.io/websocket"
 
 	"cdr.dev/slog"
-
-	"cdr.dev/coder-cli/coder-sdk"
+	"coder.com/m/product/coder/pkg/codersdk/legacy"
 )
 
 // DialOptions are configurable options for a wsnet connection.
@@ -35,10 +35,11 @@ type DialOptions struct {
 	// TURNProxyAuthToken is used to authenticate a TURN proxy request.
 	TURNProxyAuthToken string
 
-	// TURNProxyURL is the URL to proxy all TURN data through.
-	// This URL is sent to the listener during handshake so both
-	// ends connect to the same TURN endpoint.
-	TURNProxyURL *url.URL
+	// TURNRemoteProxyURL is the URL to proxy listener TURN data through.
+	TURNRemoteProxyURL *url.URL
+
+	// TURNLocalProxyURL is the URL to proxy client TURN data through.
+	TURNLocalProxyURL *url.URL
 }
 
 // DialWebsocket dials the broker with a WebSocket and negotiates a connection.
@@ -60,7 +61,7 @@ func DialWebsocket(ctx context.Context, broker string, netOpts *DialOptions, wsO
 			defer func() {
 				_ = resp.Body.Close()
 			}()
-			return nil, coder.NewHTTPError(resp)
+			return nil, legacy.NewHTTPError(resp)
 		}
 		return nil, fmt.Errorf("dial websocket: %w", err)
 	}
@@ -91,9 +92,9 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 	}
 
 	var turnProxy proxy.Dialer
-	if options.TURNProxyURL != nil {
+	if options.TURNLocalProxyURL != nil {
 		turnProxy = &turnProxyDialer{
-			baseURL: options.TURNProxyURL,
+			baseURL: options.TURNLocalProxyURL,
 			token:   options.TURNProxyAuthToken,
 		}
 	}
@@ -107,7 +108,7 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 	defer func() {
 		if err != nil {
 			// Wrap our error with some extra details.
-			err = errWrap{
+			err = wrapError{
 				err:        err,
 				iceServers: rtc.GetConfiguration().ICEServers,
 				rtc:        rtc.ConnectionState(),
@@ -128,8 +129,8 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 
 	log.Debug(ctx, "creating control channel", slog.F("proto", controlChannel))
 	ctrl, err := rtc.CreateDataChannel(controlChannel, &webrtc.DataChannelInit{
-		Protocol: stringPtr(controlChannel),
-		Ordered:  boolPtr(true),
+		Protocol: pointer.String(controlChannel),
+		Ordered:  pointer.Bool(true),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create control channel: %w", err)
@@ -146,8 +147,8 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 	}
 
 	var turnProxyURL string
-	if options.TURNProxyURL != nil {
-		turnProxyURL = options.TURNProxyURL.String()
+	if options.TURNRemoteProxyURL != nil {
+		turnProxyURL = options.TURNRemoteProxyURL.String()
 	}
 
 	bmsg := BrokerMessage{
@@ -177,7 +178,9 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 
 	err = dialer.negotiate(ctx)
 	if err != nil {
-		return nil, xerrors.Errorf("negotiate rtc connection: %w", err)
+		// Return the dialer since we have tests that verify things are closed
+		// if negotiation fails.
+		return dialer, xerrors.Errorf("negotiate rtc connection: %w", err)
 	}
 
 	return dialer, nil
@@ -290,11 +293,22 @@ func (d *Dialer) negotiate(ctx context.Context) (err error) {
 		return fmt.Errorf("unhandled message: %+v", msg)
 	}
 
-	return <-errCh
+	err = <-errCh
+	if err != nil {
+		return err
+	}
+
+	proto, err := iceProto(d.rtc)
+	if err != nil {
+		return xerrors.Errorf("determine ICE connection protocol: %w", err)
+	}
+	d.log.Debug(ctx, "connected", slog.F("ice_proto", proto))
+
+	return nil
 }
 
-// ActiveConnections returns the amount of active connections.
-// DialContext opens a connection, and close will end it.
+// ActiveConnections returns the amount of active connections. DialContext
+// opens a connection, and close will end it.
 func (d *Dialer) activeConnections() int {
 	stats, ok := d.rtc.GetStats().GetConnectionStats(d.rtc)
 	if !ok {
@@ -302,6 +316,11 @@ func (d *Dialer) activeConnections() int {
 	}
 	// Subtract 1 for the control channel.
 	return int(stats.DataChannelsRequested-stats.DataChannelsClosed) - 1
+}
+
+// Candidates returns the candidate pair that was chosen for the connection.
+func (d *Dialer) Candidates() (*webrtc.ICECandidatePair, error) {
+	return d.rtc.SCTP().Transport().ICETransport().GetSelectedCandidatePair()
 }
 
 // Close closes the RTC connection.
@@ -367,7 +386,7 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 
 	d.log.Debug(ctx, "opening data channel")
 	dc, err := d.rtc.CreateDataChannel("proxy", &webrtc.DataChannelInit{
-		Ordered:  boolPtr(network != "udp"),
+		Ordered:  pointer.Bool(network != "udp"),
 		Protocol: &proto,
 	})
 	if err != nil {

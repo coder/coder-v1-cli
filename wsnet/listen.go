@@ -15,11 +15,11 @@ import (
 	"github.com/hashicorp/yamux"
 	"github.com/pion/webrtc/v3"
 	"golang.org/x/net/proxy"
+	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 
 	"cdr.dev/slog"
-
-	"cdr.dev/coder-cli/coder-sdk"
+	"coder.com/m/product/coder/pkg/codersdk/legacy"
 )
 
 // Codes for DialChannelResponse.
@@ -32,7 +32,7 @@ const (
 var connectionRetryInterval = time.Second
 
 // DialChannelResponse is used to notify a dial channel of a
-// listening state. Modeled after net.OpError, and marshalled
+// listening state. Modeled after net.OpError, and marshaled
 // to that if Net is not "".
 type DialChannelResponse struct {
 	Code string
@@ -60,45 +60,56 @@ func Listen(ctx context.Context, log slog.Logger, broker string, turnProxyAuthTo
 	if err != nil {
 		return nil, err
 	}
+
 	go func() {
 		for {
-			err := <-ch
+			var err error
 			select {
-			case _, ok := <-l.closed:
-				if !ok {
-					return
-				}
-			default:
+			case <-l.closed:
+				return
+			case <-ctx.Done():
+				return
+			case err = <-ch:
 			}
 
-			if errors.Is(err, io.EOF) || errors.Is(err, yamux.ErrKeepAliveTimeout) {
-				l.log.Warn(ctx, "disconnected from broker", slog.Error(err))
+			if err != nil {
+				l.log.Warn(ctx, "disconnected from broker, reconnecting", slog.Error(err))
 
 				// If we hit an EOF, then the connection to the broker
 				// was interrupted. We'll take a short break then dial
 				// again.
-				ticker := time.NewTicker(connectionRetryInterval)
-				for {
-					select {
-					case <-ticker.C:
-						ch, err = l.dial(ctx)
-					case <-ctx.Done():
-						err = ctx.Err()
-					}
-					if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-						break
-					}
+				ch, err = l.retryDial(ctx)
+				if err != nil {
+					l.log.Error(ctx, "fatal error connecting to broker", slog.Error(err))
+					return
 				}
-				ticker.Stop()
-			}
-			if err != nil {
-				l.acceptError = err
-				_ = l.Close()
-				break
 			}
 		}
 	}()
+
 	return l, nil
+}
+
+func (l *listener) retryDial(ctx context.Context) (<-chan error, error) {
+	ticker := time.NewTicker(connectionRetryInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-ticker.C:
+		}
+
+		ch, err := l.dial(ctx)
+		if err != nil {
+			l.log.Warn(ctx, "connecting to broker failed, retrying", slog.Error(err))
+			continue
+		}
+
+		l.log.Info(ctx, "reconnected to broker")
+		return ch, nil
+	}
 }
 
 type listener struct {
@@ -106,7 +117,6 @@ type listener struct {
 	turnProxyAuthToken string
 
 	log            slog.Logger
-	acceptError    error
 	ws             *websocket.Conn
 	connClosers    []io.Closer
 	connClosersMut sync.Mutex
@@ -123,7 +133,7 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 	conn, resp, err := websocket.Dial(ctx, l.broker, nil)
 	if err != nil {
 		if resp != nil {
-			return nil, coder.NewHTTPError(resp)
+			return nil, legacy.NewHTTPError(resp)
 		}
 		return nil, err
 	}
@@ -138,7 +148,7 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 	}
 
 	l.log.Info(ctx, "broker connection established")
-	errCh := make(chan error)
+	errCh := make(chan error, 1)
 	go func() {
 		defer close(errCh)
 		for {
@@ -264,6 +274,19 @@ func (l *listener) negotiate(ctx context.Context, conn net.Conn) {
 				l.log.Info(ctx, "connection state change", slog.F("state", pcs.String()))
 				switch pcs {
 				case webrtc.PeerConnectionStateConnected:
+					// Log ICE protocol.
+					candidates, err := rtc.SCTP().Transport().ICETransport().GetSelectedCandidatePair()
+					if err != nil {
+						l.log.Warn(ctx, "get candidate pair to log connection protocol", slog.Error(err))
+						return
+					}
+
+					proto := "stun"
+					if candidates.Local.Typ == webrtc.ICECandidateTypeRelay {
+						proto = "turn"
+					}
+					l.log.Info(ctx, "connected", slog.F("ice_proto", proto))
+
 					return
 				case webrtc.PeerConnectionStateConnecting:
 					// Safe to close the negotiating WebSocket.
@@ -403,7 +426,7 @@ func (l *listener) handle(ctx context.Context, msg BrokerMessage, connClosers *[
 			if err != nil {
 				init.Code = CodeBadAddressErr
 				init.Err = err.Error()
-				var policyErr notPermittedByPolicyErr
+				var policyErr notPermittedByPolicyError
 				if errors.As(err, &policyErr) {
 					init.Code = CodePermissionErr
 				}
@@ -417,9 +440,11 @@ func (l *listener) handle(ctx context.Context, msg BrokerMessage, connClosers *[
 				l.log.Debug(ctx, "failed to dial remote address")
 				init.Code = CodeDialErr
 				init.Err = err.Error()
-				if op, ok := err.(*net.OpError); ok {
-					init.Net = op.Net
-					init.Op = op.Op
+
+				var opErr *net.OpError
+				if xerrors.As(err, &opErr) {
+					init.Net = opErr.Net
+					init.Op = opErr.Op
 				}
 			}
 			sendInitMessage()
@@ -429,7 +454,7 @@ func (l *listener) handle(ctx context.Context, msg BrokerMessage, connClosers *[
 
 			// Must wrap the data channel inside this connection
 			// for buffering from the dialed endpoint to the client.
-			l.log.Debug(ctx, "data channel initialized, tunnelling")
+			l.log.Debug(ctx, "data channel initialized, tunneling")
 			co := &dataChannelConn{
 				addr: nil,
 				dc:   dc,

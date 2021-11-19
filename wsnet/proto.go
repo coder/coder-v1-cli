@@ -125,13 +125,13 @@ func canonicalizeHost(addr string) string {
 	return addr
 }
 
-type notPermittedByPolicyErr struct {
+type notPermittedByPolicyError struct {
 	protocol string
 }
 
-var _ error = notPermittedByPolicyErr{}
+var _ error = notPermittedByPolicyError{}
 
 // Error implements error.
-func (e notPermittedByPolicyErr) Error() string {
+func (e notPermittedByPolicyError) Error() string {
 	return fmt.Sprintf("connections are not permitted to %q by policy", e.protocol)
 }

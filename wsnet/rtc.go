@@ -18,6 +18,7 @@ import (
 	"github.com/pion/turn/v2"
 	"github.com/pion/webrtc/v3"
 	"golang.org/x/net/proxy"
+	"golang.org/x/xerrors"
 )
 
 var (
@@ -88,7 +89,7 @@ func dialICEURL(server webrtc.ICEServer, rawURL string, options *DialICEOptions)
 			udpConn = turn.NewSTUNConn(dconn)
 		case ice.ProtoTypeTCP:
 			tcpConn, err = tls.Dial("tcp4", turnServerAddr, &tls.Config{
-				InsecureSkipVerify: options.InsecureSkipVerify,
+				InsecureSkipVerify: options.InsecureSkipVerify, //nolint:gosec
 			})
 		}
 	}
@@ -103,7 +104,11 @@ func dialICEURL(server webrtc.ICEServer, rawURL string, options *DialICEOptions)
 
 	var pass string
 	if server.Credential != nil && server.CredentialType == webrtc.ICECredentialTypePassword {
-		pass = server.Credential.(string)
+		var ok bool
+		pass, ok = server.Credential.(string)
+		if !ok {
+			return xerrors.Errorf("server credential is %T, expected a string", server.Credential)
+		}
 	}
 
 	client, err := turn.NewClient(&turn.ClientConfig{
@@ -255,7 +260,7 @@ func waitForConnectionOpen(ctx context.Context, conn *webrtc.PeerConnection) err
 		}
 	})
 	<-ctx.Done()
-	if ctx.Err() == context.DeadlineExceeded {
+	if xerrors.Is(ctx.Err(), context.DeadlineExceeded) {
 		return context.DeadlineExceeded
 	}
 	return nil
@@ -275,16 +280,20 @@ func waitForDataChannelOpen(ctx context.Context, channel *webrtc.DataChannel) er
 		cancelFunc()
 	})
 	<-ctx.Done()
-	if ctx.Err() == context.DeadlineExceeded {
+	if xerrors.Is(ctx.Err(), context.DeadlineExceeded) {
 		return ctx.Err()
 	}
 	return nil
 }
 
-func stringPtr(s string) *string {
-	return &s
-}
+func iceProto(rtc *webrtc.PeerConnection) (string, error) {
+	candidates, err := rtc.SCTP().Transport().ICETransport().GetSelectedCandidatePair()
+	if err != nil {
+		return "", xerrors.Errorf("get selected candidate pair of webrtc connection: %w", err)
+	}
 
-func boolPtr(b bool) *bool {
-	return &b
+	if candidates.Local.Typ == webrtc.ICECandidateTypeRelay {
+		return "turn", nil
+	}
+	return "stun", nil
 }

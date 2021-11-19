@@ -17,11 +17,11 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/slog/sloggers/slogtest/assert"
 	"github.com/hashicorp/yamux"
 	"github.com/pion/ice/v2"
 	"github.com/pion/logging"
 	"github.com/pion/turn/v2"
+	"github.com/stretchr/testify/require"
 	"nhooyr.io/websocket"
 )
 
@@ -38,7 +38,7 @@ func createDumbBroker(t testing.TB) (connectAddr string, listenAddr string) {
 		t.Error(err)
 	}
 	t.Cleanup(func() {
-		listener.Close()
+		_ = listener.Close()
 	})
 	var (
 		mux  = http.NewServeMux()
@@ -166,7 +166,7 @@ func createTURNServer(t *testing.T, server ice.SchemeType) (string, func()) {
 
 func generateTLSConfig(t testing.TB) *tls.Config {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	assert.Success(t, "generate key", err)
+	require.NoError(t, err, "generate key")
 	template := x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
@@ -181,15 +181,15 @@ func generateTLSConfig(t testing.TB) *tls.Config {
 		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
 	}
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
-	assert.Success(t, "create certificate", err)
+	require.NoError(t, err, "create certificate")
 	certBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 	privateKeyBytes, err := x509.MarshalPKCS8PrivateKey(privateKey)
-	assert.Success(t, "marshal private key", err)
+	require.NoError(t, err, "marshal private key")
 	keyBytes := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privateKeyBytes})
 	cert, err := tls.X509KeyPair(certBytes, keyBytes)
-	assert.Success(t, "convert to key pair", err)
+	require.NoError(t, err, "convert to key pair")
 	return &tls.Config{
 		Certificates:       []tls.Certificate{cert},
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: true, //nolint:gosec
 	}
 }

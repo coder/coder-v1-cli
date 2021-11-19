@@ -5,12 +5,15 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/slog/sloggers/slogtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
+
+	"cdr.dev/slog/sloggers/slogtest"
 )
 
 func TestCache(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	dialFunc := func(connectAddr string) func() (*Dialer, error) {
 		return func() (*Dialer, error) {
 			return DialWebsocket(context.Background(), connectAddr, nil, nil)
@@ -24,6 +27,7 @@ func TestCache(t *testing.T) {
 		defer l.Close()
 
 		cache := DialCache(time.Hour)
+		defer cache.Close()
 		c1, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, false)
@@ -40,7 +44,7 @@ func TestCache(t *testing.T) {
 		defer l.Close()
 
 		cache := DialCache(time.Hour)
-
+		defer cache.Close()
 		c1, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, false)
@@ -58,7 +62,7 @@ func TestCache(t *testing.T) {
 		defer l.Close()
 
 		cache := DialCache(0)
-
+		defer cache.Close()
 		c1, cached, err := cache.Dial(context.Background(), "example", dialFunc(connectAddr))
 		require.NoError(t, err)
 		require.Equal(t, cached, false)

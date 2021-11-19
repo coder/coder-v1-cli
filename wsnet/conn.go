@@ -14,7 +14,7 @@ import (
 	"github.com/pion/webrtc/v3"
 	"nhooyr.io/websocket"
 
-	"cdr.dev/coder-cli/coder-sdk"
+	"coder.com/m/product/coder/pkg/codersdk/legacy"
 )
 
 const (
@@ -65,7 +65,7 @@ type turnProxyDialer struct {
 	token   string
 }
 
-func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
+func (t *turnProxyDialer) Dial(_, _ string) (c net.Conn, err error) {
 	headers := http.Header{}
 	headers.Set("Session-Token", t.token)
 
@@ -89,7 +89,7 @@ func (t *turnProxyDialer) Dial(network, addr string) (c net.Conn, err error) {
 	if err != nil {
 		if resp != nil {
 			defer resp.Body.Close()
-			return nil, coder.NewHTTPError(resp)
+			return nil, legacy.NewHTTPError(resp)
 		}
 		return nil, fmt.Errorf("dial: %w", err)
 	}
@@ -187,14 +187,14 @@ func (c *dataChannelConn) RemoteAddr() net.Addr {
 	return c.addr
 }
 
-func (c *dataChannelConn) SetDeadline(t time.Time) error {
+func (c *dataChannelConn) SetDeadline(_ time.Time) error {
 	return nil
 }
 
-func (c *dataChannelConn) SetReadDeadline(t time.Time) error {
+func (c *dataChannelConn) SetReadDeadline(_ time.Time) error {
 	return nil
 }
 
-func (c *dataChannelConn) SetWriteDeadline(t time.Time) error {
+func (c *dataChannelConn) SetWriteDeadline(_ time.Time) error {
 	return nil
 }

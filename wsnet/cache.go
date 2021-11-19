@@ -55,7 +55,11 @@ func (d *DialerCache) init() {
 // evict removes lost/broken/expired connections from the cache.
 func (d *DialerCache) evict() {
 	var wg sync.WaitGroup
+	// This lock lasts for just the iteration of the for loop, the actual code
+	// is in waitgroup'd goroutines so the read lock doesn't persist the whole
+	// time, but it means we can't defer the unlock sadly.
 	d.mut.RLock()
+
 	for key, dialer := range d.dialers {
 		wg.Add(1)
 		key := key
@@ -74,7 +78,11 @@ func (d *DialerCache) evict() {
 				evict = true
 			}
 
-			if dialer.activeConnections() == 0 && time.Since(d.atime[key]) >= d.ttl {
+			d.mut.RLock()
+			atime := d.atime[key]
+			d.mut.RUnlock()
+
+			if dialer.activeConnections() == 0 && time.Since(atime) >= d.ttl {
 				evict = true
 			} else {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
@@ -92,12 +100,12 @@ func (d *DialerCache) evict() {
 			_ = dialer.Close()
 			// Ensure after Ping and potential delays that we're still testing against
 			// the proper dialer.
+			d.mut.Lock()
+			defer d.mut.Unlock()
 			if dialer != d.dialers[key] {
 				return
 			}
 
-			d.mut.Lock()
-			defer d.mut.Unlock()
 			delete(d.atime, key)
 			delete(d.dialers, key)
 		}()
@@ -109,7 +117,7 @@ func (d *DialerCache) evict() {
 // Dial returns a Dialer from the cache if one exists with the key provided,
 // or dials a new connection using the dialerFunc.
 // The bool returns whether the connection was found in the cache or not.
-func (d *DialerCache) Dial(ctx context.Context, key string, dialerFunc func() (*Dialer, error)) (*Dialer, bool, error) {
+func (d *DialerCache) Dial(_ context.Context, key string, dialerFunc func() (*Dialer, error)) (*Dialer, bool, error) {
 	select {
 	case <-d.closed:
 		return nil, false, errors.New("cache closed")
@@ -136,9 +144,9 @@ func (d *DialerCache) Dial(ctx context.Context, key string, dialerFunc func() (*
 			return nil, err
 		}
 		d.mut.Lock()
+		defer d.mut.Unlock()
 		d.dialers[key] = dialer
 		d.atime[key] = time.Now()
-		d.mut.Unlock()
 
 		return dialer, nil
 	})
@@ -159,6 +167,10 @@ func (d *DialerCache) Close() error {
 	d.mut.Lock()
 	defer d.mut.Unlock()
 
+	if d.isClosed() {
+		return nil
+	}
+
 	for _, dialer := range d.dialers {
 		err := dialer.Close()
 		if err != nil {
@@ -167,4 +179,13 @@ func (d *DialerCache) Close() error {
 	}
 	close(d.closed)
 	return nil
+}
+
+func (d *DialerCache) isClosed() bool {
+	select {
+	case <-d.closed:
+		return true
+	default:
+		return false
+	}
 }

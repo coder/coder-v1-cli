@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"cdr.dev/slog/sloggers/slogtest"
 	"github.com/stretchr/testify/require"
 	"nhooyr.io/websocket"
+
+	"cdr.dev/slog/sloggers/slogtest"
 )
 
 func init() {
