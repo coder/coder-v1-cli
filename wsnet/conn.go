@@ -14,7 +14,7 @@ import (
 	"github.com/pion/webrtc/v3"
 	"nhooyr.io/websocket"
 
-	"coder.com/m/product/coder/pkg/codersdk/legacy"
+	"cdr.dev/coder-cli/coder-sdk"
 )
 
 const (
@@ -89,7 +89,7 @@ func (t *turnProxyDialer) Dial(_, _ string) (c net.Conn, err error) {
 	if err != nil {
 		if resp != nil {
 			defer resp.Body.Close()
-			return nil, legacy.NewHTTPError(resp)
+			return nil, coder.NewHTTPError(resp)
 		}
 		return nil, fmt.Errorf("dial: %w", err)
 	}

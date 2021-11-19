@@ -18,8 +18,8 @@ import (
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 
+	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/slog"
-	"coder.com/m/product/coder/pkg/codersdk/legacy"
 )
 
 // Codes for DialChannelResponse.
@@ -133,7 +133,7 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 	conn, resp, err := websocket.Dial(ctx, l.broker, nil)
 	if err != nil {
 		if resp != nil {
-			return nil, legacy.NewHTTPError(resp)
+			return nil, coder.NewHTTPError(resp)
 		}
 		return nil, err
 	}

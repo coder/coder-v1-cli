@@ -15,11 +15,10 @@ import (
 	"github.com/pion/webrtc/v3"
 	"golang.org/x/net/proxy"
 	"golang.org/x/xerrors"
-	"k8s.io/utils/pointer"
 	"nhooyr.io/websocket"
 
+	"cdr.dev/coder-cli/coder-sdk"
 	"cdr.dev/slog"
-	"coder.com/m/product/coder/pkg/codersdk/legacy"
 )
 
 // DialOptions are configurable options for a wsnet connection.
@@ -61,7 +60,7 @@ func DialWebsocket(ctx context.Context, broker string, netOpts *DialOptions, wsO
 			defer func() {
 				_ = resp.Body.Close()
 			}()
-			return nil, legacy.NewHTTPError(resp)
+			return nil, coder.NewHTTPError(resp)
 		}
 		return nil, fmt.Errorf("dial websocket: %w", err)
 	}
@@ -129,8 +128,8 @@ func Dial(ctx context.Context, conn net.Conn, options *DialOptions) (*Dialer, er
 
 	log.Debug(ctx, "creating control channel", slog.F("proto", controlChannel))
 	ctrl, err := rtc.CreateDataChannel(controlChannel, &webrtc.DataChannelInit{
-		Protocol: pointer.String(controlChannel),
-		Ordered:  pointer.Bool(true),
+		Protocol: strptr(controlChannel),
+		Ordered:  boolptr(true),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create control channel: %w", err)
@@ -386,7 +385,7 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 
 	d.log.Debug(ctx, "opening data channel")
 	dc, err := d.rtc.CreateDataChannel("proxy", &webrtc.DataChannelInit{
-		Ordered:  pointer.Bool(network != "udp"),
+		Ordered:  boolptr(network != "udp"),
 		Protocol: &proto,
 	})
 	if err != nil {
@@ -462,4 +461,12 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 
 	d.log.Debug(ctx, "dial channel ready")
 	return c, nil
+}
+
+func boolptr(b bool) *bool {
+	return &b
+}
+
+func strptr(s string) *string {
+	return &s
 }
