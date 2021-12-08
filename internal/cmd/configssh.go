@@ -287,6 +287,13 @@ func makeSSHConfig(binPath, host, userName, workspaceName, privateKeyFilepath st
 `, workspaceName, host, userName, workspaceName, privateKeyFilepath)
 }
 
+func proxyCommand(binPath, workspaceName string, quoted bool) string {
+	if quoted {
+		binPath = fmt.Sprintf("%q", binPath)
+	}
+	return fmt.Sprintf(`%s tunnel %s 12213 stdio`, binPath, workspaceName)
+}
+
 func writeStr(filename, data string) error {
 	return ioutil.WriteFile(filename, []byte(data), 0777)
 }

@@ -227,7 +227,7 @@ type Client interface {
 	Token() string
 
 	// BaseURL returns the BaseURL configured for this Client.
-	BaseURL() url.URL
+	BaseURL() *url.URL
 
 	// CordonWorkspaceProvider prevents the provider from having any more workspaces placed on it.
 	CordonWorkspaceProvider(ctx context.Context, id, reason string) error

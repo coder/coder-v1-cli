@@ -60,6 +60,11 @@ func shell(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	if !wp.SSHEnabled {
+		return clog.Error("SSH is disabled on this Workspace")
+	}
+
 	u, err := url.Parse(wp.EnvproxyAccessURL)
 	if err != nil {
 		return err
@@ -75,10 +80,24 @@ func shell(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	binPath, err := binPath()
+	if err != nil {
+		return xerrors.Errorf("Failed to get executable path: %w", err)
+	}
+
 	ssh := exec.CommandContext(ctx,
 		"ssh", "-i"+privateKeyFilepath,
 		fmt.Sprintf("%s-%s@%s", me.Username, workspace.Name, u.Hostname()),
 	)
+
+	if wp.EnableNetV2 {
+		ssh = exec.CommandContext(ctx,
+			"ssh", "-i"+privateKeyFilepath,
+			"-o"+fmt.Sprintf("ProxyCommand=%s", proxyCommand(binPath, workspace.Name, false)),
+			workspace.Name,
+		)
+	}
 	if len(args) > 1 {
 		ssh.Args = append(ssh.Args, args[1:]...)
 	}

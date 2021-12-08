@@ -123,6 +123,6 @@ func (c *DefaultClient) Token() string {
 }
 
 // BaseURL returns the BaseURL configured for this Client.
-func (c *DefaultClient) BaseURL() url.URL {
-	return *c.baseURL
+func (c *DefaultClient) BaseURL() *url.URL {
+	return c.baseURL
 }

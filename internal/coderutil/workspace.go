@@ -20,7 +20,12 @@ func DialWorkspaceWsep(ctx context.Context, client coder.Client, workspace *code
 	if err != nil {
 		return nil, xerrors.Errorf("get workspace workspace provider: %w", err)
 	}
-	accessURL, err := url.Parse(workspaceProvider.EnvproxyAccessURL)
+	uri := workspaceProvider.EnvproxyAccessURL
+	if workspaceProvider.EnableNetV2 {
+		uri = client.BaseURL().String()
+	}
+
+	accessURL, err := url.Parse(uri)
 	if err != nil {
 		return nil, xerrors.Errorf("invalid workspace provider envproxy access url: %w", err)
 	}

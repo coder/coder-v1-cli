@@ -229,7 +229,7 @@ func (c *DefaultClient) EditWorkspace(ctx context.Context, workspaceID string, r
 // DialWsep dials a workspace's command execution interface
 // See https://github.com/cdr/wsep for details.
 func (c *DefaultClient) DialWsep(ctx context.Context, baseURL *url.URL, workspaceID string) (*websocket.Conn, error) {
-	return c.dialWebsocket(ctx, "/proxy/workspaces/"+workspaceID+"/wsep", withBaseURL(baseURL))
+	return c.dialWebsocket(ctx, "/api/v0/workspaces/"+workspaceID+"/proxy/wsep", withBaseURL(baseURL))
 }
 
 // DialExecutor gives a remote execution interface for performing commands
@@ -244,7 +244,7 @@ func (c *DefaultClient) DialExecutor(ctx context.Context, baseURL *url.URL, work
 
 // DialIDEStatus opens a websocket connection for cpu load metrics on the workspace.
 func (c *DefaultClient) DialIDEStatus(ctx context.Context, baseURL *url.URL, workspaceID string) (*websocket.Conn, error) {
-	return c.dialWebsocket(ctx, "/proxy/workspaces/"+workspaceID+"/ide/api/status", withBaseURL(baseURL))
+	return c.dialWebsocket(ctx, "/api/v0/workspaces/"+workspaceID+"/proxy/ide/api/status", withBaseURL(baseURL))
 }
 
 // DialWorkspaceBuildLog opens a websocket connection for the workspace build log messages.

@@ -77,7 +77,7 @@ coder tunnel my-dev 3000 3000
 
 			c := &tunnneler{
 				log:         log,
-				brokerAddr:  &baseURL,
+				brokerAddr:  baseURL,
 				token:       sdk.Token(),
 				workspaceID: workspaceID,
 				stdio:       args[2] == "stdio",
