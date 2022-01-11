@@ -21,7 +21,7 @@ require (
 	github.com/manifoldco/promptui v0.8.0
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/pion/datachannel v1.4.21
-	github.com/pion/dtls/v2 v2.0.9
+	github.com/pion/dtls/v2 v2.0.13
 	github.com/pion/ice/v2 v2.1.12
 	github.com/pion/logging v0.2.2
 	github.com/pion/turn/v2 v2.0.5
@@ -31,8 +31,8 @@ require (
 	github.com/spf13/afero v1.6.0
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
-	golang.org/x/net v0.0.0-20210907225631-ff17edfbf26d
+	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871
+	golang.org/x/net v0.0.0-20211201190559-0a0e4e1bb54c
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210906170528-6f6e22806c34
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
