@@ -12,7 +12,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/briandowns/spinner v1.16.0
 	github.com/cli/safeexec v1.0.0
-	github.com/fatih/color v1.12.0
+	github.com/fatih/color v1.13.0
 	github.com/google/go-cmp v0.5.6
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/yamux v0.0.0-20210826001029-26ff87cf9493
