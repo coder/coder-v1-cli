@@ -2,10 +2,6 @@ module cdr.dev/coder-cli
 
 go 1.14
 
-// TODO: remove the replace once this PR gets merged:
-// https://github.com/pion/webrtc/pull/1946
-replace github.com/pion/webrtc/v3 => github.com/deansheather/webrtc/v3 v3.1.0-beta.6.0.20210907233552-57c66b872d12
-
 require (
 	cdr.dev/slog v1.4.1
 	cdr.dev/wsep v0.1.0
