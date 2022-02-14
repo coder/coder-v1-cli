@@ -24,7 +24,7 @@ require (
 	github.com/pion/dtls/v2 v2.0.9
 	github.com/pion/ice/v2 v2.1.12
 	github.com/pion/logging v0.2.2
-	github.com/pion/turn/v2 v2.0.5
+	github.com/pion/turn/v2 v2.0.7
 	github.com/pion/webrtc/v3 v3.1.0-beta.7
 	github.com/pkg/browser v0.0.0-20210904010418-6d279e18f982
 	github.com/rjeczalik/notify v0.9.2
@@ -32,7 +32,7 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
-	golang.org/x/net v0.0.0-20210907225631-ff17edfbf26d
+	golang.org/x/net v0.0.0-20211201190559-0a0e4e1bb54c
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210906170528-6f6e22806c34
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
