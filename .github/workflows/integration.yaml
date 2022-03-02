@@ -34,7 +34,7 @@ jobs:
       CODER_EMAIL: ${{ secrets.CODER_EMAIL }}
       CODER_PASSWORD: ${{ secrets.CODER_PASSWORD }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
