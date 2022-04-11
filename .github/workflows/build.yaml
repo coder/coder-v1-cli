@@ -40,7 +40,7 @@ jobs:
         run: make -j build/linux build/windows
 
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: coder-cli
           path: ./ci/bin/coder-cli-*
@@ -75,7 +75,7 @@ jobs:
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
 
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: coder-cli
           path: ./ci/bin/coder-cli-*
