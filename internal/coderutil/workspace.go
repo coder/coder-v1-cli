@@ -79,19 +79,25 @@ func DefaultWorkspaceProvider(ctx context.Context, c coder.Client) (*coder.Kuber
 // WorkspaceTable defines an Workspace-like structure with associated entities composed in a human
 // readable form.
 type WorkspaceTable struct {
-	Name     string  `table:"Name"`
-	Image    string  `table:"Image"`
-	CPU      float32 `table:"vCPU"`
-	MemoryGB float32 `table:"MemoryGB"`
-	DiskGB   int     `table:"DiskGB"`
-	Status   string  `table:"Status"`
-	Provider string  `table:"Provider"`
-	CVM      bool    `table:"CVM"`
+	Name     string  `table:"Name" json:"name"`
+	Image    string  `table:"Image" json:"image"`
+	CPU      float32 `table:"vCPU" json:"cpu"`
+	MemoryGB float32 `table:"MemoryGB" json:"memory_gb"`
+	DiskGB   int     `table:"DiskGB" json:"disk_gb"`
+	Status   string  `table:"Status" json:"status"`
+	Provider string  `table:"Provider" json:"provider"`
+	CVM      bool    `table:"CVM" json:"cvm"`
+	Username string  `table:"Username" json:"username"`
 }
 
 // WorkspacesHumanTable performs the composition of each Workspace with its associated ProviderName and ImageRepo.
 func WorkspacesHumanTable(ctx context.Context, client coder.Client, workspaces []coder.Workspace) ([]WorkspaceTable, error) {
 	imageMap, err := MakeImageMap(ctx, client, workspaces)
+	if err != nil {
+		return nil, err
+	}
+
+	userMap, err := MakeUserMap(ctx, client, workspaces)
 	if err != nil {
 		return nil, err
 	}
@@ -105,23 +111,64 @@ func WorkspacesHumanTable(ctx context.Context, client coder.Client, workspaces [
 	for _, p := range providers.Kubernetes {
 		providerMap[p.ID] = p
 	}
-	for _, e := range workspaces {
-		workspaceProvider, ok := providerMap[e.ResourcePoolID]
+	for _, ws := range workspaces {
+		workspaceProvider, ok := providerMap[ws.ResourcePoolID]
 		if !ok {
 			return nil, xerrors.Errorf("fetch workspace workspace provider: %w", coder.ErrNotFound)
 		}
 		pooledWorkspaces = append(pooledWorkspaces, WorkspaceTable{
-			Name:     e.Name,
-			Image:    fmt.Sprintf("%s:%s", imageMap[e.ImageID].Repository, e.ImageTag),
-			CPU:      e.CPUCores,
-			MemoryGB: e.MemoryGB,
-			DiskGB:   e.DiskGB,
-			Status:   string(e.LatestStat.ContainerStatus),
+			Name:     ws.Name,
+			Image:    fmt.Sprintf("%s:%s", imageMap[ws.ImageID].Repository, ws.ImageTag),
+			CPU:      ws.CPUCores,
+			MemoryGB: ws.MemoryGB,
+			DiskGB:   ws.DiskGB,
+			Status:   string(ws.LatestStat.ContainerStatus),
 			Provider: workspaceProvider.Name,
-			CVM:      e.UseContainerVM,
+			CVM:      ws.UseContainerVM,
+			Username: userMap[ws.UserID].Username,
 		})
 	}
 	return pooledWorkspaces, nil
+}
+
+func MakeUserMap(ctx context.Context, client coder.Client, workspaces []coder.Workspace) (map[string]*coder.User, error) {
+	var (
+		mu     sync.Mutex
+		egroup = clog.LoggedErrGroup()
+	)
+
+	userMap := map[string]*coder.User{}
+
+	// Iterate over all the workspaces to get a list of unique User IDs.
+	for _, ws := range workspaces {
+		userMap[ws.UserID] = nil
+	}
+
+	fetchIds := make([]string, 0, len(userMap))
+	for id, _ := range userMap {
+		fetchIds = append(fetchIds, id)
+	}
+
+	for _, id := range fetchIds {
+		id := id
+		egroup.Go(func() error {
+			user, err := client.UserByID(ctx, id)
+			if err != nil {
+				return xerrors.Errorf("get user by id: %w", err)
+			}
+			mu.Lock()
+			defer mu.Unlock()
+
+			userMap[id] = user
+			return nil
+		})
+	}
+
+	if err := egroup.Wait(); err != nil {
+		return nil, xerrors.Errorf("fetch all workspace users: %w", err)
+	}
+
+	return userMap, nil
 }
 
 // MakeImageMap fetches all image entities specified in the slice of workspaces, then places them into an ID map.
