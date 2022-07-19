@@ -3,9 +3,9 @@
 [![GitHub Release](https://img.shields.io/github/v/release/cdr/coder-cli?color=6b9ded&include_prerelease=false)](https://github.com/cdr/coder-cli/releases)
 [![Documentation](https://godoc.org/cdr.dev/coder-cli?status.svg)](https://pkg.go.dev/cdr.dev/coder-cli/coder-sdk)
 
-`coder` is a command line utility for Coder.
-
-To report bugs and request features, please [open an issue](https://github.com/cdr/coder-cli/issues/new).
+> **Note**: This is the command line utility for [Coder Classic](https://coder.com/docs/coder).
+> If you are using [Coder OSS](https://coder.com/docs/coder-oss/latest), use [these instructions](https://coder.com/docs/coder-oss/latest/install)
+> to install the CLI.
 
 ## Code
 
@@ -17,6 +17,10 @@ We recommend using the SDK included in this repo until we publish the new Go SDK
 that's currently in progress.
 
 We will not accept any further pull requests.
+
+## Bugs & feature requests
+
+To report bugs and request features, please [open an issue](https://github.com/cdr/coder-cli/issues/new).
 
 ## Installation
 
