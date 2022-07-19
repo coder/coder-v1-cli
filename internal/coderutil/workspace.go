@@ -145,7 +145,7 @@ func MakeUserMap(ctx context.Context, client coder.Client, workspaces []coder.Wo
 	}
 
 	fetchIds := make([]string, 0, len(userMap))
-	for id, _ := range userMap {
+	for id := range userMap {
 		fetchIds = append(fetchIds, id)
 	}
 
