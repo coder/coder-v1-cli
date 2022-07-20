@@ -118,7 +118,7 @@ func pingAPI(ctx context.Context, workspaceURL *url.URL, token string) error {
 	return nil
 }
 
-// isWSL determines if coder-cli is running within Windows Subsystem for Linux
+// isWSL determines if coder-cli is running within Windows Subsystem for Linux.
 func isWSL() (bool, error) {
 	if runtime.GOOS == goosDarwin || runtime.GOOS == goosWindows {
 		return false, nil
@@ -130,7 +130,7 @@ func isWSL() (bool, error) {
 	return strings.Contains(strings.ToLower(string(data)), "microsoft"), nil
 }
 
-// openURL opens the provided URL via user's default browser
+// openURL opens the provided URL via user's default browser.
 func openURL(url string) error {
 	var cmd string
 	var args []string

@@ -116,6 +116,8 @@ func (l *listener) dial(ctx context.Context) (<-chan error, error) {
 		_ = l.ws.Close(websocket.StatusNormalClosure, "new connection inbound")
 	}
 
+	// websocket lib documents that the response does not need to be closed.
+	// nolint
 	conn, resp, err := websocket.Dial(ctx, l.broker, nil)
 	if err != nil {
 		if resp != nil {
