@@ -30,6 +30,25 @@ To report bugs and request features, please [open an issue](https://github.com/c
 brew install cdr/coder/coder-cli
 ```
 
+### Linux
+```sh
+
+#download latest release
+sudo wget https://github.com/coder/coder-cli/releases/download/{RELEASE-VERSION}/coder-cli-linux-amd64.tar.gz
+
+#extract .tar.gz
+sudo tar -xf ./coder-cli-linux-amd64.tar.gz
+
+#add execution permissions
+sudo chmod +x ./coder
+
+#make coder binary globally available
+sudo mv ./coder /usr/local/bin/coder
+
+#cleanup
+sudo rm coder-cli-linux-amd64.tar.gz
+```
+
 ### Download (Windows, Linux, Mac)
 
 Download the latest [release](https://github.com/cdr/coder-cli/releases):
