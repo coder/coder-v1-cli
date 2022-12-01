@@ -24,18 +24,18 @@ require (
 	github.com/pion/dtls/v2 v2.0.9
 	github.com/pion/ice/v2 v2.1.12
 	github.com/pion/logging v0.2.2
-	github.com/pion/turn/v2 v2.0.5
+	github.com/pion/turn/v2 v2.0.9
 	github.com/pion/webrtc/v3 v3.1.0-beta.7
 	github.com/pkg/browser v0.0.0-20210904010418-6d279e18f982
 	github.com/rjeczalik/notify v0.9.2
 	github.com/spf13/afero v1.6.0
 	github.com/spf13/cobra v1.2.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.8.1
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
-	golang.org/x/net v0.0.0-20210907225631-ff17edfbf26d
+	golang.org/x/net v0.0.0-20220531201128-c960675eff93
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210906170528-6f6e22806c34
-	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
+	golang.org/x/sys v0.0.0-20220608164250-635b8c9b7f68
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	nhooyr.io/websocket v1.8.7
