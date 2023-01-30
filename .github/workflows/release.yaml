@@ -101,7 +101,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
-          body: ""
+          body: "> **Note**: This is the command line utility for [Coder v1](https://coder.com/docs/coder). If you are using [Coder v2 / Coder OSS](https://coder.com/docs/coder-oss/latest), use [these instructions](https://coder.com/docs/coder-oss/latest/install) to install the CLI."
           draft: true
           prerelease: false
 
