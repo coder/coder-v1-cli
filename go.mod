@@ -12,7 +12,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/briandowns/spinner v1.16.0
 	github.com/cli/safeexec v1.0.0
-	github.com/fatih/color v1.12.0
+	github.com/fatih/color v1.14.1
 	github.com/google/go-cmp v0.5.6
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/yamux v0.0.0-20210826001029-26ff87cf9493
@@ -34,7 +34,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/net v0.0.0-20210907225631-ff17edfbf26d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210906170528-6f6e22806c34
+	golang.org/x/sys v0.3.0
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
