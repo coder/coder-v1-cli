@@ -34,13 +34,13 @@ jobs:
         run: make -j build/linux build/windows
 
       - name: Upload linux
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: coder-cli-linux-amd64
           path: ./ci/bin/coder-cli-linux-amd64.tar.gz
 
       - name: Upload windows
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: coder-cli-windows
           path: ./ci/bin/coder-cli-windows.zip
@@ -76,7 +76,7 @@ jobs:
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
 
       - name: Upload darwin
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: coder-cli-darwin-amd64
           path: ./ci/bin/coder-cli-darwin-amd64.zip
